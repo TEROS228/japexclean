@@ -1,26 +1,387 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ты можешь добавить свои глобальные стили ниже */
+
+/* Например, для красивого шрифта и базовой настройки */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: white;
+  color: #111827; /* Tailwind gray-900 */
+  margin: 0;
+  padding: 0;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Анимации для homepage */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(20px, -50px) scale(1.1);
+  }
+  50% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  75% {
+    transform: translate(50px, 50px) scale(1.05);
   }
 }
 
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-fadeInScale {
+  animation: fadeInScale 0.6s ease-out forwards;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.8s ease-out forwards;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Задержки для staggered animations */
+.delay-100 {
+  animation-delay: 0.1s;
+}
+.delay-200 {
+  animation-delay: 0.2s;
+}
+.delay-300 {
+  animation-delay: 0.3s;
+}
+.delay-400 {
+  animation-delay: 0.4s;
+}
+.delay-500 {
+  animation-delay: 0.5s;
+}
+.delay-600 {
+  animation-delay: 0.6s;
+}
+
+/* 3D трансформации для карточек */
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.card-3d:hover,
+.card-3d:active {
+  transform: translateY(-8px) rotateX(2deg) rotateY(2deg);
+}
+
+/* Touch feedback для мобильных */
+@media (hover: none) and (pointer: coarse) {
+  .card-3d:active {
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  .hover\:scale-105:active {
+    transform: scale(1.02) !important;
+  }
+
+  .group:active .group-hover\:scale-110 {
+    transform: scale(1.08);
+  }
+
+  .group:active .group-hover\:translate-x-2 {
+    transform: translateX(0.5rem);
+  }
+
+  .group:active .group-hover\:translate-x-1 {
+    transform: translateX(0.25rem);
+  }
+
+  /* Добавляем легкую пульсацию при нажатии */
+  button:active,
+  a:active {
+    animation: tap-pulse 0.3s ease-out;
+  }
+}
+
+/* Анимация пульсации при касании */
+@keyframes tap-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Touch manipulation для улучшения отклика на тап */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Ripple эффект при нажатии */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Smooth scroll - removed to prevent conflicts with JS scrolling */
+html[data-scroll-behavior="smooth"] {
+  scroll-behavior: smooth;
+}
+
+/* Shine/shimmer effect for buttons */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.5s;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.shimmer:hover::before,
+.shimmer:active::before {
+  left: 150%;
+}
+
+/* Fix Google Translate conflicts */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  position: relative !important;
+  top: 0 !important;
+}
+
+.skiptranslate {
+  z-index: 9999 !important;
+}
+
+/* Ensure header elements are properly positioned */
+header button {
+  position: relative;
+}
+
+header button.shimmer {
+  position: absolute;
+}
+
+/* Pulse icon effect */
+@keyframes pulse-icon {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(0, 0, 0, 0);
+  }
+}
+
+.animate-pulse-icon {
+  animation: pulse-icon 2s ease-in-out infinite;
+}
+
+/* Modal animations */
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+/* Confetti animation */
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  animation: confetti ease-in forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #f0f;
+  opacity: 0;
+}
+
+.confetti-1 { left: 10%; animation: confetti-fall 3s ease-in-out 0s; background: #ff6b6b; }
+.confetti-2 { left: 20%; animation: confetti-fall 2.5s ease-in-out 0.1s; background: #4ecdc4; }
+.confetti-3 { left: 30%; animation: confetti-fall 3.2s ease-in-out 0.2s; background: #ffd93d; }
+.confetti-4 { left: 40%; animation: confetti-fall 2.8s ease-in-out 0.3s; background: #95e1d3; }
+.confetti-5 { left: 50%; animation: confetti-fall 3.1s ease-in-out 0.4s; background: #ff6b9d; }
+.confetti-6 { left: 60%; animation: confetti-fall 2.7s ease-in-out 0.5s; background: #c44569; }
+.confetti-7 { left: 70%; animation: confetti-fall 3.3s ease-in-out 0.6s; background: #f8b500; }
+.confetti-8 { left: 80%; animation: confetti-fall 2.9s ease-in-out 0.7s; background: #4a90e2; }
+.confetti-9 { left: 90%; animation: confetti-fall 3s ease-in-out 0.8s; background: #a8e6cf; }
+.confetti-10 { left: 15%; animation: confetti-fall 2.6s ease-in-out 0.9s; background: #ff8b94; }
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
 }

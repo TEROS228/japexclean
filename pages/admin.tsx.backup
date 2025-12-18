@@ -1,0 +1,2080 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { MessageCircle } from "lucide-react";
+
+export default function AdminPage() {
+  const router = useRouter();
+  const [orderItems, setOrderItems] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [warehouseItems, setWarehouseItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [showPackageModal, setShowPackageModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'orders' | 'warehouse' | 'consolidation' | 'photos' | 'disposal' | 'cancelPurchase' | 'messages' | 'shipping'>('orders');
+  const [consolidationPackages, setConsolidationPackages] = useState<any[]>([]);
+  const [photoRequests, setPhotoRequests] = useState<any[]>([]);
+  const [disposalRequests, setDisposalRequests] = useState<any[]>([]);
+  const [cancelPurchaseRequests, setCancelPurchaseRequests] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [shippingRequests, setShippingRequests] = useState<any[]>([]);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [selectedShippingPackage, setSelectedShippingPackage] = useState<any>(null);
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [selectedConsolidationPackage, setSelectedConsolidationPackage] = useState<any>(null);
+  const [showConsolidationModal, setShowConsolidationModal] = useState(false);
+  const [consolidationShippingCost, setConsolidationShippingCost] = useState("");
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [selectedCancelPackage, setSelectedCancelPackage] = useState<any>(null);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [packageData, setPackageData] = useState({
+    trackingNumber: "",
+    weight: "",
+    shippingCost: "",
+    notes: ""
+  });
+
+  // Fetch unread messages count
+  const fetchUnreadCount = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch('/api/messages', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Count unread messages from users
+        const unreadCount = data.messages.filter((m: any) => m.senderType === 'user' && !m.read).length;
+        setUnreadMessagesCount(unreadCount);
+      }
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    fetchWarehouseItems();
+    fetchConsolidationRequests();
+    fetchPhotoRequests();
+    fetchDisposalRequests();
+    fetchCancelPurchaseRequests();
+    fetchMessages();
+    fetchShippingRequests();
+    fetchUnreadCount();
+
+    // Update unread count every 10 seconds
+    const interval = setInterval(fetchUnreadCount, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchConsolidationRequests = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch('/api/admin/consolidation-requests', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setConsolidationPackages(data.packages);
+      }
+    } catch (error) {
+      console.error('Error fetching consolidation requests:', error);
+    }
+  };
+
+  const fetchPhotoRequests = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch('/api/admin/photo-requests', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPhotoRequests(data.packages);
+      }
+    } catch (error) {
+      console.error('Error fetching photo requests:', error);
+    }
+  };
+
+  const fetchShippingRequests = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch('/api/admin/shipping-requests', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setShippingRequests(data.packages);
+      }
+    } catch (error) {
+      console.error('Error fetching shipping requests:', error);
+    }
+  };
+
+  const fetchDisposalRequests = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch('/api/admin/disposal-requests', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDisposalRequests(data.packages);
+      }
+    } catch (error) {
+      console.error('Error fetching disposal requests:', error);
+    }
+  };
+
+  const fetchCancelPurchaseRequests = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch('/api/admin/cancel-purchase-requests', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCancelPurchaseRequests(data.packages);
+      }
+    } catch (error) {
+      console.error('Error fetching cancel purchase requests:', error);
+    }
+  };
+
+  const fetchMessages = async (userId?: string) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const url = userId ? `/api/messages?userId=${userId}` : '/api/messages';
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data.messages);
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        router.push('/');
+        return;
+      }
+
+      const response = await fetch('/api/admin/orders', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setOrders(data.orders);
+      } else if (response.status === 403) {
+        alert('Access denied: Admin only');
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchWarehouseItems = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch('/api/admin/warehouse-items', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setWarehouseItems(data.items);
+      }
+    } catch (error) {
+      console.error('Error fetching warehouse items:', error);
+    }
+  };
+
+  const handleConfirmOrder = async (orderId: string) => {
+    if (!confirm('Confirm that this order has been received? Items will appear in Warehouse tab.')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/admin/orders?orderId=${orderId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        alert('Order confirmed! Items are now in warehouse.');
+        fetchOrders();
+        fetchWarehouseItems();
+      } else {
+        const data = await response.json();
+        alert(`Error: ${data.error || 'Failed to confirm order'}`);
+      }
+    } catch (error) {
+      console.error('Error confirming order:', error);
+      alert('Error confirming order');
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/admin/orders?orderId=${orderId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        alert('Order deleted successfully!');
+        fetchOrders();
+      } else {
+        const data = await response.json();
+        alert(`Error: ${data.error || 'Failed to delete order'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      alert('Error deleting order');
+    }
+  };
+
+  const handleCreatePackage = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/admin/packages/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          orderItemId: selectedItem.id,
+          trackingNumber: packageData.trackingNumber || null,
+          weight: packageData.weight ? parseFloat(packageData.weight) : null,
+          shippingCost: packageData.shippingCost ? parseInt(packageData.shippingCost) : 0,
+          notes: packageData.notes || null
+        })
+      });
+
+      if (response.ok) {
+        alert('Package created successfully! User will be notified.');
+        setShowPackageModal(false);
+        setPackageData({ trackingNumber: "", weight: "", shippingCost: "", notes: "" });
+        fetchWarehouseItems();
+      } else {
+        const error = await response.json();
+        alert('Error: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Error creating package:', error);
+      alert('Failed to create package');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
+          <Link href="/" className="text-green-600 hover:underline">
+            ← Back to Home
+          </Link>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`px-6 py-3 font-medium transition-colors ${
+              activeTab === 'orders'
+                ? 'text-green-600 border-b-2 border-green-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Orders
+          </button>
+          <button
+            onClick={() => setActiveTab('warehouse')}
+            className={`px-6 py-3 font-medium transition-colors relative ${
+              activeTab === 'warehouse'
+                ? 'text-green-600 border-b-2 border-green-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Warehouse
+            {warehouseItems.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {warehouseItems.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('consolidation')}
+            className={`px-6 py-3 font-medium transition-colors relative ${
+              activeTab === 'consolidation'
+                ? 'text-green-600 border-b-2 border-green-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Consolidation Requests
+            {consolidationPackages.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {consolidationPackages.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('photos')}
+            className={`px-6 py-3 font-medium transition-colors relative ${
+              activeTab === 'photos'
+                ? 'text-green-600 border-b-2 border-green-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            📸 Product Photos
+            {photoRequests.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {photoRequests.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('disposal')}
+            className={`px-6 py-3 font-medium transition-colors relative ${
+              activeTab === 'disposal'
+                ? 'text-green-600 border-b-2 border-green-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            ♻️ Disposal Requests
+            {disposalRequests.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {disposalRequests.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('cancelPurchase')}
+            className={`px-6 py-3 font-medium transition-colors relative ${
+              activeTab === 'cancelPurchase'
+                ? 'text-green-600 border-b-2 border-green-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            ❌ Cancel Purchase
+            {cancelPurchaseRequests.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {cancelPurchaseRequests.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={`px-6 py-3 font-medium transition-colors relative ${
+              activeTab === 'messages'
+                ? 'text-green-600 border-b-2 border-green-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            💬 Messages
+            {unreadMessagesCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {unreadMessagesCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('shipping')}
+            className={`px-6 py-3 font-medium transition-colors relative ${
+              activeTab === 'shipping'
+                ? 'text-green-600 border-b-2 border-green-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            📮 Shipping Requests
+            {shippingRequests.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {shippingRequests.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Orders Tab */}
+        {activeTab === 'orders' && (
+          <div className="space-y-4">
+            {orders.filter(order => !order.confirmed).length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <p className="text-gray-500">No orders yet</p>
+              </div>
+            ) : (
+              orders.filter(order => !order.confirmed).map((order) => (
+                <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Order #{order.id.slice(0, 8)}</h3>
+                      <p className="text-sm text-gray-500">
+                        {order.user.email} • {new Date(order.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-gray-900">¥{order.total.toLocaleString()}</p>
+                        <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
+                          {order.status}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedUser(order.userId);
+                          setActiveTab('messages');
+                          fetchMessages(order.userId);
+                        }}
+                        className="p-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                        title="Message User"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleConfirmOrder(order.id)}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+                      >
+                        Confirm
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {order.items.map((item: any) => (
+                      <div key={item.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                        {item.image && (
+                          <img src={item.image} alt={item.title} className="w-20 h-20 rounded object-cover flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 mb-1">{item.title}</p>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs px-2 py-0.5 bg-white border border-gray-200 rounded">
+                              {item.marketplace === 'yahoo' ? '💜 Yahoo' : '🛍️ Rakuten'}
+                            </span>
+                            <span className="text-xs text-gray-500 font-mono">{item.itemCode.slice(0, 12)}</span>
+                          </div>
+
+                          {/* Варианты товара */}
+                          {item.options && Object.keys(item.options).length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs font-medium text-gray-700 mb-1">Options:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {Object.entries(item.options).map(([key, value]) => (
+                                  <span key={key} className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                    {key}: {value as string}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Ссылка на товар */}
+                          {item.itemUrl && (
+                            <a
+                              href={item.itemUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                            >
+                              View Product
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </a>
+                          )}
+
+                          <div className="flex items-center gap-4 mt-2 text-sm">
+                            <span className="text-gray-600">Qty: {item.quantity}</span>
+                            <span className="font-semibold text-gray-900">¥{(item.price * item.quantity).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Warehouse Tab */}
+        {activeTab === 'warehouse' && (
+          <div className="space-y-4">
+            {warehouseItems.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <p className="text-gray-500">No items in warehouse yet</p>
+                <p className="text-sm text-gray-400 mt-2">Confirmed order items will appear here</p>
+              </div>
+            ) : (
+              warehouseItems.map((item) => (
+                <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-start gap-4">
+                    {item.image && (
+                      <img src={item.image} alt={item.title} className="w-24 h-24 rounded object-cover flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
+                          <p className="text-sm text-gray-500 mt-1">
+                            Customer: {item.order.user.email}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-gray-900">¥{(item.price * item.quantity).toLocaleString()}</p>
+                          <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full mt-1">
+                            In Warehouse
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-xs px-2 py-0.5 bg-white border border-gray-200 rounded">
+                          {item.marketplace === 'yahoo' ? '💜 Yahoo' : '🛍️ Rakuten'}
+                        </span>
+                        <span className="text-xs text-gray-500 font-mono">{item.itemCode.slice(0, 12)}</span>
+                        <span className="text-xs text-gray-600">Qty: {item.quantity}</span>
+                      </div>
+
+                      {/* Варианты товара */}
+                      {item.options && Object.keys(item.options).length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-xs font-medium text-gray-700 mb-1">Options:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {Object.entries(item.options).map(([key, value]) => (
+                              <span key={key} className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                {key}: {value as string}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Ссылка на товар */}
+                      {item.itemUrl && (
+                        <a
+                          href={item.itemUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mb-3"
+                        >
+                          View Product
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setSelectedItem(item);
+                          setShowPackageModal(true);
+                        }}
+                        className="w-full px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 font-medium shadow-sm hover:shadow-md transition-all"
+                      >
+                        📦 Create Package
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <p className="text-xs text-gray-500">
+                      Order ID: {item.order.id.slice(0, 8)} • Arrived: {new Date(item.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Consolidation Requests Tab */}
+        {activeTab === 'consolidation' && (
+          <div className="space-y-6">
+            {consolidationPackages.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <p className="text-gray-500">No consolidation requests at the moment</p>
+              </div>
+            ) : (
+              consolidationPackages.map((pkg) => {
+                const consolidateWithIds = pkg.consolidateWith ? JSON.parse(pkg.consolidateWith) : [];
+                return (
+                  <div key={pkg.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">{pkg.user.email}</h3>
+                        <p className="text-sm text-gray-500">Requested on {new Date(pkg.updatedAt).toLocaleString()}</p>
+                        <p className="text-xs text-gray-400 font-mono mt-1">Package ID: {pkg.id}</p>
+                      </div>
+                      <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                        📦 Consolidation Request
+                      </span>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Main Package:</h4>
+                      <div className="flex items-center gap-3">
+                        {pkg.orderItem.image && (
+                          <img src={pkg.orderItem.image} alt={pkg.orderItem.title} className="w-16 h-16 rounded object-cover" />
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{pkg.orderItem.title}</p>
+                          <p className="text-xs text-gray-500">Qty: {pkg.orderItem.quantity}</p>
+                          <p className="text-xs text-blue-600 font-mono">Order #{pkg.orderItem.orderId.slice(0, 8)}</p>
+                          {pkg.trackingNumber && (
+                            <p className="text-xs text-gray-600 font-mono mt-1">Tracking: {pkg.trackingNumber}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {consolidateWithIds.length > 0 && (
+                      <div className="bg-blue-50 rounded-lg p-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Combine with these packages:</h4>
+                        <div className="space-y-2">
+                          {pkg.consolidateWithPackages?.map((relatedPkg: any) => (
+                            <div key={relatedPkg.id} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-blue-200">
+                              {relatedPkg.orderItem.image && (
+                                <img src={relatedPkg.orderItem.image} alt={relatedPkg.orderItem.title} className="w-12 h-12 rounded object-cover" />
+                              )}
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">{relatedPkg.orderItem.title}</p>
+                                <p className="text-xs text-gray-500">Qty: {relatedPkg.orderItem.quantity}</p>
+                                <p className="text-xs text-blue-600 font-mono">Order #{relatedPkg.orderItem.orderId.slice(0, 8)}</p>
+                                <p className="text-xs text-gray-400 font-mono">Package ID: {relatedPkg.id}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 flex gap-3 text-xs">
+                      {pkg.shippingMethod && (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">📮 {pkg.shippingMethod.toUpperCase()}</span>
+                      )}
+                      {pkg.photoService && (
+                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">📸 Photo Service (+¥400)</span>
+                      )}
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-gray-200 flex gap-3">
+                      <button
+                        onClick={() => {
+                          console.log('Selected package for consolidation:', pkg);
+                          console.log('consolidateWith:', pkg.consolidateWith);
+                          console.log('consolidateWithPackages:', pkg.consolidateWithPackages);
+                          setSelectedConsolidationPackage(pkg);
+                          // Вычисляем начальную стоимость доставки (сумма всех пакетов)
+                          const consolidateWithIds = pkg.consolidateWith ? JSON.parse(pkg.consolidateWith) : [];
+                          const totalCost = pkg.shippingCost +
+                            (pkg.consolidateWithPackages?.reduce((sum: number, p: any) => sum + p.shippingCost, 0) || 0);
+                          setConsolidationShippingCost(totalCost.toString());
+                          setShowConsolidationModal(true);
+                        }}
+                        className="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 font-medium shadow-sm hover:shadow-md transition-all"
+                      >
+                        ✓ Mark as Completed
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Cancel this consolidation request?')) return;
+
+                          try {
+                            const token = localStorage.getItem('auth_token');
+                            const response = await fetch(`/api/admin/packages/${pkg.id}/cancel-consolidation`, {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                              }
+                            });
+
+                            if (response.ok) {
+                              alert('Consolidation request cancelled');
+                              fetchConsolidationRequests();
+                            } else {
+                              const error = await response.json();
+                              alert('Error: ' + error.error);
+                            }
+                          } catch (error) {
+                            console.error('Error cancelling consolidation:', error);
+                            alert('Failed to cancel consolidation');
+                          }
+                        }}
+                        className="px-4 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-all"
+                      >
+                        Cancel Request
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* Product Photos Tab */}
+        {activeTab === 'photos' && (
+          <div className="space-y-6">
+            {photoRequests.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <p className="text-gray-500">No photo requests at the moment</p>
+              </div>
+            ) : (
+              photoRequests.map((pkg) => (
+                <PhotoRequestCard
+                  key={pkg.id}
+                  pkg={pkg}
+                  onPhotoUploaded={() => fetchPhotoRequests()}
+                />
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Disposal Requests Tab */}
+        {activeTab === 'disposal' && (
+          <div className="space-y-4">
+            {disposalRequests.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <p className="text-gray-500">No disposal requests at the moment</p>
+              </div>
+            ) : (
+              disposalRequests.map((pkg) => (
+                <div key={pkg.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">{pkg.user.email}</h3>
+                      <p className="text-sm text-gray-500">Requested disposal</p>
+                    </div>
+                    <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                      ♻️ Pending Disposal
+                    </span>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <div className="flex gap-4">
+                      {pkg.orderItem.image && (
+                        <img
+                          src={pkg.orderItem.image}
+                          alt={pkg.orderItem.title}
+                          className="w-20 h-20 object-cover rounded border border-gray-200"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900 mb-1">{pkg.orderItem.title}</h4>
+                        <p className="text-sm text-gray-600">Quantity: {pkg.orderItem.quantity}</p>
+                        <p className="text-sm text-gray-600">Weight: {pkg.weight} kg</p>
+                        <p className="text-sm font-medium text-orange-600 mt-2">
+                          Disposal Cost: ¥{pkg.disposalCost} (paid by user)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-500">Tracking Number</p>
+                      <p className="font-medium text-gray-900">{pkg.trackingNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Package ID</p>
+                      <p className="font-medium text-gray-900">{pkg.id.slice(0, 8)}...</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={async () => {
+                        if (!confirm('Mark this package as disposed? This action cannot be undone.')) {
+                          return;
+                        }
+                        try {
+                          const token = localStorage.getItem('auth_token');
+                          const response = await fetch(`/api/admin/packages/${pkg.id}/mark-disposed`, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${token}`,
+                              'Content-Type': 'application/json'
+                            }
+                          });
+                          if (response.ok) {
+                            alert('✅ Package marked as disposed!');
+                            fetchDisposalRequests();
+                          } else {
+                            const data = await response.json();
+                            alert(`Error: ${data.error}`);
+                          }
+                        } catch (error) {
+                          console.error('Error marking as disposed:', error);
+                          alert('Failed to mark as disposed');
+                        }
+                      }}
+                      className="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      ✓ Mark as Disposed
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Cancel Purchase Requests Tab */}
+        {activeTab === 'cancelPurchase' && (
+          <div className="space-y-4">
+            {cancelPurchaseRequests.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <p className="text-gray-500">No cancel purchase requests at the moment</p>
+              </div>
+            ) : (
+              cancelPurchaseRequests.map((pkg) => (
+                <div key={pkg.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">{pkg.user.email}</h3>
+                      <p className="text-sm text-gray-500">Requested cancellation</p>
+                      <p className="text-xs text-gray-400 font-mono mt-1">Package ID: {pkg.id}</p>
+                    </div>
+                    <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                      ❌ Cancel Request
+                    </span>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <div className="flex gap-4">
+                      {pkg.orderItem.image && (
+                        <img
+                          src={pkg.orderItem.image}
+                          alt={pkg.orderItem.title}
+                          className="w-20 h-20 object-cover rounded border border-gray-200"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900 mb-1">{pkg.orderItem.title}</h4>
+                        <p className="text-sm text-gray-600">Quantity: {pkg.orderItem.quantity}</p>
+                        <p className="text-xs text-blue-600 font-mono">Order #{pkg.orderItem.orderId.slice(0, 8)}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          <span className="font-medium">Marketplace:</span> {pkg.orderItem.marketplace?.toUpperCase()}
+                        </p>
+                        {pkg.orderItem.itemUrl && (
+                          <a
+                            href={pkg.orderItem.itemUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:underline mt-1 inline-block"
+                          >
+                            View Product →
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                    <div>
+                      <p className="text-gray-500">Tracking Number</p>
+                      <p className="font-medium text-gray-900">{pkg.trackingNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Status</p>
+                      <p className="font-medium text-gray-900 capitalize">{pkg.cancelPurchaseStatus || 'pending'}</p>
+                    </div>
+                  </div>
+
+                  {pkg.cancelPurchaseStatus === 'pending' && (
+                    <>
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                        <p className="text-xs text-amber-700">
+                          ⚠️ Contact the seller to confirm cancellation. If seller approves, click "Request Payment" button below.
+                        </p>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={async () => {
+                            if (!confirm('Seller approved cancellation? This will request ¥900 payment from user.')) {
+                              return;
+                            }
+                            try {
+                              const token = localStorage.getItem('auth_token');
+                              const response = await fetch(`/api/admin/packages/${pkg.id}/request-cancel-payment`, {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${token}`
+                                }
+                              });
+                              if (response.ok) {
+                                alert('✅ Payment request sent! User will be charged ¥900.');
+                                fetchCancelPurchaseRequests();
+                              } else {
+                                const data = await response.json();
+                                alert(`Error: ${data.error}`);
+                              }
+                            } catch (error) {
+                              console.error('Error requesting payment:', error);
+                              alert('Failed to request payment');
+                            }
+                          }}
+                          className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm transition-all"
+                        >
+                          💳 Request Payment (¥900)
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('Reject this cancellation request?')) {
+                              return;
+                            }
+                            try {
+                              const token = localStorage.getItem('auth_token');
+                              const response = await fetch(`/api/admin/packages/${pkg.id}/update-cancel-purchase`, {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${token}`,
+                                  'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ status: 'rejected' })
+                              });
+                              if (response.ok) {
+                                alert('❌ Cancellation rejected! User has been notified.');
+                                fetchCancelPurchaseRequests();
+                              } else {
+                                const data = await response.json();
+                                alert(`Error: ${data.error}`);
+                              }
+                            } catch (error) {
+                              console.error('Error updating status:', error);
+                              alert('Failed to update status');
+                            }
+                          }}
+                          className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium shadow-sm transition-all"
+                        >
+                          ❌ Reject Request
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {pkg.cancelPurchaseStatus === 'awaiting_payment' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                      <p className="text-sm text-blue-700 font-medium">
+                        ⏳ Waiting for user to pay ¥900 cancellation fee...
+                      </p>
+                    </div>
+                  )}
+
+                  {pkg.cancelPurchaseStatus === 'paid' && (
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                        <p className="text-xs text-green-700">
+                          ✅ User has paid ¥900. Complete the cancellation process with seller and update status below.
+                        </p>
+                      </div>
+
+                      <div
+                        onClick={() => {
+                          alert('BUTTON CLICKED - 1');
+                          setSelectedCancelPackage(pkg);
+                          alert('BUTTON CLICKED - 2 (after setSelectedCancelPackage)');
+                          setRefundAmount("");
+                          alert('BUTTON CLICKED - 3 (after setRefundAmount)');
+                          setShowRefundModal(true);
+                          alert('BUTTON CLICKED - 4 (after setShowRefundModal - should show modal now)');
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '10px 16px',
+                          backgroundColor: '#16a34a',
+                          color: 'white',
+                          borderRadius: '8px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          userSelect: 'none',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#15803d';
+                          e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#16a34a';
+                          e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+                        }}
+                      >
+                        ✅ Complete Cancellation
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Messages Tab */}
+        {activeTab === 'messages' && (
+          <AdminMessagesSection
+            messages={messages}
+            selectedUser={selectedUser}
+            setSelectedUser={setSelectedUser}
+            onRefresh={fetchMessages}
+          />
+        )}
+
+        {/* Shipping Requests Tab */}
+        {activeTab === 'shipping' && (
+          <div className="space-y-4">
+            {shippingRequests.length === 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <p className="text-gray-500">No shipping requests at the moment</p>
+              </div>
+            ) : (
+              shippingRequests.map((pkg) => (
+                <div key={pkg.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">{pkg.user.email}</h3>
+                      <p className="text-sm text-gray-500">Requested shipping</p>
+                    </div>
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                      📮 Ready to Ship
+                    </span>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    {pkg.consolidated ? (
+                      // Для консолидированных пакетов показываем все товары
+                      <div>
+                        <h4 className="text-xs font-semibold text-green-700 mb-2 flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Consolidated Package ({(pkg.consolidatedPackages?.length || 0) + 1} items)
+                        </h4>
+                        <div className="space-y-2">
+                          {/* Главный товар */}
+                          <div className="flex items-center gap-3 p-2 bg-white rounded border border-green-200">
+                            {pkg.orderItem.image && (
+                              <img src={pkg.orderItem.image} alt={pkg.orderItem.title} className="w-12 h-12 rounded object-cover" />
+                            )}
+                            <div className="flex-1">
+                              <p className="text-xs font-medium text-gray-900">{pkg.orderItem.title}</p>
+                              <p className="text-xs text-gray-500">Qty: {pkg.orderItem.quantity}</p>
+                            </div>
+                          </div>
+                          {/* Объединенные товары */}
+                          {pkg.consolidatedPackages && pkg.consolidatedPackages.length > 0 && (
+                            <>
+                              {pkg.consolidatedPackages.map((consolidatedPkg: any) => (
+                                <div key={consolidatedPkg.id} className="flex items-center gap-3 p-2 bg-white rounded border border-gray-200">
+                                  {consolidatedPkg.orderItem.image && (
+                                    <img src={consolidatedPkg.orderItem.image} alt={consolidatedPkg.orderItem.title} className="w-12 h-12 rounded object-cover" />
+                                  )}
+                                  <div className="flex-1">
+                                    <p className="text-xs font-medium text-gray-900">{consolidatedPkg.orderItem.title}</p>
+                                    <p className="text-xs text-gray-500">Qty: {consolidatedPkg.orderItem.quantity}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                        {/* Информация о посылке */}
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          {pkg.trackingNumber && (
+                            <p className="text-xs text-gray-600 font-mono">Tracking: {pkg.trackingNumber}</p>
+                          )}
+                          {pkg.weight && (
+                            <p className="text-xs text-gray-600 mt-1">Total Weight: {pkg.weight} kg</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      // Для обычных пакетов показываем как раньше
+                      <div className="flex items-center gap-3">
+                        {pkg.orderItem.image && (
+                          <img src={pkg.orderItem.image} alt={pkg.orderItem.title} className="w-20 h-20 rounded object-cover" />
+                        )}
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{pkg.orderItem.title}</p>
+                          <p className="text-xs text-gray-500">Qty: {pkg.orderItem.quantity}</p>
+                          {pkg.trackingNumber && (
+                            <p className="text-xs text-gray-600 font-mono mt-1">Tracking: {pkg.trackingNumber}</p>
+                          )}
+                          {pkg.weight && (
+                            <p className="text-xs text-gray-600 mt-1">Weight: {pkg.weight} kg</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 text-xs mb-4">
+                    {pkg.shippingMethod && (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">📮 {pkg.shippingMethod.toUpperCase()}</span>
+                    )}
+                    {pkg.photoService && (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">📸 Photo Service</span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedShippingPackage(pkg);
+                      setShowTrackingModal(true);
+                    }}
+                    className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 font-medium shadow-sm hover:shadow-md transition-all"
+                  >
+                    ✓ Mark as Shipped & Add Tracking
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Package Modal */}
+      {showPackageModal && selectedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Create Package</h2>
+            <p className="text-gray-600 mb-2">Item: {selectedItem.title}</p>
+            <p className="text-gray-500 text-sm mb-6">Qty: {selectedItem.quantity}</p>
+
+            <form onSubmit={handleCreatePackage} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tracking Number (optional)
+                </label>
+                <input
+                  type="text"
+                  value={packageData.trackingNumber}
+                  onChange={(e) => setPackageData({ ...packageData, trackingNumber: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="TRK123456789"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Weight (kg, optional)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={packageData.weight}
+                  onChange={(e) => setPackageData({ ...packageData, weight: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="2.5"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Shipping Cost (¥, optional)
+                </label>
+                <input
+                  type="number"
+                  value={packageData.shippingCost}
+                  onChange={(e) => setPackageData({ ...packageData, shippingCost: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="5000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notes (optional)
+                </label>
+                <textarea
+                  value={packageData.notes}
+                  onChange={(e) => setPackageData({ ...packageData, notes: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  rows={3}
+                  placeholder="Additional notes..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                >
+                  Create & Notify User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPackageModal(false)}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Consolidation Modal */}
+      {showConsolidationModal && selectedConsolidationPackage && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Complete Consolidation</h3>
+
+            <div className="bg-gray-50 rounded-xl p-4 mb-6">
+              <p className="text-sm font-medium text-gray-700 mb-2">Customer:</p>
+              <p className="font-medium text-gray-900">{selectedConsolidationPackage.user.email}</p>
+              <p className="text-xs text-gray-500 mt-2">
+                {(selectedConsolidationPackage.consolidateWith ? JSON.parse(selectedConsolidationPackage.consolidateWith).length : 0) + 1} packages will be combined
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Total Shipping Cost (¥)
+              </label>
+              <input
+                type="number"
+                value={consolidationShippingCost}
+                onChange={(e) => setConsolidationShippingCost(e.target.value)}
+                placeholder="e.g., 5000"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+                autoFocus
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Enter the total shipping cost for the consolidated package
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    const token = localStorage.getItem('auth_token');
+                    console.log('Sending consolidation request for package:', selectedConsolidationPackage.id);
+                    console.log('Package consolidateWith:', selectedConsolidationPackage.consolidateWith);
+                    const response = await fetch(`/api/admin/packages/${selectedConsolidationPackage.id}/complete-consolidation`, {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        shippingCost: parseInt(consolidationShippingCost) || 0
+                      })
+                    });
+
+                    if (response.ok) {
+                      alert('✅ Consolidation completed! User has been notified.');
+                      setShowConsolidationModal(false);
+                      setSelectedConsolidationPackage(null);
+                      fetchConsolidationRequests();
+                    } else {
+                      const error = await response.json();
+                      console.error('Consolidation error:', error);
+                      alert('Error: ' + JSON.stringify(error));
+                    }
+                  } catch (error) {
+                    console.error('Error completing consolidation:', error);
+                    alert('Failed to complete consolidation');
+                  }
+                }}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => {
+                  setShowConsolidationModal(false);
+                  setSelectedConsolidationPackage(null);
+                }}
+                className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tracking Number Modal */}
+      {showTrackingModal && selectedShippingPackage && (
+        <TrackingNumberModal
+          package={selectedShippingPackage}
+          onClose={() => {
+            setShowTrackingModal(false);
+            setSelectedShippingPackage(null);
+          }}
+          onSubmit={async (trackingNumber: string) => {
+            try {
+              const token = localStorage.getItem('auth_token');
+              const response = await fetch(`/api/admin/packages/${selectedShippingPackage.id}/mark-shipped`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ trackingNumber })
+              });
+
+              if (response.ok) {
+                alert('✅ Package marked as shipped! User has been notified.');
+                setShowTrackingModal(false);
+                setSelectedShippingPackage(null);
+                fetchShippingRequests();
+              } else {
+                const error = await response.json();
+                alert('Error: ' + error.error);
+              }
+            } catch (error) {
+              console.error('Error marking as shipped:', error);
+              alert('Failed to mark as shipped');
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Модальное окно для ввода трекинг номера
+function TrackingNumberModal({ package: pkg, onClose, onSubmit }: any) {
+  const [trackingNumber, setTrackingNumber] = useState(pkg.trackingNumber || '');
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+        <h3 className="text-2xl font-bold text-gray-900 mb-4">Add Tracking Number</h3>
+
+        <div className="bg-gray-50 rounded-xl p-4 mb-6">
+          <div className="flex items-center gap-3">
+            {pkg.orderItem?.image && (
+              <img src={pkg.orderItem.image} alt={pkg.orderItem.title} className="w-16 h-16 rounded object-cover" />
+            )}
+            <div>
+              <p className="font-medium text-gray-900">{pkg.orderItem?.title}</p>
+              <p className="text-sm text-gray-500">{pkg.user.email}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tracking Number
+          </label>
+          <input
+            type="text"
+            value={trackingNumber}
+            onChange={(e) => setTrackingNumber(e.target.value)}
+            placeholder="e.g., 1Z999AA10123456784"
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+            autoFocus
+          />
+          <p className="text-xs text-gray-500 mt-2">
+            Enter the tracking number for this shipment (optional but recommended)
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => onSubmit(trackingNumber)}
+            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 font-semibold shadow-lg hover:shadow-xl transition-all"
+          >
+            Confirm Shipment
+          </button>
+          <button
+            onClick={onClose}
+            className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-all"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Компонент для загрузки фотографий
+function PhotoRequestCard({ pkg, onPhotoUploaded }: any) {
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  useEffect(() => {
+    if (pkg.photos) {
+      try {
+        setPhotoUrls(JSON.parse(pkg.photos));
+      } catch (e) {
+        setPhotoUrls([]);
+      }
+    }
+  }, [pkg.photos]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (photoUrls.length >= 3) {
+      alert('Maximum 3 photos allowed');
+      return;
+    }
+
+    // Проверка типа файла
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file');
+      return;
+    }
+
+    // Проверка размера (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    setUploadingFile(true);
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPhotoUrls([...photoUrls, data.url]);
+        // Очищаем input
+        e.target.value = '';
+      } else {
+        const error = await response.json();
+        alert('Upload failed: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Failed to upload file');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setPhotoUrls(photoUrls.filter((_, i) => i !== index));
+  };
+
+  const handleSavePhotos = async () => {
+    if (photoUrls.length === 0) {
+      alert('Please add at least one photo');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/admin/packages/${pkg.id}/upload-photos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ photos: photoUrls })
+      });
+
+      if (response.ok) {
+        alert('✅ Photos uploaded successfully! User has been notified.');
+        // Очищаем состояние
+        setPhotoUrls([]);
+        // Обновляем список запросов (запрос удалится из списка)
+        onPhotoUploaded();
+      } else {
+        const error = await response.json();
+        alert('Error: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Error uploading photos:', error);
+      alert('Failed to upload photos');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-bold text-gray-900">{pkg.user.email}</h3>
+          <p className="text-sm text-gray-500">Requested on {new Date(pkg.updatedAt).toLocaleString()}</p>
+          <p className="text-xs text-gray-400 font-mono mt-1">Package ID: {pkg.id}</p>
+        </div>
+        <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+          📸 Photo Request • ¥500 Paid
+        </span>
+      </div>
+
+      {/* Package Info */}
+      <div className="bg-gray-50 rounded-lg p-4 mb-4">
+        <div className="flex items-center gap-3">
+          {pkg.orderItem.image && (
+            <img src={pkg.orderItem.image} alt={pkg.orderItem.title} className="w-20 h-20 rounded object-cover" />
+          )}
+          <div className="flex-1">
+            <p className="text-sm font-medium text-gray-900">{pkg.orderItem.title}</p>
+            <p className="text-xs text-gray-500">Qty: {pkg.orderItem.quantity}</p>
+            <p className="text-xs text-blue-600 font-mono">Order #{pkg.orderItem.orderId.slice(0, 8)}</p>
+            {pkg.trackingNumber && (
+              <p className="text-xs text-gray-600 font-mono mt-1">Tracking: {pkg.trackingNumber}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Status */}
+      <div className="mb-4">
+        <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+          ⏳ Waiting for Photos
+        </span>
+      </div>
+
+      {/* Photo Upload Section */}
+      <div className="space-y-4">
+        {/* File Upload */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            📁 Upload Photos from Computer (Max 3 photos, 10MB each)
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              disabled={photoUrls.length >= 3 || uploadingFile}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            {uploadingFile && (
+              <div className="flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700 mr-2"></div>
+                Uploading...
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            ✨ Click "Choose File" to select photos from your computer
+          </p>
+        </div>
+
+        {/* Photo Preview */}
+        {photoUrls.length > 0 && (
+          <div className="grid grid-cols-3 gap-3">
+            {photoUrls.map((url, index) => (
+              <div key={index} className="relative group">
+                <img
+                  src={url}
+                  alt={`Photo ${index + 1}`}
+                  className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder.png';
+                  }}
+                />
+                <button
+                  onClick={() => handleRemovePhoto(index)}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ×
+                </button>
+                <p className="text-xs text-gray-600 mt-1 text-center">Photo {index + 1}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <button
+            onClick={handleSavePhotos}
+            disabled={uploading || photoUrls.length === 0}
+            className="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {uploading ? 'Uploading...' : '✓ Upload Photos & Notify User'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Admin Messages Section Component
+function AdminMessagesSection({
+  messages,
+  selectedUser,
+  setSelectedUser,
+  onRefresh
+}: {
+  messages: any[],
+  selectedUser: string | null,
+  setSelectedUser: (id: string | null) => void,
+  onRefresh: (userId?: string) => void
+}) {
+  const [newMessage, setNewMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Fetch list of users with messages
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch('/api/admin/users', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.users);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  // Auto-refresh messages for selected user
+  useEffect(() => {
+    if (!selectedUser) return;
+
+    const interval = setInterval(() => {
+      onRefresh(selectedUser);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [selectedUser, onRefresh]);
+
+  // Mark user messages as read when viewing conversation
+  useEffect(() => {
+    const markMessagesAsRead = async () => {
+      if (!selectedUser || messages.length === 0) return;
+
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const unreadUserMessages = messages.filter(
+        m => m.userId === selectedUser && m.senderType === 'user' && !m.read
+      );
+
+      if (unreadUserMessages.length === 0) return;
+
+      try {
+        for (const msg of unreadUserMessages) {
+          await fetch('/api/messages', {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ messageId: msg.id })
+          });
+        }
+        // Refresh after marking as read
+        setTimeout(() => onRefresh(selectedUser), 500);
+      } catch (error) {
+        console.error('Error marking messages as read:', error);
+      }
+    };
+
+    // Mark messages as read after a short delay
+    const timer = setTimeout(() => markMessagesAsRead(), 1000);
+    return () => clearTimeout(timer);
+  }, [selectedUser, messages]);
+
+  // Send message
+  const handleSend = async () => {
+    if (!newMessage.trim() || !selectedUser) return;
+
+    setSending(true);
+    const token = localStorage.getItem('auth_token');
+
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: selectedUser,
+          message: newMessage
+        })
+      });
+
+      if (response.ok) {
+        setNewMessage('');
+        onRefresh(selectedUser);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Handle Enter key to send
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  // Get unread count for a user
+  const getUnreadCount = (userId: string) => {
+    return messages.filter(m => m.userId === userId && m.senderType === 'user' && !m.read).length;
+  };
+
+  return (
+    <div className="grid grid-cols-3 gap-6 h-[calc(100vh-250px)]">
+      {/* Users List */}
+      <div className="col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+        <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-4 flex items-center gap-2">
+          <MessageCircle className="w-5 h-5" />
+          <h3 className="font-semibold">Users</h3>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {users.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-gray-500 text-sm">No users yet</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {users.map((user) => {
+                const unreadCount = getUnreadCount(user.id);
+                return (
+                  <button
+                    key={user.id}
+                    onClick={() => {
+                      setSelectedUser(user.id);
+                      onRefresh(user.id);
+                    }}
+                    className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
+                      selectedUser === user.id ? 'bg-purple-50 border-l-4 border-purple-600' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {user.name || user.email}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                      </div>
+                      {unreadCount > 0 && (
+                        <span className="ml-2 flex-shrink-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Chat Area */}
+      <div className="col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+        {!selectedUser ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">Select a user to view messages</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Chat Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold">
+                  {users.find(u => u.id === selectedUser)?.name ||
+                   users.find(u => u.id === selectedUser)?.email ||
+                   'User'}
+                </h3>
+                <p className="text-xs text-purple-100">
+                  {users.find(u => u.id === selectedUser)?.email}
+                </p>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              {messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-400 text-sm">No messages yet</p>
+                </div>
+              ) : (
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.senderType === 'admin' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[70%] rounded-2xl px-4 py-3 ${
+                        msg.senderType === 'admin'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-white text-gray-900 border border-gray-200'
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                      <p className={`text-xs mt-1 ${
+                        msg.senderType === 'admin' ? 'text-purple-100' : 'text-gray-500'
+                      }`}>
+                        {new Date(msg.createdAt).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="p-4 bg-white border-t border-gray-200">
+              <div className="flex gap-2">
+                <textarea
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type your message... (Press Enter to send)"
+                  disabled={sending}
+                  rows={2}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={sending || !newMessage.trim()}
+                  className="px-6 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {sending ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      Send
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Refund Amount Modal */}
+      {showRefundModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '40px',
+            borderRadius: '16px',
+            maxWidth: '500px',
+            width: '90%'
+          }}>
+            <h2 style={{ marginBottom: '20px', fontSize: '24px' }}>Enter Refund Amount</h2>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px' }}>Amount (¥):</label>
+              <input
+                type="number"
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '2px solid #ccc',
+                  borderRadius: '8px',
+                  fontSize: '16px'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  setShowRefundModal(false);
+                  setRefundAmount("");
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#gray',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={async () => {
+                  if (!refundAmount || parseFloat(refundAmount) <= 0) {
+                    alert('Please enter a valid amount');
+                    return;
+                  }
+
+                  try {
+                    const token = localStorage.getItem('auth_token');
+                    const response = await fetch(`/api/admin/packages/${selectedCancelPackage.id}/update-cancel-purchase`, {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        status: 'approved',
+                        refundAmount: parseFloat(refundAmount)
+                      })
+                    });
+
+                    if (response.ok) {
+                      alert(`✅ Refund completed! ¥${refundAmount} credited to customer.`);
+                      setShowRefundModal(false);
+                      setRefundAmount("");
+                      fetchCancelPurchaseRequests();
+                    } else {
+                      const data = await response.json();
+                      alert(`Error: ${data.error}`);
+                    }
+                  } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to process refund');
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#16a34a',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                Confirm Refund
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

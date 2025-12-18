@@ -1,0 +1,463 @@
+[
+  {
+    "id": "user1",
+    "email": "demo@japex.test",
+    "balance": 809686,
+    "transactions": [
+      {
+        "date": "2025-08-13T23:57:47.518Z",
+        "type": "purchase",
+        "amount": -5113,
+        "cart": [
+          {
+            "id": "one-city:10001164",
+            "title": "サンダル メンズ おしゃれ サンダル メンズ レザー 2way サンダル メンズ 大きい 滑り止め メンズサンダル 本革 メンズ スリッパ メンズ靴 夏 レザーサンダル 大人 紳士靴 アウトドア スポーツ サンダル",
+            "price": 4113,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/one-city/cabinet/114/glaxy2463855_1.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "type": "top-up",
+        "amount": 1000,
+        "date": "2025-08-14T00:01:47.481Z"
+      },
+      {
+        "date": "2025-08-14T00:04:04.929Z",
+        "type": "purchase",
+        "amount": -2265,
+        "cart": [
+          {
+            "id": "vis-a-vis:10088092",
+            "title": "Amazfit GTR 4 保護 フィルム OverLay Secret for アマズフィット スマートウォッチ GTR4 液晶保護 プライバシーフィルター 覗き見防止",
+            "price": 1265,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/vis-a-vis/cabinet/image99/4525443584406_1.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T00:08:32.666Z",
+        "type": "purchase",
+        "amount": -4190,
+        "cart": [
+          {
+            "id": "plusmart:10177398",
+            "title": "メール便送料無料 ムーミン 腕時計 カジュアルウォッチ4 MOC004-2 PI リトルミイ かわいい キュート ギフト プレゼント 1年保証",
+            "price": 3190,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/plusmart/cabinet/zakka09/4582680127445a.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T00:13:57.684Z",
+        "type": "purchase",
+        "amount": -5950,
+        "cart": [
+          {
+            "id": "plywoodzakka:10046016",
+            "title": "湿気取り ニオイ取り 靴用 玄関 下駄箱 湿気対策 日本製 珪藻土ソイル ドライングサックforスポーツ soil DRYING SACK for sports 2個セット 乾燥剤 脱臭剤 吸湿剤 靴 シューズ◇靴の臭い けいそうど 炭 強力脱臭 スニーカー",
+            "price": 4950,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/plywoodzakka/cabinet/502/05445046.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T00:18:45.593Z",
+        "type": "purchase",
+        "amount": -1880,
+        "cart": [
+          {
+            "id": "shop-stl-333:10000053",
+            "title": "五芒星 ペンタグラム ステンレス ペンダント ネックレス 円 シルバーカラー 送料無料",
+            "price": 880,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/shop-stl-333/cabinet/ke2196-6m.jpg?_ex=600x600",
+            "quantity": 1,
+            "itemUrl": "/product/shop-stl-333:10000053"
+          }
+        ]
+      },
+      {
+        "type": "top-up",
+        "amount": 100000,
+        "date": "2025-08-14T00:32:58.401Z"
+      },
+      {
+        "date": "2025-08-14T00:33:04.306Z",
+        "type": "purchase",
+        "amount": -21680,
+        "cart": [
+          {
+            "id": "uemuramegane:10005915",
+            "title": "オークリー OAKLEY 眼鏡 ノールズ OX8144-0457 57mm ポリッシュブラックフェード Knolls",
+            "price": 20680,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/uemuramegane/cabinet/ox8144-04-bn-1.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T00:37:01.374Z",
+        "type": "purchase",
+        "amount": -3529,
+        "cart": [
+          {
+            "id": "uminokaze:10124990",
+            "title": "MMSH ベビーカー スマホホルダー ベビーカー 携帯ホルダー 自転車 スマホホルダー 取り付け簡単",
+            "price": 2529,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/uminokaze/cabinet/11166344/18917660_0.jpg?_ex=600x600",
+            "quantity": 1,
+            "itemUrl": "/product/uminokaze:10124990"
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T00:39:25.949Z",
+        "type": "purchase",
+        "amount": -2978,
+        "cart": [
+          {
+            "id": "yui-shop5981:10031538",
+            "title": "カチューシャ ワイド 幅広 レディース ヘアアクセサリー ヘッドアクセサリー 髪飾り 刺繍 レース ナチュラル ガーリー お花 フラワー スパンコール",
+            "price": 1978,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/yui-shop5981/cabinet/10827350/jkmig613-ha1421_932.jpg?_ex=600x600",
+            "quantity": 1,
+            "itemUrl": "/product/yui-shop5981:10031538"
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T00:44:33.706Z",
+        "type": "purchase",
+        "amount": -12054,
+        "cart": [
+          {
+            "id": "saibashop01:10129366",
+            "title": "1600円OFFクーポン 厚底スニーカー レディース インヒールスニーカー スリッポン 黒 白 サイドゴム 4cmUP 身長効果 美脚 滑りにくい 軽量 通気 シークレットシューズ カジュアル 大きいサイズ 歩きやすい 履きやすい スニーカー 疲れない RaogtCYU",
+            "price": 11054,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/saibashop01/cabinet/lk9/jq4/14gthc_00.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T00:49:36.201Z",
+        "type": "purchase",
+        "amount": -3680,
+        "cart": [
+          {
+            "id": "yume-marche:10001042",
+            "title": "イヤリング 欧米風 INS ファッション新モデル バタフライボウイヤリング ニッチで高級感 18K チタンスチール 揺れる 大ぶり 痛くない 落ちにくい 滑り止め シルバー 金属アレルギー対応 レディース ン ピアレス",
+            "price": 2680,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/yume-marche/cabinet/a5/a824-21.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T00:57:49.848Z",
+        "type": "purchase",
+        "amount": -1880,
+        "cart": [
+          {
+            "id": "shop-stl-333:10000053",
+            "title": "五芒星 ペンタグラム ステンレス ペンダント ネックレス 円 シルバーカラー 送料無料",
+            "price": 880,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/shop-stl-333/cabinet/ke2196-6m.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T00:57:57.893Z",
+        "type": "purchase",
+        "amount": -1880,
+        "cart": [
+          {
+            "id": "shop-stl-333:10000053",
+            "title": "五芒星 ペンタグラム ステンレス ペンダント ネックレス 円 シルバーカラー 送料無料",
+            "price": 880,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/shop-stl-333/cabinet/ke2196-6m.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T00:59:46.564Z",
+        "type": "purchase",
+        "amount": -1880,
+        "cart": [
+          {
+            "id": "shop-stl-333:10000053",
+            "title": "五芒星 ペンタグラム ステンレス ペンダント ネックレス 円 シルバーカラー 送料無料",
+            "price": 880,
+            "quantity": 1,
+            "itemUrl": "",
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/shop-stl-333/cabinet/ke2196-6m.jpg?_ex=600x600"
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T02:39:03.548Z",
+        "type": "purchase",
+        "amount": -4310,
+        "cart": [
+          {
+            "id": "locostore:10006518",
+            "title": "厚底 サンダル レディース 靴 ブーツ グラディエーター サマーサンダル プラットフォーム 太めヒール オープントゥサンダル アンクルサンダル Tストラップ",
+            "price": 3310,
+            "quantity": 1,
+            "itemUrl": "",
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/locostore/cabinet/12336030/12349554/sf-0904-1rx131_36.jpg?_ex=600x600"
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T02:43:19.473Z",
+        "type": "purchase",
+        "amount": -24320,
+        "cart": [
+          {
+            "id": "stone-akane:10027222",
+            "title": "【最大60%オフ 最終値下げ】 【送料無料】 ロイヤルブルームーンストーン スリランカ産 SV925 シルバー製 天然石 パワーストーン チャーム ペンダント ネックレス トップ アクセサリーパーツ",
+            "price": 23320,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/stone-akane/cabinet/2403/kb-tp-slv-16-1.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T02:45:17.216Z",
+        "type": "purchase",
+        "amount": -18050,
+        "cart": [
+          {
+            "id": "taikonaut:10003121",
+            "title": "20mm メタル時計バンド ステンレススチール オイスター ブレスレット Vクラスプ for セイコー 1965 メカニカルダイバーズ 現代デザイン 63MAS SBDC101, SBDC103, SBDC105, SBDC107他",
+            "price": 17050,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/taikonaut/cabinet/metal_04/imgrc0108577025.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T02:46:50.793Z",
+        "type": "purchase",
+        "amount": -1968,
+        "cart": [
+          {
+            "id": "vis-a-vis:10032895",
+            "title": "CASIO G-SHOCK MTG-B1000 シリーズ 保護 フィルム OverLay 9H Brilliant for カシオ Gショック MTGB10009H 高硬度で透明感が美しい高光沢タイプ ミヤビックス",
+            "price": 968,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/vis-a-vis/cabinet/image73/4525443358748_1.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T02:48:46.459Z",
+        "type": "purchase",
+        "amount": -2000,
+        "cart": [
+          {
+            "id": "worldcraft:10001039",
+            "title": "BABY IN CAR　ステッカー（シール）【ソフトボール・バッターバージョン】〜赤ちゃんが乗っています〜・カー用品・かわいいあかちゃんグッズ・セーフティードライブ・パパママ・打者",
+            "price": 1000,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/worldcraft/cabinet/babyincar/babyincar_kyugi/hb0sof2-2.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "type": "top-up",
+        "amount": 1000000,
+        "date": "2025-08-14T02:53:09.642Z"
+      },
+      {
+        "date": "2025-08-14T02:53:16.035Z",
+        "type": "purchase",
+        "amount": -5600,
+        "cart": [
+          {
+            "id": "vectorpremium:18356716",
+            "title": "【中古】メルモ MELMO ソックスブーツ ショートブーツ アーモンドトゥ チャンキーヒール スエード 切替 L 黒 ブラック /BB ■OF レディース 【ベクトル 古着】 250225",
+            "price": 4600,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/vectorpremium/cabinet/17020241217/170-402412160752_1.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T03:04:48.950Z",
+        "type": "purchase",
+        "amount": -3750,
+        "cart": [
+          {
+            "id": "stylife:15209096",
+            "title": "Casselini Casselini(キャセリーニ)フラワーリング キャセリーニ アクセサリー・腕時計 リング・指輪 ゴールド シルバー",
+            "price": 2750,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/stylife/cabinet/item/861/pv9861-02_1.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T03:08:49.989Z",
+        "type": "purchase",
+        "amount": -10800,
+        "cart": [
+          {
+            "id": "ssk-1:18855657",
+            "title": "CrazyAngel 6面ダブル 喜平 チェーン ブレスレット 金属アレルギー対応 ステンレス316L 20cm CA-982 | ブレスレット 関連単語 ジュエルボックス メンズ レディース ペア ゴム 銅 ゴールド シルバー 男性 女性 ボックス ジュエリーアクセサリー 革 パーツ",
+            "price": 9800,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/ssk-1/cabinet/asve-old/031/4560337900320-500.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T03:16:39.015Z",
+        "type": "purchase",
+        "amount": -6556,
+        "cart": [
+          {
+            "id": "taico:10029519",
+            "title": "スカーフ おしゃれ 可愛い 綺麗 ファッション 秋冬 学生 暖かい 誕生日 プレゼント ギフト 2024年 ショール ウール 女性 男性 レッド キャメル ベージュ",
+            "price": 5556,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/taico/cabinet/11793408/tb3185564_4.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T03:21:28.027Z",
+        "type": "purchase",
+        "amount": -13100,
+        "cart": [
+          {
+            "id": "stylife:14944907",
+            "title": "MK MICHEL KLEIN homme スムースレザープレーントゥーシューズ ミッシェルクランオム シューズ・靴 その他のシューズ・靴 ブラック ベージュ【送料無料】",
+            "price": 12100,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/stylife/cabinet/item/266/nr9266-01_1.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T03:26:19.787Z",
+        "type": "purchase",
+        "amount": -4130,
+        "cart": [
+          {
+            "id": "soerutistore:10010186",
+            "title": "ヘッドドレス フラワー ウェディング小物 ヘアアクセサリー 前撮り 結婚式 二次会 披露宴 花嫁 ブライダル ウエディング パーティー 小枝 髪飾り ビジュー 花",
+            "price": 3130,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/soerutistore/cabinet/a00039/km1261.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T03:34:28.342Z",
+        "type": "purchase",
+        "amount": -13100,
+        "cart": [
+          {
+            "id": "alize-bijoux:10012798",
+            "title": "K23 ロイヤルゴールドプレーティング ダイヤモンド フェザー シルバーネックレス(チェーン付) Royal Stag ZEST メンズ ネックレス 23金 シルバー925 羽根 メンズネックレス 男性用ネックレス ブランド プレゼント 人気 彼氏 おしゃれ",
+            "price": 12100,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/alize-bijoux/cabinet/kuraall/top-9/ctm-sn26-011_0.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T03:36:41.635Z",
+        "type": "purchase",
+        "amount": -15740,
+        "cart": [
+          {
+            "id": "ssk-1:20345259",
+            "title": "シモン 安全靴 8911ホワイト 24.5cm 1129240 靴 シューズ 靴下 ソックス | 黒 白 グレー ベージュ ネイビー ブラウン カーキ マルチカラー くるぶし丈 ミドル丈 ハイソックス 五本指 裏起毛 表パイル 綿素材 ポリエステル混 合成皮革 スウェード 通気設計 軽量構造",
+            "price": 14740,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/ssk-1/cabinet/ab-all/119/2010403.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T03:48:12.440Z",
+        "type": "purchase",
+        "amount": -26300,
+        "cart": [
+          {
+            "id": "tasche-jack:10002894",
+            "title": "【当店オリジナルエコバッグプレゼント中！】【NATURALBAG】 ナチュラルバッグ NBトートバッグ ボストンバッグ 3630 レディース 女性 大人 上品 日本製 軽量 超軽量 牛革 高級 通勤 おしゃれ 人気 母の日 バッグ 鞄",
+            "price": 25300,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/tasche-jack/cabinet/naturalbag/3630-1.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T04:10:37.826Z",
+        "type": "purchase",
+        "amount": -64700,
+        "cart": [
+          {
+            "id": "plejour:11322861",
+            "title": "ネックレス メンズ 彫り 洋彫り 洋唐草 おしゃれ 誕生石 6月 ロイヤルブルームーンストーン ペンダント 10金 男性 メンズネックレス 父の日 2024",
+            "price": 63700,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/plejour/cabinet/pendant28/mh-0404-6-yg-kago01.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-14T06:56:26.058Z",
+        "type": "purchase",
+        "amount": -6232,
+        "cart": [
+          {
+            "id": "rcmdse:16205314",
+            "title": "京都モリタ屋 国産黒毛和牛モモ味噌漬け 食品 ギフト プレゼント 贈答 熨斗 のし 贈り物 記念日 お祝い 冠婚葬祭 内祝 御祝 無地 出産内祝 結婚内祝 御見舞 快気祝 御仏前 志 お供(代引不可)【送料無料】",
+            "price": 5232,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/rcmdse/cabinet/4o02/4o-5840054.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-17T01:53:21.137Z",
+        "type": "purchase",
+        "amount": -15899,
+        "cart": [
+          {
+            "id": "shoesnuts:10028123",
+            "title": "ナイキ ガンマ フォース NIKE W GAMMA FORCE セイル/ライトピンク/ホワイト DX9176-111",
+            "price": 14899,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/shoesnuts/cabinet/nike202407/dx9176-111m01.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "date": "2025-08-17T02:19:26.449Z",
+        "type": "purchase",
+        "amount": -5800,
+        "cart": [
+          {
+            "id": "ragtag:16830517",
+            "title": "CARVEN カルヴェンドレスシューズ/ローファー レディース【中古】【古着】",
+            "price": 4800,
+            "image": "https://thumbnail.image.rakuten.co.jp/@0_mall/ragtag/cabinet/item/21309/2130924l0000/2130924l0015_1.jpg?_ex=600x600",
+            "quantity": 1
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,324 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String
+  name       String?
+  secondName String?  // ← ДОБАВЛЕНО ПОЛЕ
+  balance    Int      @default(0)
+  isAdmin    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  transactions         Transaction[]
+  orders               Order[]
+  packages             Package[]
+  notifications        Notification[]
+  messages             Message[]
+  addresses            Address[]
+  compensationRequests CompensationRequest[]
+  favourites           Favourite[]
+  damagedItemRequests  DamagedItemRequest[]
+
+  @@map("users")
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Int
+  type        String
+  status      String
+  description String?
+  sessionId   String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model Order {
+  id                        String   @id @default(cuid())
+  orderNumber               Int?     @unique  // Удобный номер заказа (генерируется вручную)
+  userId                    String
+  addressId                 String?  // Адрес доставки для этого заказа
+  total                     Int
+  status                    String   @default("pending")
+  confirmed                 Boolean  @default(false)  // Подтвержден ли заказ админом
+  isReplacement             Boolean  @default(false)  // Заказ на замену поврежденного товара (не попадает в warehouse)
+  shippingCountry           String?  // Страна доставки клиента
+  preferredShippingCarrier  String?  // Предпочтительная служба доставки (ems/fedex)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address     Address?   @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  items       OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                    String   @id @default(cuid())
+  orderId               String
+  itemCode              String
+  title                 String
+  price                 Int
+  quantity              Int
+  image                 String?
+  marketplace           String?
+  itemUrl               String?
+  options               String?  // JSON string for variant options
+  domesticShippingCost  Int      @default(0)  // Стоимость доставки товара до склада (вводит админ)
+  sharedDomesticShippingGroup String?  // Группа товаров с общей оплатой domestic shipping (если разделили автоконсолидированные)
+  createdAt             DateTime @default(now())
+
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  package     Package?
+
+  @@map("order_items")
+}
+
+model Package {
+  id                    String   @id @default(cuid())
+  userId                String
+  orderItemId           String   @unique
+  trackingNumber        String?
+  weight                Float?   // в килограммах
+  status                String   @default("pending_shipping")  // pending_shipping, ready, shipped, delivered
+  shippingCost          Int      @default(0)
+  domesticShippingCost  Int      @default(0)  // Стоимость доставки товара до склада (копируется из OrderItem)
+  domesticShippingPaid  Boolean  @default(false)  // Оплачена ли доставка до склада
+  sharedDomesticShippingGroup String?  // Группа товаров с общей оплатой domestic shipping (если разделили автоконсолидированные)
+  notes                 String?
+
+  // Настройки доставки от пользователя
+  shippingMethod        String?  @default("ems")  // ems, dhl, fedex и т.д.
+  shippingAddressId     String?  // ID адреса доставки
+  consolidation         Boolean  @default(false)  // Консолидация с другими посылками
+  consolidateWith       String?  // ID посылок для консолидации (JSON array)
+  futureConsolidatedId  String?  // ID будущего консолидированного пакета (генерируется при запросе)
+  consolidated          Boolean  @default(false)  // Консолидация завершена админом
+  consolidatedInto      String?  // ID пакета, в который был объединен этот пакет
+  autoConsolidated      Boolean  @default(false)  // Автоматически консолидирован при создании (одинаковые товары с разными вариантами)
+  originalOrderItemIds  String?  // JSON array ID оригинальных OrderItems (для autoConsolidated packages)
+  photoService          Boolean  @default(false)  // Фото товара изнутри (500 иен)
+  photoServicePaid      Boolean  @default(false)  // Оплачено ли фото
+  photoServiceStatus    String?  @default("pending") // pending, uploaded, completed
+  photos                String?  // JSON array of photo URLs (max 3)
+  packagePhoto          String?  // Фото посылки снаружи (добавлено админом)
+  reinforcement         Boolean  @default(false)  // Укрепление посылки (1000 иен)
+  reinforcementPaid     Boolean  @default(false)  // Оплачено ли укрепление
+  reinforcementStatus   String?  @default("pending") // pending, completed
+  cancelReturn          Boolean  @default(false)  // Отмена отправки и возврат
+  cancelPurchase        Boolean  @default(false)  // Отмена покупки товара (только Yahoo/Rakuten)
+  cancelPurchaseStatus  String?  @default("pending")  // pending, awaiting_payment, paid, approved, rejected
+  cancelPurchasePaid    Boolean  @default(false)  // Оплачено ли (900 иен)
+  disposalRequested     Boolean  @default(false)  // Запрошена ли утилизация
+  disposalCost          Int?     // Стоимость утилизации
+  disposalDeclineReason String?  // Причина отклонения disposal
+  disposed              Boolean  @default(false)  // Утилизирован ли товар
+  shippingRequested     Boolean  @default(false)  // Запрошена ли отправка
+  shippingRequestedAt   DateTime?  // Когда запрошена отправка
+  invoice               String?  // Путь к файлу инвойса (загружается админом)
+  additionalInsurance   Int      @default(0)  // Дополнительная страховка в иенах (50¥ = +20,000¥ покрытия, макс 2,000,000¥)
+  additionalInsurancePaid Boolean @default(false)  // Оплачена ли дополнительная страховка
+
+  // Дополнительные расходы на доставку (если админ обнаружил что нужно доплатить)
+  additionalShippingCost Int      @default(0)  // Дополнительная стоимость доставки в иенах
+  additionalShippingReason String?  // Причина дополнительной оплаты
+  additionalShippingPaid Boolean  @default(false)  // Оплачена ли дополнительная стоимость
+
+  // FedEx опции для США (автоматический расчет)
+  fedexOptions          String?  // JSON array доступных вариантов FedEx (Priority, Economy, etc.)
+  selectedFedexService  String?  // Выбранный клиентом сервис (serviceType, например "INTERNATIONAL_PRIORITY")
+
+  // Система хранения
+  storageDaysUsed       Int      @default(0)  // DEPRECATED - оставлено для совместимости
+  storageFeesPaid       Boolean  @default(false)  // DEPRECATED - оставлено для совместимости
+  storageFeesAmount     Int      @default(0)  // Общая сумма оплаченная за хранение
+  lastStorageFeeCheck   DateTime @default(now())  // Последняя проверка для подсчета дней (используется cron)
+  lastStoragePayment    DateTime?  // Дата последней оплаты хранения (null = еще не платил)
+
+  arrivedAt             DateTime @default(now())
+  shippedAt             DateTime?
+  deliveredAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItem             OrderItem             @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  shippingAddress       Address?              @relation(fields: [shippingAddressId], references: [id], onDelete: SetNull)
+  compensationRequests  CompensationRequest[]
+  damagedItemRequests   DamagedItemRequest[]
+
+  @@map("packages")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // package_ready, package_shipped, etc
+  title       String
+  message     String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  userId      String   // ID пользователя (кому/от кого сообщение)
+  senderType  String   // "admin" или "user"
+  message     String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Address {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String   // Receiver name
+  address      String
+  apartment    String?
+  city         String
+  state        String
+  postalCode   String
+  country      String
+  phoneNumber  String?
+  isCommercial Boolean  @default(false)  // Is this a business/commercial address (affects FedEx residential surcharge)
+
+  // USA Tax fields
+  ssnNumber   String?  // SSN (Social Security Number) для физических лиц
+  taxIdType   String?  // ABN, CR, EIN, GST, IN, RFC, VAT
+  taxIdNumber String?  // Номер Tax ID
+  companyName String?  // Название компании (обязательно если выбран Tax ID)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packages    Package[]
+  orders      Order[]
+
+  @@map("addresses")
+}
+
+model TranslationCache {
+  id           String   @id @default(cuid())
+  sourceText   String
+  sourceLang   String
+  targetLang   String
+  translation  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([sourceText, sourceLang, targetLang])
+  @@index([sourceText, sourceLang, targetLang])
+  @@map("translation_cache")
+}
+
+model CompensationRequest {
+  id                  String   @id @default(cuid())
+  userId              String
+  packageId           String
+  selectedPackageIds  String?  // JSON array of selected package IDs (for consolidated packages)
+  compensationType    String?  @default("replace") // replace (always replace for now)
+  description         String
+  files               String   // JSON array of file paths (photos/videos of damage)
+  damageCertificate   String?  // Path to official damage certificate (REQUIRED for EMS, not needed for FedEx)
+  status              String   @default("Pending") // Pending, Approved, Rejected, Processing
+  adminNotes          String?
+  approvedForRefund   Boolean  @default(false) // Admin must approve before customer can request refund
+  refundMethod        String?  // balance, stripe, paypal
+  refundProcessed     Boolean  @default(false)
+  refundEmail         String?  // Email for Stripe/PayPal refund
+  refundCardLast4     String?  // Last 4 digits of card for verification
+  bankAccountName     String?  // Full name for bank transfer
+  bankAccountAddress  String?  // Address for bank transfer
+  bankAccountNumber   String?  // Account number
+  bankRoutingNumber   String?  // Routing number
+  bankName            String?  // Bank name
+  swiftCode           String?  // SWIFT/BIC code
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package     Package  @relation(fields: [packageId], references: [id])
+
+  @@map("compensation_requests")
+}
+
+model Favourite {
+  id         String   @id @default(cuid())
+  userId     String
+  itemCode   String
+  itemName   String
+  itemPrice  Int
+  itemUrl    String?
+  imageUrl   String?
+  source     String   @default("rakuten") // rakuten or yahoo
+  addedAt    DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemCode])
+  @@index([userId])
+  @@map("favourites")
+}
+
+model DamagedItemRequest {
+  id                String   @id @default(cuid())
+  userId            String
+  packageId         String
+  description       String   // Description of the damage
+  photos            String   // JSON array of photo URLs showing damage
+  status            String   @default("pending") // pending, approved, rejected
+  adminNotes        String?
+  refundRequested   Boolean  @default(false) // Has user requested refund
+  refundMethod      String?  // balance, stripe, paypal
+  refundEmail       String?  // Email for Stripe/PayPal refund
+  refundCardLast4   String?  // Last 4 digits of card for verification
+  refundProcessed   Boolean  @default(false) // Has refund been processed
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package     Package  @relation(fields: [packageId], references: [id])
+
+  @@map("damaged_item_requests")
+}
+
+model VariantCache {
+  id              String   @id @default(cuid())
+  url             String   @unique // Product URL
+  variants        String   // JSON array of variants
+  groups          String   // JSON array of variant groups
+  colorSizeMapping String? // JSON object for color-size mapping
+  postageFlag     Int?     // Free shipping flag
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime // Expiration timestamp (15 minutes from creation)
+
+  @@index([expiresAt])
+  @@map("variant_cache")
+}
