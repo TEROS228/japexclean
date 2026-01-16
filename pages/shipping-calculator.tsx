@@ -90,22 +90,47 @@ export default function ShippingCalculatorPage() {
                 <Package size={18} className="text-blue-700" />
                 Japan Post EMS Zones
               </h4>
-              <div className="space-y-3 text-sm ml-6">
+              <div className="space-y-4 text-sm ml-6">
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-1">Zone 1</h5>
-                  <p className="text-gray-600">China, South Korea, Taiwan</p>
+                  <h5 className="font-semibold text-gray-900 mb-1.5">First Zone (Zone 1)</h5>
+                  <p className="text-gray-600 leading-relaxed">
+                    <span className="font-medium">East Asia:</span> China, South Korea
+                  </p>
                 </div>
+
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-1">Zone 2</h5>
-                  <p className="text-gray-600">Asia (excluding Zone 1) - Hong Kong, Macau, Singapore, Thailand, Philippines, Vietnam, Malaysia, India, etc.</p>
+                  <h5 className="font-semibold text-gray-900 mb-1.5">Second Zone (Zone 2)</h5>
+                  <p className="text-gray-600 leading-relaxed">
+                    <span className="font-medium">Southeast Asia:</span> Singapore, Thailand, Malaysia, Philippines, Vietnam, Indonesia
+                  </p>
                 </div>
+
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-1">Zone 3</h5>
-                  <p className="text-gray-600">Oceania, Canada, Mexico, Middle East, Europe - Australia, New Zealand, Canada, Mexico, UK, Germany, France, Italy, Spain, etc.</p>
+                  <h5 className="font-semibold text-gray-900 mb-1.5">Third Zone (Zone 3)</h5>
+                  <div className="text-gray-600 leading-relaxed space-y-1">
+                    <p><span className="font-medium">Oceania & North America:</span> Australia, New Zealand, Canada</p>
+                    <p><span className="font-medium">Western & Northern Europe:</span> United Kingdom, Germany, France, Austria, Ireland, Spain, Portugal, Italy, Norway, Sweden, Finland</p>
+                    <p><span className="font-medium">Eastern & Central Europe:</span> Poland, Czech Republic, Hungary, Slovakia, Lithuania, Latvia, Estonia, Romania, Bulgaria, Croatia, Greece</p>
+                    <p><span className="font-medium">Middle East:</span> Turkey</p>
+                  </div>
                 </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <h5 className="font-semibold text-amber-900 mb-1.5 flex items-center gap-1">
+                    <AlertCircle size={16} className="text-amber-600" />
+                    Zone 4 - SUSPENDED
+                  </h5>
+                  <p className="text-amber-800 text-xs">
+                    United States (USA, Guam) - EMS shipping currently suspended
+                  </p>
+                </div>
+
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-1">Zone 5</h5>
-                  <p className="text-gray-600">Central/South America (excluding Mexico), Africa - Brazil, Argentina, South Africa, etc.</p>
+                  <h5 className="font-semibold text-gray-900 mb-1.5">Fifth Zone (Zone 5)</h5>
+                  <div className="text-gray-600 leading-relaxed space-y-1">
+                    <p><span className="font-medium">Africa:</span> South Africa</p>
+                    <p><span className="font-medium">South America:</span> Argentina, Brazil, Peru, Chile</p>
+                  </div>
                 </div>
               </div>
             </div>

@@ -14,6 +14,7 @@ interface CurrencyContextType {
   setCurrency: (currency: Currency) => void;
   exchangeRates: ExchangeRates;
   convertPrice: (priceInJPY: number) => number;
+  convertToJPY: (priceInCurrentCurrency: number) => number;
   formatPrice: (priceInJPY: number) => string;
   getCurrencySymbol: () => string;
   isLoaded: boolean;
@@ -120,6 +121,17 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     return priceInJPY * rate;
   };
 
+  const convertToJPY = (priceInCurrentCurrency: number): number => {
+    const rate = exchangeRates[currency];
+
+    // Проверяем что цена и курс валидны
+    if (!priceInCurrentCurrency || isNaN(priceInCurrentCurrency)) return 0;
+    if (!rate || isNaN(rate)) return priceInCurrentCurrency; // Возвращаем исходную цену если курс невалиден
+
+    // Конвертируем обратно в JPY
+    return Math.round(priceInCurrentCurrency / rate);
+  };
+
   const getCurrencySymbol = (): string => {
     const symbols: { [key in Currency]: string } = {
       JPY: '¥', USD: '$', EUR: '€', GBP: '£',
@@ -162,6 +174,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         setCurrency,
         exchangeRates,
         convertPrice,
+        convertToJPY,
         formatPrice,
         getCurrencySymbol,
         isLoaded

@@ -4,15 +4,17 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { loadStripe } from '@stripe/stripe-js';
 import { useRouter } from 'next/router';
-import { getCompatibleAuthToken, isAuthenticated } from '@/lib/auth';
+import { getCompatibleAuthToken } from '@/lib/auth';
 import LoginModal from "@/components/LoginModal";
 import SignUpModal from "@/components/SignUpModal";
 import { useCurrency } from "@/context/CurrencyContext";
+import useUserContext from "@/context/UserContext";
 
 export default function CartPage() {
   const { cart, removeFromCart, clearCart, increaseQuantity, decreaseQuantity } = useCart();
   const router = useRouter();
   const { formatPrice } = useCurrency();
+  const { user } = useUserContext();
 
   const [mounted, setMounted] = useState(false);
   const [currencyKey, setCurrencyKey] = useState(0);
@@ -37,10 +39,13 @@ export default function CartPage() {
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [packages, setPackages] = useState<any[]>([]);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [selectedCoupon, setSelectedCoupon] = useState<any | null>(null);
+  const [showCouponSelector, setShowCouponSelector] = useState(false);
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  // Service fee: ¥1000 за каждый уникальный товар
+  // Service fee: ¥800 за каждый уникальный товар
   // Уникальность определяется по rakutenId или базовому названию товара
   const getProductIdentifier = (item: any) => {
     // Используем rakutenId если есть, иначе базовое название
@@ -51,9 +56,11 @@ export default function CartPage() {
   };
 
   const uniqueProducts = new Set(cart.map(item => getProductIdentifier(item))).size;
-  const serviceFee = uniqueProducts * 1000;
+  const serviceFee = uniqueProducts * 800;
 
-  const grandTotal = total + serviceFee;
+  // Применяем скидку купона
+  const couponDiscount = selectedCoupon ? selectedCoupon.discountAmount : 0;
+  const grandTotal = Math.max(0, total + serviceFee - couponDiscount);
 
   // Broadcast обновления между вкладками
   const broadcastUpdate = (type: string) => {
@@ -107,17 +114,7 @@ export default function CartPage() {
         const data = await response.json();
         if (data.addresses && data.addresses.length > 0) {
           setAddresses(data.addresses);
-          setSelectedAddressId(data.addresses[0].id);
-          setShippingCountry(data.addresses[0].country);
-
-          // Автоматически определяем предпочтительную службу доставки
-          const country = data.addresses[0].country.toLowerCase();
-          const emsRestricted = ['united states', 'usa', 'us', 'iceland', 'serbia', 'moldova', 'georgia'];
-          if (emsRestricted.some(c => country.includes(c))) {
-            setPreferredShippingCarrier('fedex');
-          } else {
-            setPreferredShippingCarrier('ems');
-          }
+          // Don't auto-select - require user to explicitly choose an address
         }
       }
     } catch (error) {
@@ -145,6 +142,31 @@ export default function CartPage() {
     }
   };
 
+  // Загрузка доступных купонов
+  const fetchCoupons = async () => {
+    const token = getCompatibleAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch('/api/user/coupons', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Фильтруем только активные неистекшие купоны
+        const activeCoupons = (data.coupons || []).filter((c: any) =>
+          c.status === 'active' && new Date(c.expiresAt) > new Date()
+        );
+        setCoupons(activeCoupons);
+      }
+    } catch (error) {
+      console.error('Failed to fetch coupons:', error);
+    }
+  };
+
   // Проверяем заблокирован ли адрес (есть ли активный shipping request на этот адрес)
   const isAddressLocked = (addressId: string) => {
     return packages.some(pkg =>
@@ -158,7 +180,7 @@ export default function CartPage() {
   // Hide header when any modal is open
   useEffect(() => {
     const header = document.querySelector('header');
-    if ((showTopUpModal || showOrderSuccess || showAddressModal) && header) {
+    if ((showTopUpModal || showOrderSuccess || showAddressModal || showCouponSelector) && header) {
       header.style.display = 'none';
     } else if (header) {
       header.style.display = '';
@@ -169,20 +191,21 @@ export default function CartPage() {
         header.style.display = '';
       }
     };
-  }, [showTopUpModal, showOrderSuccess, showAddressModal]);
+  }, [showTopUpModal, showOrderSuccess, showAddressModal, showCouponSelector]);
 
   useEffect(() => {
     setMounted(true);
 
     // Проверяем аутентификацию
-    if (!isAuthenticated()) {
+    if (!user) {
       return;
     }
 
-    // Загружаем баланс, адреса доставки и посылки при монтировании
+    // Загружаем баланс, адреса доставки, посылки и купоны при монтировании
     fetchServerBalance();
     fetchAddresses();
     fetchPackages();
+    fetchCoupons();
 
     // Listen for currency changes
     const handleCurrencyChange = (e: any) => {
@@ -204,7 +227,7 @@ export default function CartPage() {
     return () => {
       window.removeEventListener('balanceUpdated', handleBalanceUpdate);
     };
-  }, []);
+  }, [user]);
 
   // Отдельный эффект для обработки успешного пополнения
   useEffect(() => {
@@ -243,11 +266,12 @@ export default function CartPage() {
 
   // Проверка наличия адреса
   const checkAddressBeforePayment = async () => {
-    const token = getCompatibleAuthToken();
-    if (!token) {
+    if (!user) {
       alert("Please log in first");
       return false;
     }
+
+    const token = getCompatibleAuthToken();
 
     try {
       const response = await fetch('/api/user/addresses', {
@@ -276,9 +300,19 @@ export default function CartPage() {
 
   // Оплата с баланса
   const handlePayWithBalance = async () => {
-    const token = getCompatibleAuthToken();
-    if (!token) {
+    if (!user) {
       alert("Please log in first");
+      return;
+    }
+
+    const token = getCompatibleAuthToken();
+
+    console.log('[CART] Payment attempt - selectedAddressId:', selectedAddressId);
+    console.log('[CART] Payment attempt - addresses:', addresses);
+
+    // Проверяем что выбран адрес доставки
+    if (!selectedAddressId) {
+      alert("Please select a delivery address from the list below");
       return;
     }
 
@@ -291,24 +325,7 @@ export default function CartPage() {
     }
 
     try {
-      // Получаем страну доставки из адреса
-      let shippingCountry = '';
-      try {
-        const addressResponse = await fetch('/api/user/addresses', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (addressResponse.ok) {
-          const addressData = await addressResponse.json();
-          if (addressData.addresses && addressData.addresses.length > 0) {
-            shippingCountry = addressData.addresses[0].country;
-          }
-        }
-      } catch (e) {
-        console.error('Error fetching addresses:', e);
-      }
+      // shippingCountry уже установлен при выборе адреса в state
 
       // Списание через защищенный API
       const paymentResponse = await fetch('/api/balance/update', {
@@ -342,7 +359,8 @@ export default function CartPage() {
           total: grandTotal,
           shippingCountry: shippingCountry || 'Unknown',
           preferredShippingCarrier: preferredShippingCarrier,
-          addressId: selectedAddressId
+          addressId: selectedAddressId,
+          couponCode: selectedCoupon?.code || null
         }),
       });
 
@@ -362,6 +380,9 @@ export default function CartPage() {
       broadcastUpdate('admin-data');
 
       clearCart();
+      setSelectedCoupon(null); // Очищаем выбранный купон
+      setShowCouponSelector(false);
+      fetchCoupons(); // Перезагружаем купоны для обновления статуса
       setShowOrderSuccess(true);
 
     } catch (err: any) {
@@ -372,11 +393,12 @@ export default function CartPage() {
 
   // Top Up через Stripe
   const handleTopUp = async () => {
-    const token = getCompatibleAuthToken();
-    if (!token) {
+    if (!user) {
       alert("Please log in first");
       return;
     }
+
+    const token = getCompatibleAuthToken();
 
     if (selectedAmount < 100) return alert("Minimum top up is ¥100");
 
@@ -392,6 +414,7 @@ export default function CartPage() {
           },
           body: JSON.stringify({
             amount: selectedAmount,
+            userEmail: user.email,
             successUrl: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancelUrl: `${window.location.origin}/cart`
           }),
@@ -431,7 +454,7 @@ export default function CartPage() {
 
   if (!mounted) return null;
 
-  if (!isAuthenticated()) {
+  if (!user) {
     return (
       <>
         <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-green-50/30 flex items-center justify-center p-6">
@@ -759,6 +782,60 @@ export default function CartPage() {
                   <span>Service Fee</span>
                   <span className="font-semibold text-gray-900">{formatPrice(serviceFee)}</span>
                 </div>
+
+                {/* Coupon Section */}
+                {mounted && coupons.length > 0 && (
+                  <div className="border-t border-dashed border-gray-200 pt-3">
+                    {!selectedCoupon ? (
+                      <button
+                        onClick={() => setShowCouponSelector(true)}
+                        className="w-full flex items-center justify-between text-left p-3 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 rounded-lg transition-all hover:scale-102 active:scale-98"
+                      >
+                        <div className="flex items-center gap-2">
+                          <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                          </svg>
+                          <span className="text-sm font-semibold text-purple-600">
+                            Apply Coupon ({coupons.length} available)
+                          </span>
+                        </div>
+                        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <div className="flex items-start justify-between p-3 bg-green-50 border-2 border-green-200 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span className="text-xs font-semibold text-green-700">COUPON APPLIED</span>
+                          </div>
+                          <p className="text-sm font-mono font-bold text-gray-900">{selectedCoupon.code}</p>
+                          <p className="text-xs text-green-600 mt-1">-{formatPrice(selectedCoupon.discountAmount)}</p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedCoupon(null)}
+                          className="text-gray-400 hover:text-red-600 transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Discount line if coupon applied */}
+                {selectedCoupon && (
+                  <div className="flex justify-between text-green-600 text-sm sm:text-base font-semibold">
+                    <span>Coupon Discount</span>
+                    <span>-{formatPrice(couponDiscount)}</span>
+                  </div>
+                )}
+
                 <div className="border-t-2 border-gray-100 pt-2 sm:pt-3 flex justify-between items-center">
                   <span className="font-bold text-base sm:text-lg text-gray-900">Total</span>
                   <span className="font-bold text-xl sm:text-2xl text-green-600">{formatPrice(grandTotal)}</span>
@@ -963,11 +1040,11 @@ export default function CartPage() {
               <button
                 onClick={handlePayWithBalance}
                 className={`group w-full relative px-6 py-4 font-semibold rounded-xl transition-all duration-300 overflow-hidden ${
-                  cart.length === 0 || serverBalance < grandTotal || !shippingPolicyAccepted || !preferredShippingCarrier
+                  cart.length === 0 || serverBalance < grandTotal || !shippingPolicyAccepted || !preferredShippingCarrier || !selectedAddressId
                     ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                     : "bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
                 }`}
-                disabled={cart.length === 0 || serverBalance < grandTotal || !shippingPolicyAccepted || !preferredShippingCarrier}
+                disabled={cart.length === 0 || serverBalance < grandTotal || !shippingPolicyAccepted || !preferredShippingCarrier || !selectedAddressId}
               >
                 {cart.length === 0 || serverBalance >= grandTotal ? (
                   <>
@@ -976,7 +1053,7 @@ export default function CartPage() {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      {serverBalance < grandTotal ? "Not enough balance" : "Pay with Balance"}
+                      {!selectedAddressId ? "Select delivery address" : serverBalance < grandTotal ? "Not enough balance" : "Pay with Balance"}
                     </span>
                   </>
                 ) : (
@@ -1245,6 +1322,81 @@ export default function CartPage() {
                 className="w-full py-3.5 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Coupon Selector Modal */}
+      {showCouponSelector && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl transform transition-all animate-scaleIn max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Select Coupon</h2>
+              <p className="text-gray-600">Choose a discount coupon or skip to continue without one</p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              {coupons.map((coupon) => (
+                <button
+                  key={coupon.id}
+                  onClick={() => {
+                    setSelectedCoupon(coupon);
+                    setShowCouponSelector(false);
+                  }}
+                  className="w-full text-left p-4 sm:p-5 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 hover:border-purple-400 hover:from-purple-100 hover:to-pink-100 rounded-xl transition-all transform hover:scale-102 active:scale-98"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        <span className="text-xs sm:text-sm font-semibold text-purple-700 uppercase">Coupon Code</span>
+                      </div>
+                      <p className="text-sm sm:text-base font-mono font-bold text-gray-900 mb-2">{coupon.code}</p>
+                      {coupon.description && (
+                        <p className="text-xs sm:text-sm text-gray-600 mb-2">{coupon.description}</p>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        Expires: {new Date(coupon.expiresAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="ml-4 text-right">
+                      <div className="inline-flex flex-col items-end bg-purple-100 rounded-lg px-3 py-2">
+                        <span className="text-xs text-purple-600 font-semibold">DISCOUNT</span>
+                        <span className="text-xl sm:text-2xl font-bold text-purple-600">
+                          {formatPrice(coupon.discountAmount)}
+                        </span>
+                        <span className="text-xs text-purple-600 font-semibold">OFF</span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  setSelectedCoupon(null);
+                  setShowCouponSelector(false);
+                }}
+                className="flex-1 py-3.5 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+              >
+                Skip / No Coupon
+              </button>
+              <button
+                onClick={() => setShowCouponSelector(false)}
+                className="flex-1 py-3.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+              >
+                Close
               </button>
             </div>
           </div>

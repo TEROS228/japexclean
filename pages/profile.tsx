@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useReducer } from "react";
 import { useRouter } from "next/router";
-import { isAuthenticated, getUserData } from "@/lib/auth";
-import { Package, CreditCard, Truck, MapPin, ShoppingBag, MessageCircle, HelpCircle, AlertCircle, Heart } from "lucide-react";
+import useUserContext from "@/context/UserContext";
+import { Package, CreditCard, Truck, MapPin, ShoppingBag, MessageCircle, HelpCircle, AlertCircle, Heart, Tag } from "lucide-react";
 import Head from "next/head";
 import OrderProgressBar from "@/components/OrderProgressBar";
 import JapanPostTracker from "@/components/JapanPostTracker";
@@ -12,7 +12,7 @@ import { useFavourites } from "@/context/FavouritesContext";
 import StorageTimer from "@/components/StorageTimer";
 import { useStorage } from "@/hooks/useStorage";
 
-type TabType = "orders" | "transactions" | "packages" | "addresses" | "messages" | "disputes" | "favourites";
+type TabType = "orders" | "transactions" | "packages" | "addresses" | "messages" | "disputes" | "favourites" | "coupons";
 
 function BalanceDisplay({ balance }: { balance: number }) {
   const { formatPrice, currency } = useCurrency();
@@ -22,8 +22,8 @@ function BalanceDisplay({ balance }: { balance: number }) {
 export default function ProfilePage() {
   const router = useRouter();
   const { currency } = useCurrency();
+  const { user } = useUserContext();
   const [activeTab, setActiveTab] = useState<TabType>("orders");
-  const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -63,12 +63,10 @@ export default function ProfilePage() {
     // Даём время на hydration Context'ов (особенно CurrencyContext)
     setTimeout(() => setHydrated(true), 0);
 
-    if (!isAuthenticated()) {
+    if (!user) {
       router.push("/");
       return;
     }
-    const userData = getUserData();
-    setUser(userData);
 
     // Initial fetch
     fetchUnreadCount();
@@ -76,7 +74,7 @@ export default function ProfilePage() {
     // Проверяем URL параметр tab
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab && ['orders', 'transactions', 'packages', 'addresses'].includes(tab)) {
+    if (tab && ['orders', 'transactions', 'packages', 'addresses', 'coupons', 'favourites', 'disputes', 'messages'].includes(tab)) {
       setActiveTab(tab as TabType);
     }
 
@@ -88,7 +86,7 @@ export default function ProfilePage() {
       // Очищаем параметр из URL
       router.replace('/profile', undefined, { shallow: true });
     }
-  }, [router]);
+  }, [router, user]);
 
   // Handle ESC key to close photo modal
   useEffect(() => {
@@ -115,6 +113,7 @@ export default function ProfilePage() {
     { id: "transactions" as TabType, label: "Transactions", icon: CreditCard },
     { id: "packages" as TabType, label: "Packages", icon: Truck },
     { id: "favourites" as TabType, label: "Favourites", icon: Heart },
+    { id: "coupons" as TabType, label: "Coupons", icon: Tag },
     { id: "addresses" as TabType, label: "Address", icon: MapPin },
     { id: "disputes" as TabType, label: "Disputes", icon: AlertCircle },
     { id: "messages" as TabType, label: "Help", icon: HelpCircle },
@@ -201,6 +200,9 @@ export default function ProfilePage() {
                 </div>
                 <div style={{ display: activeTab === "favourites" ? "block" : "none" }} className="animate-fadeIn">
                   <FavouritesSection key={`favourites-${currencyKey}`} />
+                </div>
+                <div style={{ display: activeTab === "coupons" ? "block" : "none" }} className="animate-fadeIn">
+                  <CouponsSection key={`coupons-${currencyKey}`} />
                 </div>
                 <div style={{ display: activeTab === "addresses" ? "block" : "none" }} className="animate-fadeIn">
                   <AddressesSection key="addresses" />
@@ -763,6 +765,7 @@ function TransactionsSection() {
 
 function PackagesSection({ setSelectedPhoto }: any) {
   const { formatPrice, currency } = useCurrency();
+  const { user } = useUserContext();
   console.log('🎨 [PackagesSection] Rendering with currency:', currency);
 
   const [packages, setPackages] = useState<any[]>([]);
@@ -965,11 +968,10 @@ function PackagesSection({ setSelectedPhoto }: any) {
   const handleConfirmAdditionalPayment = async () => {
     if (!selectedAdditionalPackage) return;
 
-    const userData = getUserData();
-    if (!userData) return;
+    if (!user) return;
 
     // Check if user has enough balance
-    const userBalance = userData.balance || 0;
+    const userBalance = user.balance || 0;
     if (userBalance < selectedAdditionalPackage.additionalShippingCost) {
       alert(`Insufficient balance. You need ¥${selectedAdditionalPackage.additionalShippingCost.toLocaleString()} but have ¥${userBalance.toLocaleString()}`);
       return;
@@ -2175,38 +2177,17 @@ function PackagesSection({ setSelectedPhoto }: any) {
               // Устанавливаем timestamp ДО запроса
               lastUpdateTimeRef.current = Date.now();
 
-              const token = localStorage.getItem('auth_token');
-              const response = await fetch(`/api/user/packages/${selectedPackage.id}/request-shipping`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                }
-              });
+              // ПРИНУДИТЕЛЬНО перезагружаем ВСЕ данные с сервера
+              await fetchPackages();
 
-              if (response.ok) {
-                const result = await response.json();
+              // Отправляем событие обновления для принудительного ререндера
+              window.dispatchEvent(new CustomEvent('packagesUpdated'));
+              window.dispatchEvent(new CustomEvent('dataUpdated'));
 
-                // ПРИНУДИТЕЛЬНО перезагружаем ВСЕ данные с сервера
-                await fetchPackages();
-
-                // Отправляем событие обновления для принудительного ререндера
-                window.dispatchEvent(new CustomEvent('packagesUpdated'));
-                window.dispatchEvent(new CustomEvent('dataUpdated'));
-
-                // НЕ закрываем модалку здесь - дадим анимации завершиться
-                // setShowShippingModal(false);
-                // setSelectedPackage(null);
-
-                // Уведомляем другие вкладки (в том числе админку)
-                broadcastUpdate('packages');
-              } else {
-                const error = await response.json();
-                alert('Error: ' + error.error);
-              }
+              // Уведомляем другие вкладки (в том числе админку)
+              broadcastUpdate('packages');
             } catch (error) {
-              console.error('Error requesting shipping:', error);
-              alert('Failed to request shipping');
+              console.error('Error refreshing data:', error);
             }
           }}
         />
@@ -7567,6 +7548,153 @@ function CompensationModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Coupons Section Component
+function CouponsSection() {
+  const { formatPrice, currency } = useCurrency();
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
+
+  // Force re-render when currency changes
+  useEffect(() => {
+    forceUpdate();
+  }, [currency]);
+
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        console.log('[Coupons] Token exists:', !!token);
+        if (!token) {
+          console.log('[Coupons] No token found');
+          setLoading(false);
+          return;
+        }
+
+        console.log('[Coupons] Fetching from /api/user/coupons...');
+        const response = await fetch('/api/user/coupons', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        console.log('[Coupons] Response status:', response.status);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[Coupons] Data received:', data);
+          console.log('[Coupons] Number of coupons:', data.coupons?.length || 0);
+          setCoupons(data.coupons || []);
+        } else {
+          const errorData = await response.json();
+          console.error('[Coupons] Error response:', errorData);
+        }
+      } catch (error) {
+        console.error('[Coupons] Error fetching coupons:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCoupons();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="text-center py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+      </div>
+    );
+  }
+
+  if (coupons.length === 0) {
+    return (
+      <div>
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">My Coupons</h2>
+        <div className="text-center py-12 sm:py-16">
+          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 mb-3 sm:mb-4">
+            <svg className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          </div>
+          <p className="text-base sm:text-lg font-medium text-gray-700">No coupons available</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2">Your discount coupons will appear here</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">My Coupons</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {coupons.map((coupon: any) => (
+          <div
+            key={coupon.id}
+            className={`relative overflow-hidden rounded-xl border-2 transition-all ${
+              coupon.status === 'used' || coupon.status === 'expired' || new Date(coupon.expiresAt) < new Date()
+                ? 'border-gray-200 bg-gray-50 opacity-60'
+                : 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 hover:shadow-lg'
+            }`}
+          >
+            {/* Decorative pattern */}
+            <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
+              <svg viewBox="0 0 100 100" className="text-purple-600">
+                <circle cx="50" cy="50" r="40" fill="currentColor" />
+              </svg>
+            </div>
+
+            <div className="relative p-4">
+              {/* Coupon header */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Discount</p>
+                    <p className="text-xl font-bold text-purple-600">
+                      {formatPrice(coupon.discountAmount)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status badge */}
+                {coupon.status === 'used' ? (
+                  <span className="px-2 py-1 bg-gray-200 text-gray-600 text-xs font-medium rounded-full">Used</span>
+                ) : coupon.status === 'expired' || new Date(coupon.expiresAt) < new Date() ? (
+                  <span className="px-2 py-1 bg-red-100 text-red-600 text-xs font-medium rounded-full">Expired</span>
+                ) : (
+                  <span className="px-2 py-1 bg-green-100 text-green-600 text-xs font-medium rounded-full">Active</span>
+                )}
+              </div>
+
+              {/* Coupon code */}
+              <div className="mb-3 p-3 bg-white rounded-lg border border-dashed border-purple-300">
+                <p className="text-xs text-gray-500 mb-1">Coupon Code</p>
+                <p className="text-sm font-mono font-bold text-gray-900">{coupon.code}</p>
+              </div>
+
+              {/* Description */}
+              {coupon.description && (
+                <p className="text-xs text-gray-600 mb-3">{coupon.description}</p>
+              )}
+
+              {/* Footer */}
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span className="font-semibold text-purple-600">{formatPrice(coupon.discountAmount)} OFF</span>
+                <span>Expires: {new Date(coupon.expiresAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

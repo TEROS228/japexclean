@@ -9,9 +9,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Cache for 4 hours
   res.setHeader('Cache-Control', 'public, s-maxage=14400, stale-while-revalidate=7200');
 
-  const { genreId, page, sort } = req.query;
+  const { genreId, page, sort, minPrice, maxPrice } = req.query;
 
-  console.log("API /api/products called with", { genreId, page, sort });
+  console.log("API /api/products called with", { genreId, page, sort, minPrice, maxPrice });
 
   try {
     if (!genreId) return res.status(400).json({ error: "Missing genreId parameter" });
@@ -24,9 +24,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const sortParam = typeof sort === "string" ? sort : "";
 
-    console.log(`Fetching products for genreId ${genreIdNum}, page ${pageNum}, sort=${sortParam}`);
+    // Парсим параметры цены
+    const minPriceNum = minPrice && !isNaN(Number(minPrice)) ? Number(minPrice) : undefined;
+    const maxPriceNum = maxPrice && !isNaN(Number(maxPrice)) ? Number(maxPrice) : undefined;
 
-    const products = await getProductsByGenreId(genreIdNum, pageNum, sortParam);
+    console.log(`Fetching products for genreId ${genreIdNum}, page ${pageNum}, sort=${sortParam}, minPrice=${minPriceNum}, maxPrice=${maxPriceNum}`);
+
+    const products = await getProductsByGenreId(genreIdNum, pageNum, sortParam, minPriceNum, maxPriceNum);
 
     if (!Array.isArray(products)) {
       console.error("Error: products is not an array:", products);

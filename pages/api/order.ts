@@ -4,6 +4,7 @@ import { verifyToken } from '../../lib/jwt';
 import { sendTelegramNotification } from '../../lib/telegram';
 import { formatOrderNotification } from '../../lib/order-notification';
 import { prisma } from '../../lib/prisma';
+import { markCouponAsUsed } from '../../lib/coupons';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -21,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Invalid token' });
   }
 
-  const { cart, total, shippingCountry, preferredShippingCarrier, addressId } = req.body;
+  const { cart, total, shippingCountry, preferredShippingCarrier, addressId, couponCode } = req.body;
 
   // Проверяем что корзина не пустая
   if (!cart || cart.length === 0) {
@@ -127,6 +128,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('Telegram notification sent successfully');
     } else {
       console.warn('Telegram notification failed, but order was created');
+    }
+
+    // Помечаем купон как использованный, если он был применён
+    if (couponCode) {
+      try {
+        await markCouponAsUsed(couponCode);
+        console.log(`✅ Coupon ${couponCode} marked as used`);
+      } catch (error) {
+        console.error('Error marking coupon as used:', error);
+        // Не падаем, если не удалось пометить купон
+      }
     }
 
     res.status(200).json({

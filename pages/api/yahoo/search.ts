@@ -32,13 +32,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const pageNum = Number(page) || 1;
-    const sortParam = typeof sort === 'string' ? mapSortToYahoo(sort) : '-review';
+    // Не используем сортировку по умолчанию - дадим Yahoo API вернуть по релевантности
+    const sortParam = typeof sort === 'string' ? mapSortToYahoo(sort) : undefined;
 
     // Нормализуем японский запрос
     const normalizedKeyword = normalizeJapaneseQuery(keyword);
 
     // Создаем ключ для кеша
-    const cacheKey = `${normalizedKeyword}:${pageNum}:${sortParam}`;
+    const cacheKey = `${normalizedKeyword}:${pageNum}:${sortParam || 'relevance'}`;
 
     // Проверяем кеш
     const cachedEntry = searchCache.get(cacheKey);
@@ -57,10 +58,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Конвертируем в формат Rakuten для совместимости с существующим UI
     let products = yahooProducts.map(convertYahooToRakutenFormat);
 
-    // Применяем умное ранжирование только для первой страницы
-    if (pageNum === 1) {
-      products = rankSearchResults(products, normalizedKeyword) as any;
-    }
+    // Применяем умное ранжирование для всех страниц (усиленное для Yahoo)
+    products = rankSearchResults(products, normalizedKeyword) as any;
 
     console.log(`[Yahoo Shopping API] Query: "${keyword}" -> "${normalizedKeyword}", found ${products.length} products`);
 

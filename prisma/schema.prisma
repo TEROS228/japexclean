@@ -9,15 +9,16 @@ generator client {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  password   String
-  name       String?
-  secondName String?  // ← ДОБАВЛЕНО ПОЛЕ
-  balance    Int      @default(0)
-  isAdmin    Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String   @id @default(cuid())
+  email           String   @unique
+  password        String
+  name            String?
+  secondName      String?  // ← ДОБАВЛЕНО ПОЛЕ
+  balance         Int      @default(0)
+  isAdmin         Boolean  @default(false)
+  adminPermissions String?  // JSON string with admin panel permissions
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   transactions         Transaction[]
   orders               Order[]
@@ -28,8 +29,24 @@ model User {
   compensationRequests CompensationRequest[]
   favourites           Favourite[]
   damagedItemRequests  DamagedItemRequest[]
+  coupons              Coupon[]
 
   @@map("users")
+}
+
+model Visit {
+  id            String   @id @default(cuid())
+  sessionId     String   @unique  // Уникальный ID сессии браузера
+  fingerprint   String?  // Browser fingerprint для дополнительной дедупликации
+  userAgent     String?
+  ipAddress     String?
+  referrer      String?
+  landingPage   String?
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([sessionId])
+  @@map("visits")
 }
 
 model Transaction {
@@ -53,7 +70,7 @@ model Order {
   orderNumber               Int?     @unique  // Удобный номер заказа (генерируется вручную)
   userId                    String
   addressId                 String?  // Адрес доставки для этого заказа
-  total                     Int
+  total                     Int      // Оборот/Revenue (сумма корзины при заказе)
   status                    String   @default("pending")
   confirmed                 Boolean  @default(false)  // Подтвержден ли заказ админом
   isReplacement             Boolean  @default(false)  // Заказ на замену поврежденного товара (не попадает в warehouse)
@@ -321,4 +338,24 @@ model VariantCache {
 
   @@index([expiresAt])
   @@map("variant_cache")
+}
+
+model Coupon {
+  id            String   @id @default(cuid())
+  userId        String
+  code          String   @unique  // Уникальный код купона (например: REWARD800-ABC123)
+  discountAmount Int               // Сумма скидки в иенах
+  minPurchase   Int      @default(0) // Минимальная сумма заказа для применения купона
+  description   String              // Описание купона
+  status        String   @default("active") // active, used, expired
+  usedAt        DateTime?           // Дата использования
+  expiresAt     DateTime            // Дата истечения срока действия
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([code])
+  @@map("coupons")
 }

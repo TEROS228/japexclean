@@ -3,6 +3,7 @@ import type { AppProps } from "next/app";
 import Script from "next/script";
 import "../styles/globals.css";
 
+import { SessionProvider } from "next-auth/react";
 import { CartProvider } from "@/context/CartContext";
 import { UserProvider } from "@/context/UserContext";
 import { NotificationProvider } from "@/context/NotificationContext";
@@ -34,6 +35,11 @@ function MyApp({ Component, pageProps }: AppProps) {
   // Патчим React для игнорирования NotFoundError
   React.useEffect(() => {
     console.log('[_app] Component mounted, pathname:', router.pathname);
+
+    // Track visit (analytics)
+    import('@/lib/analytics').then(({ trackVisit }) => {
+      trackVisit();
+    });
 
     // Патчим window.onerror на самом раннем этапе
     const originalWindowError = window.onerror;
@@ -73,9 +79,10 @@ function MyApp({ Component, pageProps }: AppProps) {
 
   return (
     <>
-      <ErrorBoundary>
-        <LanguageProvider>
-          <CurrencyProvider>
+      <SessionProvider session={pageProps.session}>
+        <ErrorBoundary>
+          <LanguageProvider>
+            <CurrencyProvider>
             <MarketplaceProvider>
               <CategoryProvider>
                 <NotificationProvider>
@@ -111,6 +118,7 @@ function MyApp({ Component, pageProps }: AppProps) {
           </CurrencyProvider>
         </LanguageProvider>
       </ErrorBoundary>
+    </SessionProvider>
     </>
   );
 }

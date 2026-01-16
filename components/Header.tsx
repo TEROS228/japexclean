@@ -6,13 +6,10 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ShoppingCart, User, Search } from "lucide-react";
 import { Menu, Transition } from "@headlessui/react";
-import {
-  isAuthenticated,
-  getUserData,
-  clearAuthData
-} from "@/lib/auth";
+import { clearAuthData } from "@/lib/auth";
 import { useMarketplace } from "@/context/MarketplaceContext";
 import { useCart } from "@/context/CartContext";
+import useUserContext from "@/context/UserContext";
 import { yahooCategories, YahooCategory } from "@/data/yahoo-categories";
 import SignUpModal from "./SignUpModal";
 import LoginModal from "./LoginModal";
@@ -87,41 +84,33 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
       }))
     : categories;
 
-  // Debug: логируем подкатегории
-  useEffect(() => {
-    if (marketplace === "yahoo" && displayCategories) {
-      const withSubcats = displayCategories.filter(c => c.subcategories && c.subcategories.length > 0);
-      console.log(`[Header] Yahoo categories loaded: ${displayCategories.length}, with subcategories: ${withSubcats.length}`);
-      if (withSubcats.length > 0) {
-        console.log(`[Header] First category with subcategories: ${withSubcats[0].name}, subcategories: ${withSubcats[0].subcategories?.length}`);
-      }
-    }
-  }, [marketplace, displayCategories]);
-
   const [searchTerm, setSearchTerm] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showSearchHistory, setShowSearchHistory] = useState(false);
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
 
   // Модалки
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
 
-  // Получаем данные пользователя ТОЛЬКО после mount
-  const [user, setUser] = useState<any>(null);
-  const [authenticated, setAuthenticated] = useState(false);
+  // Получаем данные пользователя из UserContext
+  const { user, logout: userLogout } = useUserContext();
 
   useEffect(() => {
     setMounted(true);
 
-    setUser(getUserData());
-    setAuthenticated(isAuthenticated());
-
-    const handleBalanceUpdate = () => {
-      setUser(getUserData());
-    };
-
-    window.addEventListener('balanceUpdated', handleBalanceUpdate);
+    // Load search history from localStorage
+    const savedHistory = localStorage.getItem('searchHistory');
+    if (savedHistory) {
+      try {
+        setSearchHistory(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error('Error loading search history:', e);
+      }
+    }
 
     // Check for category menu flag
     const checkInterval = setInterval(() => {
@@ -133,7 +122,6 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
     }, 100);
 
     return () => {
-      window.removeEventListener('balanceUpdated', handleBalanceUpdate);
       clearInterval(checkInterval);
     };
   }, []);
@@ -143,12 +131,15 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setCategoryDropdownOpen(false);
       }
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target as Node) && !searchInputRef.current?.contains(event.target as Node)) {
+        setShowSearchHistory(false);
+      }
     }
-    if (categoryDropdownOpen) {
+    if (categoryDropdownOpen || showSearchHistory) {
       document.addEventListener("mousedown", onClickOutside);
     }
     return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [categoryDropdownOpen]);
+  }, [categoryDropdownOpen, showSearchHistory]);
 
   // Сбрасываем выбранную категорию при смене маркетплейса
   useEffect(() => {
@@ -161,18 +152,41 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
     router.push(`/category/${cat.id}`);
   };
 
+  const saveToHistory = (query: string) => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return;
+
+    // Add to history, avoiding duplicates and keeping max 10 items
+    const newHistory = [
+      trimmedQuery,
+      ...searchHistory.filter(item => item !== trimmedQuery)
+    ].slice(0, 10);
+
+    setSearchHistory(newHistory);
+    localStorage.setItem('searchHistory', JSON.stringify(newHistory));
+  };
+
   const onSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
+      saveToHistory(searchTerm);
       router.push(`/search?query=${encodeURIComponent(searchTerm.trim())}`);
       setSearchTerm("");
+      setShowSearchHistory(false);
       searchInputRef.current?.blur();
     }
   };
 
-  const handleLogout = () => {
+  const handleHistoryClick = (query: string) => {
+    setSearchTerm(query);
+    setShowSearchHistory(false);
+    router.push(`/search?query=${encodeURIComponent(query)}`);
+  };
+
+  const handleLogout = async () => {
+    await userLogout(); // Используем logout из UserContext (выходит из NextAuth если нужно)
     clearAuthData();
-    window.location.href = window.location.href;
+    window.location.href = "/";
   };
 
   if (!mounted) {
@@ -313,7 +327,7 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
                 >
                   <Menu.Items className="absolute right-0 mt-2 w-44 bg-white border-2 border-gray-100 rounded-2xl shadow-2xl z-10 overflow-hidden">
                     <div className="py-1">
-                      {authenticated ? (
+                      {user ? (
                         <>
                           <Menu.Item>
                             {({ active }) => (
@@ -401,7 +415,7 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
             {/* Category selector - скрыт на мобильных, показывается в меню */}
             <div className="hidden md:block relative" ref={dropdownRef}>
               {/* Gradient border wrapper */}
-              <div className="relative p-[3px] rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-[length:200%_auto] animate-gradient shadow-md hover:shadow-lg transition-all hover:scale-105 active:scale-95">
+              <div id="categories-button" className="relative p-[3px] rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-[length:200%_auto] animate-gradient shadow-md hover:shadow-lg transition-all hover:scale-105 active:scale-95">
                 <button
                   onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
                   className="group relative overflow-hidden px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-[10px] bg-white text-sm sm:text-base font-black hover:bg-gray-50 active:bg-gray-50 transition-colors flex items-center gap-2 sm:gap-3 whitespace-nowrap w-full"
@@ -495,7 +509,7 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
             </div>
 
             {/* Search box */}
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <form
                 onSubmit={onSearchSubmit}
                 className="relative group w-full"
@@ -508,6 +522,17 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
                   style={{ height: '48px', lineHeight: '48px', paddingTop: '0', paddingBottom: '0' }}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onFocus={() => {
+                    if (searchHistory.length > 0 && !searchTerm) {
+                      setShowSearchHistory(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    // Save to history when user exits search with text
+                    if (searchTerm.trim()) {
+                      saveToHistory(searchTerm);
+                    }
+                  }}
                 />
                 <div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none">
                   <Search size={16} className="sm:w-[19px] sm:h-[19px] text-gray-400 group-focus-within:text-green-600 transition-colors" />
@@ -521,6 +546,44 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
                   <Search size={16} className="sm:hidden" />
                 </button>
               </form>
+
+              {/* Search History Dropdown */}
+              {showSearchHistory && searchHistory.length > 0 && (
+                <div
+                  ref={searchDropdownRef}
+                  className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border-2 border-gray-100 overflow-hidden z-50 animate-fadeIn"
+                >
+                  <div className="p-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-gray-700">Recent Searches</h3>
+                      <button
+                        onClick={() => {
+                          setSearchHistory([]);
+                          localStorage.removeItem('searchHistory');
+                          setShowSearchHistory(false);
+                        }}
+                        className="text-xs text-gray-500 hover:text-red-600 transition-colors"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {searchHistory.map((query, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleHistoryClick(query)}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 group"
+                      >
+                        <Search size={16} className="text-gray-400 group-hover:text-green-600 transition-colors flex-shrink-0" />
+                        <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium truncate">
+                          {query}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

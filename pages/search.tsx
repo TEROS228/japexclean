@@ -5,11 +5,178 @@ import { useMarketplace } from "@/context/MarketplaceContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import ProductLoadingOverlay from "@/components/ProductLoadingOverlay";
 
+// Компонент анимации загрузки поиска
+function SearchLoadingAnimation({ marketplace }: { marketplace: string }) {
+  const [stage, setStage] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  const stages = [
+    { icon: "🔍", text: "Connecting to Japanese marketplace...", tip: "We're searching through millions of products" },
+    { icon: "📦", text: "Scanning product databases...", tip: "Finding the best deals for you" },
+    { icon: "💎", text: "Analyzing prices and availability...", tip: "Quality products from trusted sellers" },
+    { icon: "✨", text: "Preparing your results...", tip: "Almost there! Hang tight" }
+  ];
+
+  useEffect(() => {
+    // Меняем стадию каждые 3 секунды
+    const stageInterval = setInterval(() => {
+      setStage(prev => (prev + 1) % stages.length);
+    }, 3000);
+
+    // Плавный прогресс бар
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 95) return 95; // Максимум 95% пока не загрузится
+        return prev + Math.random() * 5;
+      });
+    }, 200);
+
+    return () => {
+      clearInterval(stageInterval);
+      clearInterval(progressInterval);
+    };
+  }, []);
+
+  const currentStage = stages[stage];
+
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4">
+      {/* Главная анимация */}
+      <div className="relative mb-8">
+        {/* Внешнее кольцо */}
+        <div className="absolute inset-0 animate-spin-slow">
+          <div className="w-32 h-32 border-4 border-green-200 rounded-full border-t-green-500"></div>
+        </div>
+
+        {/* Среднее кольцо */}
+        <div className="absolute inset-2 animate-spin-reverse">
+          <div className="w-28 h-28 border-4 border-blue-200 rounded-full border-r-blue-500"></div>
+        </div>
+
+        {/* Центральный значок */}
+        <div className="relative w-32 h-32 flex items-center justify-center">
+          <div className="text-6xl animate-bounce-slow">
+            {currentStage.icon}
+          </div>
+        </div>
+
+        {/* Пульсирующие точки */}
+        <div className="absolute -top-2 -right-2">
+          <div className="w-4 h-4 bg-green-500 rounded-full animate-ping"></div>
+          <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+        </div>
+        <div className="absolute -bottom-2 -left-2">
+          <div className="w-3 h-3 bg-blue-500 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
+          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+        </div>
+      </div>
+
+      {/* Текущая стадия */}
+      <div className="text-center max-w-md mb-6">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2 animate-fadeIn">
+          {currentStage.text}
+        </h3>
+        <p className="text-sm text-gray-600 animate-fadeIn">
+          {currentStage.tip}
+        </p>
+      </div>
+
+      {/* Прогресс бар */}
+      <div className="w-full max-w-md mb-8">
+        <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 transition-all duration-300 ease-out relative"
+            style={{ width: `${progress}%` }}
+          >
+            <div className="absolute inset-0 bg-white/30 animate-shimmer"></div>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500 mt-2 text-center">
+          {Math.round(progress)}% complete
+        </p>
+      </div>
+
+      {/* Информационные карточки */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl w-full">
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 text-center border border-green-100">
+          <div className="text-3xl mb-2">🚀</div>
+          <p className="text-sm font-semibold text-gray-800">Fast Delivery</p>
+          <p className="text-xs text-gray-600">From Japan</p>
+        </div>
+        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 text-center border border-blue-100">
+          <div className="text-3xl mb-2">🛡️</div>
+          <p className="text-sm font-semibold text-gray-800">Secure Payment</p>
+          <p className="text-xs text-gray-600">100% Protected</p>
+        </div>
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 text-center border border-purple-100">
+          <div className="text-3xl mb-2">💰</div>
+          <p className="text-sm font-semibold text-gray-800">Best Prices</p>
+          <p className="text-xs text-gray-600">Direct from sellers</p>
+        </div>
+      </div>
+
+      {/* Индикаторы стадий */}
+      <div className="flex gap-2 mt-8">
+        {stages.map((_, index) => (
+          <div
+            key={index}
+            className={`h-2 rounded-full transition-all duration-500 ${
+              index === stage
+                ? 'w-8 bg-green-500'
+                : index < stage
+                ? 'w-2 bg-green-300'
+                : 'w-2 bg-gray-300'
+            }`}
+          />
+        ))}
+      </div>
+
+      <style jsx>{`
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes spin-reverse {
+          from { transform: rotate(360deg); }
+          to { transform: rotate(0deg); }
+        }
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 3s linear infinite;
+        }
+        .animate-spin-reverse {
+          animation: spin-reverse 4s linear infinite;
+        }
+        .animate-bounce-slow {
+          animation: bounce-slow 2s ease-in-out infinite;
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.5s ease-out;
+        }
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+      `}</style>
+    </div>
+  );
+}
+
 export default function SearchPage() {
   const router = useRouter();
   const { query } = router.query;
   const { marketplace } = useMarketplace();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, currency, getCurrencySymbol, convertToJPY, convertPrice } = useCurrency();
 
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
@@ -19,6 +186,16 @@ export default function SearchPage() {
   const [loadedPages, setLoadedPages] = useState<{ [key: number]: any[] }>({});
   const [maxPageLoaded, setMaxPageLoaded] = useState(1);
   const [navigatingToProduct, setNavigatingToProduct] = useState(false);
+
+  // Фильтры по цене
+  const [minPrice, setMinPrice] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("");
+  const [appliedMinPrice, setAppliedMinPrice] = useState<string>("");
+  const [appliedMaxPrice, setAppliedMaxPrice] = useState<string>("");
+
+  // Не используется (было для Yahoo фильтрации, но убрали)
+  // const [loadingMore, setLoadingMore] = useState(false);
+  // const [filteredPage, setFilteredPage] = useState(1);
 
   // Ref для отслеживания последнего выполненного запроса
   const lastSearchRef = useRef<string>("");
@@ -115,6 +292,12 @@ export default function SearchPage() {
     }
     lastSearchRef.current = searchKey;
 
+    // Сбрасываем фильтры при новом поисковом запросе
+    setMinPrice("");
+    setMaxPrice("");
+    setAppliedMinPrice("");
+    setAppliedMaxPrice("");
+
     console.log('[Search] Query received:', searchQuery);
 
     // Проверяем, является ли это URL от Rakuten
@@ -163,6 +346,29 @@ export default function SearchPage() {
     return () => window.removeEventListener('marketplaceChanged', handleMarketplaceChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
+
+  // --- Сброс фильтра при смене валюты ---
+  useEffect(() => {
+    const handleCurrencyChange = () => {
+      // Очищаем фильтры при смене валюты
+      setMinPrice("");
+      setMaxPrice("");
+      setAppliedMinPrice("");
+      setAppliedMaxPrice("");
+
+      // Перезагружаем без фильтров
+      if (query && typeof query === "string" && !isRestoring) {
+        setCurrentPage(1);
+        setLoadedPages({});
+        setMaxPageLoaded(1);
+        handleSearch(query.trim(), 1, false);
+      }
+    };
+
+    window.addEventListener('currencyChanged', handleCurrencyChange);
+    return () => window.removeEventListener('currencyChanged', handleCurrencyChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, isRestoring]);
 
   const handleProductByUrl = async (url: string) => {
     setLoading(true);
@@ -232,21 +438,51 @@ export default function SearchPage() {
     }
   };
 
-  const handleSearch = async (searchTerm: string, pageNum: number = 1) => {
-    setLoading(true);
+  const handleSearch = async (
+    searchTerm: string,
+    pageNum: number = 1,
+    isFilterLoading: boolean = false,
+    filterMin?: string,
+    filterMax?: string
+  ) => {
+    if (!isFilterLoading) {
+      setLoading(true);
+    }
     setError("");
 
     // Сбрасываем при новом поиске
-    if (pageNum === 1) {
+    if (pageNum === 1 && !isFilterLoading) {
       setCurrentPage(1);
       setLoadedPages({});
       setMaxPageLoaded(1);
+      if (!filterMin && !filterMax) {
+        // Сбрасываем фильтры только если не передали новые
+        setMinPrice("");
+        setMaxPrice("");
+      }
     }
 
     try {
-      const endpoint = marketplace === "yahoo"
-        ? `/api/yahoo/search?keyword=${encodeURIComponent(searchTerm)}&page=${pageNum}`
-        : `/api/search?query=${encodeURIComponent(searchTerm)}&page=${pageNum}`;
+      let endpoint = "";
+
+      if (marketplace === "yahoo") {
+        endpoint = `/api/yahoo/search?keyword=${encodeURIComponent(searchTerm)}&page=${pageNum}`;
+      } else {
+        // Базовый endpoint для Rakuten
+        endpoint = `/api/search?query=${encodeURIComponent(searchTerm)}&page=${pageNum}`;
+
+        // Используем переданные фильтры или текущие appliedMinPrice/appliedMaxPrice
+        const minToUse = filterMin !== undefined ? filterMin : appliedMinPrice;
+        const maxToUse = filterMax !== undefined ? filterMax : appliedMaxPrice;
+
+        // Добавляем фильтры по цене через API (НОВАЯ СИСТЕМА)
+        if (minToUse) {
+          endpoint += `&minPrice=${encodeURIComponent(minToUse)}`;
+        }
+        if (maxToUse) {
+          endpoint += `&maxPrice=${encodeURIComponent(maxToUse)}`;
+        }
+      }
 
       const res = await fetch(endpoint);
 
@@ -264,7 +500,9 @@ export default function SearchPage() {
       console.error("Search error:", err);
       setError(err.message || "Failed to search products");
     } finally {
-      setLoading(false);
+      if (!isFilterLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -280,6 +518,141 @@ export default function SearchPage() {
 
     await handleSearch(query.trim(), pageNum);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // ===== ФИЛЬТРАЦИЯ (только Rakuten) =====
+
+  // Получение всех загруженных товаров
+  const getAllLoadedProducts = () => {
+    const allProducts: any[] = [];
+    for (let i = 1; i <= maxPageLoaded; i++) {
+      if (loadedPages[i]) {
+        allProducts.push(...loadedPages[i]);
+      }
+    }
+    return allProducts;
+  };
+
+  // Получение отфильтрованных товаров (только для отображения статистики)
+  const getFilteredProducts = () => {
+    return getAllLoadedProducts();
+  };
+
+  // Получение товаров для текущей страницы
+  const getCurrentPageProducts = () => {
+    return loadedPages[currentPage] || [];
+  };
+
+  // Форматирование числа с пробелами (10000 -> 10 000)
+  const formatNumberWithSpaces = (value: string): string => {
+    // Убираем все пробелы и нечисловые символы
+    const cleanValue = value.replace(/\s/g, '').replace(/[^\d]/g, '');
+    if (!cleanValue) return '';
+
+    // Добавляем пробелы каждые 3 цифры с конца
+    return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  };
+
+  // Получение чистого числа из форматированной строки
+  const getCleanNumber = (value: string): string => {
+    return value.replace(/\s/g, '');
+  };
+
+  // Обработчик изменения минимальной цены
+  const handleMinPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatNumberWithSpaces(e.target.value);
+    setMinPrice(formatted);
+  };
+
+  // Обработчик изменения максимальной цены
+  const handleMaxPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatNumberWithSpaces(e.target.value);
+    setMaxPrice(formatted);
+  };
+
+  // Применение фильтра (только Rakuten)
+  const applyPriceFilter = async () => {
+    const minInCurrentCurrency = getCleanNumber(minPrice);
+    const maxInCurrentCurrency = getCleanNumber(maxPrice);
+
+    // Конвертируем в JPY для API
+    const minInJPY = minInCurrentCurrency ? String(convertToJPY(Number(minInCurrentCurrency))) : "";
+    const maxInJPY = maxInCurrentCurrency ? String(convertToJPY(Number(maxInCurrentCurrency))) : "";
+
+    setAppliedMinPrice(minInJPY);
+    setAppliedMaxPrice(maxInJPY);
+
+    // Rakuten: API фильтрация, перезагружаем
+    setCurrentPage(1);
+    setLoadedPages({});
+    setMaxPageLoaded(1);
+
+    if (query && typeof query === "string") {
+      await handleSearch(query.trim(), 1, false, minInJPY, maxInJPY);
+    }
+  };
+
+  // Сброс фильтра (только Rakuten)
+  const clearPriceFilter = async () => {
+    setMinPrice("");
+    setMaxPrice("");
+    setAppliedMinPrice("");
+    setAppliedMaxPrice("");
+
+    // Перезагружаем без фильтров
+    setCurrentPage(1);
+    setLoadedPages({});
+    setMaxPageLoaded(1);
+
+    if (query && typeof query === "string") {
+      await handleSearch(query.trim(), 1, false);
+    }
+  };
+
+  // Рендер пагинации
+  const renderPagination = () => {
+    // Обычная пагинация
+    const visiblePages = 6;
+    const start = Math.max(currentPage - Math.floor(visiblePages / 2), 1);
+    const end = start + visiblePages - 1;
+
+    const pages: any[] = [];
+    for (let i = start; i <= end; i++) {
+      pages.push(
+        <button
+          key={i}
+          onClick={() => fetchPage(i)}
+          disabled={loading}
+          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border-2 text-sm sm:text-base font-semibold transition-all hover:scale-110 active:scale-95 touch-manipulation disabled:opacity-50 ${
+            i === currentPage
+              ? "bg-gradient-to-br from-green-500 to-green-600 text-white border-green-500 shadow-lg"
+              : "bg-white border-gray-200 text-gray-700 hover:border-green-300 active:border-green-300"
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    return (
+      <div className="flex justify-center items-center gap-2 sm:gap-3 mt-6 sm:mt-8 flex-wrap">
+        <button
+          onClick={() => fetchPage(currentPage - 1)}
+          disabled={currentPage === 1 || loading}
+          className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border-2 border-gray-200 bg-white hover:border-green-300 active:border-green-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold text-gray-700 transition-all hover:scale-110 active:scale-95 touch-manipulation"
+        >
+          ←
+        </button>
+        {pages}
+        <button
+          onClick={() => fetchPage(currentPage + 1)}
+          disabled={loading}
+          className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border-2 border-gray-200 bg-white hover:border-green-300 active:border-green-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold text-gray-700 transition-all hover:scale-110 active:scale-95 touch-manipulation"
+        >
+          →
+        </button>
+      </div>
+    );
   };
 
   if (!query) {
@@ -315,15 +688,7 @@ export default function SearchPage() {
         </p>
 
         {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="text-center">
-              <svg className="animate-spin h-12 w-12 text-green-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <p className="text-gray-600 font-medium">Searching products...</p>
-            </div>
-          </div>
+          <SearchLoadingAnimation marketplace={marketplace} />
         ) : error ? (
           <div className="text-center py-16 bg-white rounded-3xl shadow-sm border border-gray-100">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-100 to-red-200 rounded-3xl mb-6">
@@ -353,18 +718,113 @@ export default function SearchPage() {
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-100 rounded-xl">
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-                <span className="font-semibold text-gray-900">{loadedPages[currentPage]?.length || 0}</span>
-                <span className="text-gray-600">products on page {currentPage}</span>
+            {/* Price Filter - только для Rakuten */}
+            {marketplace === "rakuten" && (
+            <div className="mb-8 bg-white rounded-2xl border-2 border-gray-100 p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="font-bold text-gray-900 text-lg">Price Filter</h3>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 flex-1">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700">From:</label>
+                    <input
+                      type="text"
+                      placeholder={`Min ${getCurrencySymbol()}`}
+                      value={minPrice}
+                      onChange={handleMinPriceChange}
+                      className="w-32 px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition-all"
+                    />
+                  </div>
+
+                  <span className="text-gray-400 font-bold">—</span>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700">To:</label>
+                    <input
+                      type="text"
+                      placeholder={`Max ${getCurrencySymbol()}`}
+                      value={maxPrice}
+                      onChange={handleMaxPriceChange}
+                      className="w-32 px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition-all"
+                    />
+                  </div>
+
+                  <button
+                    onClick={applyPriceFilter}
+                    disabled={(!minPrice && !maxPrice) || loading}
+                    className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                  >
+                    Apply Filter
+                  </button>
+
+                  {(appliedMinPrice || appliedMaxPrice) && !loading && (
+                    <button
+                      onClick={clearPriceFilter}
+                      className="px-4 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium text-sm border-2 border-red-200"
+                    >
+                      Clear Filter
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {/* Показываем активные фильтры (только Rakuten) */}
+              {(appliedMinPrice || appliedMaxPrice) && (
+                <div className="mt-4 pt-4 border-t-2 border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                      </svg>
+                      <span className="text-xs text-green-700 font-medium">
+                        Active filter: {appliedMinPrice ? formatPrice(Number(appliedMinPrice)) : `${getCurrencySymbol()}0`} - {appliedMaxPrice ? formatPrice(Number(appliedMaxPrice)) : '∞'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            )}
+
+            <div className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-100 rounded-xl mb-6 w-fit">
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              <span className="font-semibold text-gray-900">{getCurrentPageProducts().length}</span>
+              <span className="text-gray-600">products shown</span>
+              {(appliedMinPrice || appliedMaxPrice) && (
+                <span className="text-xs text-green-600 font-semibold ml-2">
+                  (filtered by price)
+                </span>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
-              {loadedPages[currentPage]?.map((product) => (
+            {(appliedMinPrice || appliedMaxPrice) && getFilteredProducts().length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-3xl shadow-sm border border-gray-100">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-200 rounded-3xl mb-6">
+                  <svg className="w-10 h-10 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <p className="text-gray-900 text-xl font-bold mb-2">No products match your price filter</p>
+                <p className="text-gray-600 mb-6">
+                  Try adjusting your price range. We have {getAllLoadedProducts().length} products loaded.
+                </p>
+                <button
+                  onClick={clearPriceFilter}
+                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all hover:scale-105 active:scale-95 shadow-lg"
+                >
+                  Clear Price Filter
+                </button>
+              </div>
+            ) : getCurrentPageProducts().length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+                {getCurrentPageProducts().map((product) => (
                 <a
                   key={product.itemCode}
                   href={product.itemUrl ? `/product/${product.itemCode}?url=${encodeURIComponent(product.itemUrl)}` : `/product/${product.itemCode}`}
@@ -394,43 +854,11 @@ export default function SearchPage() {
                   </div>
                 </a>
               ))}
-            </div>
+              </div>
+            ) : null}
 
-            {/* Пагинация */}
-            <div className="flex justify-center items-center gap-3 mt-8 flex-wrap">
-              <button
-                onClick={() => currentPage > 1 && fetchPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="w-10 h-10 rounded-xl border-2 border-gray-200 bg-white hover:border-green-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-gray-700 transition-all hover:scale-110 active:scale-95"
-              >
-                ←
-              </button>
-
-              {Array.from({ length: 6 }, (_, i) => {
-                const pageNum = Math.max(currentPage - 3, 1) + i;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => fetchPage(pageNum)}
-                    className={`w-10 h-10 rounded-xl border-2 font-semibold transition-all hover:scale-110 active:scale-95 ${
-                      pageNum === currentPage
-                        ? "bg-gradient-to-br from-green-500 to-green-600 text-white border-green-500 shadow-lg"
-                        : "border-gray-200 bg-white hover:border-green-300 text-gray-700"
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-
-              <button
-                onClick={() => fetchPage(currentPage + 1)}
-                disabled={loadedPages[currentPage]?.length === 0}
-                className="w-10 h-10 rounded-xl border-2 border-gray-200 bg-white hover:border-green-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-gray-700 transition-all hover:scale-110 active:scale-95"
-              >
-                →
-              </button>
-            </div>
+            {/* Pagination */}
+            {getCurrentPageProducts().length > 0 && renderPagination()}
           </>
         )}
       </div>

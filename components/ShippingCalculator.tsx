@@ -1,16 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { calculateEMSCost, getChargeableWeight } from '@/lib/emsRates';
 import { calculateECMSCost, getECMSChargeableWeight, ecmsDestinations, ECMSDestination } from '@/lib/ecmsRates';
+import { calculateCustomsDuty } from '@/lib/customsDuty';
 import { useCurrency } from '@/context/CurrencyContext';
 import { Package, Ruler, Weight, MapPin, Calculator, Plane, Camera, Package2, Layers, ChevronDown, Search, X } from 'lucide-react';
 
 type ShippingService = 'EMS' | 'ECMS';
 
 const emsZones = [
-  { zone: 1, name: 'Zone 1', desc: 'China, S.Korea, Taiwan' },
-  { zone: 2, name: 'Zone 2', desc: 'Hong Kong, Singapore, Thailand' },
-  { zone: 3, name: 'Zone 3', desc: 'Canada, Europe, Australia' },
-  { zone: 5, name: 'Zone 5', desc: 'S.America, Africa' },
+  { zone: 1, name: 'First Zone', desc: 'China, South Korea' },
+  { zone: 2, name: 'Second Zone', desc: 'Singapore, Thailand, Malaysia, Philippines, Vietnam, Indonesia' },
+  { zone: 3, name: 'Third Zone', desc: 'UK, Germany, France, Canada, Australia, New Zealand, Europe, Turkey' },
+  { zone: 5, name: 'Fifth Zone', desc: 'South Africa, Argentina, Brazil, Peru, Chile' },
 ] as const;
 
 // USA States list with 2-letter codes
@@ -52,59 +53,61 @@ const AUSTRALIA_STATES = [
 
 // FedEx Countries
 const FEDEX_COUNTRIES = [
+  // North America
   { code: 'US', name: 'United States' },
   { code: 'CA', name: 'Canada' },
-  { code: 'KR', name: 'South Korea' },
-  { code: 'CN', name: 'China' },
-  { code: 'PH', name: 'Philippines' },
-  { code: 'VN', name: 'Vietnam' },
-  { code: 'TH', name: 'Thailand' },
-  { code: 'MY', name: 'Malaysia' },
-  { code: 'SG', name: 'Singapore' },
-  { code: 'ID', name: 'Indonesia' },
+
+  // Oceania
   { code: 'AU', name: 'Australia' },
   { code: 'NZ', name: 'New Zealand' },
-  { code: 'IN', name: 'India' },
-  { code: 'MN', name: 'Mongolia' },
-  { code: 'KZ', name: 'Kazakhstan' },
-  { code: 'MD', name: 'Moldova' },
-  { code: 'RO', name: 'Romania' },
-  { code: 'BG', name: 'Bulgaria' },
-  { code: 'RS', name: 'Serbia' },
-  { code: 'GR', name: 'Greece' },
-  { code: 'HR', name: 'Croatia' },
-  { code: 'HU', name: 'Hungary' },
-  { code: 'CZ', name: 'Czech Republic' },
-  { code: 'SK', name: 'Slovakia' },
-  { code: 'PL', name: 'Poland' },
-  { code: 'BY', name: 'Belarus' },
-  { code: 'RU', name: 'Russia' },
-  { code: 'LT', name: 'Lithuania' },
-  { code: 'LV', name: 'Latvia' },
-  { code: 'EE', name: 'Estonia' },
-  { code: 'DE', name: 'Germany' },
-  { code: 'AT', name: 'Austria' },
-  { code: 'FR', name: 'France' },
+
+  // Western & Northern Europe
   { code: 'GB', name: 'United Kingdom' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'FR', name: 'France' },
+  { code: 'AT', name: 'Austria' },
   { code: 'IE', name: 'Ireland' },
   { code: 'ES', name: 'Spain' },
   { code: 'PT', name: 'Portugal' },
   { code: 'IT', name: 'Italy' },
-  { code: 'NL', name: 'Netherlands' },
-  { code: 'BE', name: 'Belgium' },
-  { code: 'DK', name: 'Denmark' },
-  { code: 'TR', name: 'Turkey' },
-  { code: 'GE', name: 'Georgia' },
   { code: 'NO', name: 'Norway' },
   { code: 'SE', name: 'Sweden' },
   { code: 'FI', name: 'Finland' },
   { code: 'IS', name: 'Iceland' },
-  { code: 'HK', name: 'Hong Kong' },
-  { code: 'TW', name: 'Taiwan' },
-  { code: 'AE', name: 'United Arab Emirates' },
-  { code: 'SA', name: 'Saudi Arabia' },
-  { code: 'IL', name: 'Israel' },
+
+  // Eastern & Central Europe
+  { code: 'PL', name: 'Poland' },
+  { code: 'CZ', name: 'Czech Republic' },
+  { code: 'HU', name: 'Hungary' },
+  { code: 'SK', name: 'Slovakia' },
+  { code: 'LT', name: 'Lithuania' },
+  { code: 'LV', name: 'Latvia' },
+  { code: 'EE', name: 'Estonia' },
+  { code: 'RO', name: 'Romania' },
+  { code: 'BG', name: 'Bulgaria' },
+  { code: 'RS', name: 'Serbia' },
+  { code: 'HR', name: 'Croatia' },
+  { code: 'MD', name: 'Moldova' },
+  { code: 'GR', name: 'Greece' },
+
+  // Asia
+  { code: 'SG', name: 'Singapore' },
+  { code: 'KR', name: 'South Korea' },
+  { code: 'TH', name: 'Thailand' },
+  { code: 'MY', name: 'Malaysia' },
+  { code: 'PH', name: 'Philippines' },
+  { code: 'VN', name: 'Vietnam' },
+  { code: 'ID', name: 'Indonesia' },
+  { code: 'CN', name: 'China' },
+
+  // Middle East & Caucasus
+  { code: 'TR', name: 'Turkey' },
+  { code: 'GE', name: 'Georgia' },
+
+  // Africa
   { code: 'ZA', name: 'South Africa' },
+
+  // South America
   { code: 'AR', name: 'Argentina' },
   { code: 'BR', name: 'Brazil' },
   { code: 'PE', name: 'Peru' },
@@ -119,6 +122,7 @@ export default function ShippingCalculator() {
 
   // Input states
   const [weightGrams, setWeightGrams] = useState<string>('');
+  const [itemValue, setItemValue] = useState<string>('');
   const [length, setLength] = useState<string>('');
   const [width, setWidth] = useState<string>('');
   const [height, setHeight] = useState<string>('');
@@ -131,6 +135,7 @@ export default function ShippingCalculator() {
 
   // FedEx address input states
   const [fedexWeight, setFedexWeight] = useState<string>('');
+  const [fedexItemValue, setFedexItemValue] = useState<string>('');
   const [fedexCity, setFedexCity] = useState<string>('');
   const [fedexState, setFedexState] = useState<string>('');
   const [fedexPostalCode, setFedexPostalCode] = useState<string>('');
@@ -155,6 +160,7 @@ export default function ShippingCalculator() {
   // Additional services
   const [photoService, setPhotoService] = useState(false);
   const [consolidation, setConsolidation] = useState(false);
+  const [reinforcement, setReinforcement] = useState(false);
 
   // Result states
   const [shippingCost, setShippingCost] = useState<number | null>(null);
@@ -265,8 +271,15 @@ export default function ShippingCalculator() {
       return;
     }
 
-    if (!fedexCity || !fedexState || !fedexPostalCode) {
-      alert('Please fill in all address fields');
+    if (!fedexCity || !fedexPostalCode) {
+      alert('Please fill in City and Postal Code');
+      return;
+    }
+
+    // State/Province is required only for US, CA, and AU
+    const requiresState = ['US', 'CA', 'AU'].includes(fedexCountry);
+    if (requiresState && !fedexState) {
+      alert('Please select a State/Province for this country');
       return;
     }
 
@@ -275,35 +288,43 @@ export default function ShippingCalculator() {
     setFedexOptions([]);
 
     try {
+      const requestData = {
+        weight,
+        toCountry: fedexCountry,
+        toCity: fedexCity,
+        toState: fedexState || '',
+        toPostalCode: fedexPostalCode,
+        isCommercial: fedexIsCommercial
+      };
+
+      console.log('📦 Sending FedEx request:', requestData);
+
       const response = await fetch('/api/fedex/calculate-rates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          weight,
-          toCountry: fedexCountry,
-          toCity: fedexCity,
-          toState: fedexState,
-          toPostalCode: fedexPostalCode,
-          isCommercial: fedexIsCommercial
-        })
+        body: JSON.stringify(requestData)
       });
 
       const result = await response.json();
+      console.log('📬 FedEx response:', result);
 
       if (!response.ok) {
         setFedexError(result.error || 'Failed to calculate shipping rates');
+        console.error('❌ FedEx API error:', result.error);
         return;
       }
 
-      if (result.success && result.options) {
+      if (result.success && result.options && result.options.length > 0) {
         setFedexOptions(result.options);
+        console.log('✅ Found', result.options.length, 'FedEx options');
       } else {
-        setFedexError(result.error || 'No rates available');
+        setFedexError(result.error || 'No shipping rates available for this destination');
+        console.warn('⚠️ No FedEx rates available');
       }
     } catch (error) {
-      console.error('Error fetching FedEx rates:', error);
+      console.error('❌ Error fetching FedEx rates:', error);
       setFedexError('Failed to calculate rates. Please try again.');
     } finally {
       setLoadingFedex(false);
@@ -335,6 +356,7 @@ export default function ShippingCalculator() {
               setService('EMS');
               setFedexOptions([]);
               setFedexError(null);
+              // Don't reset additional services as they apply to both
             }}
             className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${
               service === 'EMS'
@@ -351,6 +373,7 @@ export default function ShippingCalculator() {
               setShippingCost(null);
               setChargeableWeight(null);
               setVolumetricWeight(null);
+              // Don't reset additional services as they apply to both
             }}
             className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${
               service === 'ECMS'
@@ -467,6 +490,30 @@ export default function ShippingCalculator() {
         </div>
       )}
 
+      {/* Item Value - Only show for EMS */}
+      {service === 'EMS' && (
+        <div className="mb-6">
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+            </svg>
+            Item Value (¥)
+          </label>
+          <input
+            type="number"
+            step="1"
+            min="0"
+            placeholder="e.g., 5000 or 15000"
+            value={itemValue}
+            onChange={(e) => setItemValue(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Total value of items in Japanese Yen (for insurance and customs)
+          </p>
+        </div>
+      )}
+
       {/* Dimensions - Only show for EMS */}
       {service === 'EMS' && (
         <div className="mb-6">
@@ -552,6 +599,35 @@ export default function ShippingCalculator() {
             </div>
           </button>
 
+          {/* Package Reinforcement */}
+          <button
+            onClick={() => setReinforcement(!reinforcement)}
+            className={`w-full p-4 rounded-xl text-left transition-all border-2 ${
+              reinforcement
+                ? 'border-amber-500 bg-amber-50 shadow-md'
+                : 'border-gray-200 bg-white hover:border-amber-300 hover:bg-amber-50'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div className={`p-2 rounded-lg mt-0.5 ${
+                reinforcement ? 'bg-amber-100' : 'bg-gray-100'
+              }`}>
+                <svg className={`w-[18px] h-[18px] ${reinforcement ? 'text-amber-600' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-gray-900">Package Reinforcement</span>
+                  <span className="text-sm font-bold text-gray-900">¥1,000</span>
+                </div>
+                <p className="text-xs text-gray-600">
+                  Reinforced corners and bubble wrap for fragile items
+                </p>
+              </div>
+            </div>
+          </button>
+
           {/* Consolidation */}
           <button
             onClick={() => setConsolidation(!consolidation)}
@@ -623,6 +699,28 @@ export default function ShippingCalculator() {
             />
             <p className="text-xs text-gray-500 mt-1">
               Enter weight in kilograms (e.g., 2.5 kg)
+            </p>
+          </div>
+
+          {/* Item Value */}
+          <div className="mb-6">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
+              Item Value (¥)
+            </label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              placeholder="e.g., 5000 or 15000"
+              value={fedexItemValue}
+              onChange={(e) => setFedexItemValue(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Total value of items in Japanese Yen (for insurance and customs)
             </p>
           </div>
 
@@ -750,7 +848,9 @@ export default function ShippingCalculator() {
 
               {/* State */}
               <div className="relative" ref={stateDropdownRef}>
-                <label className="text-xs text-gray-600 mb-1 block">State/Province</label>
+                <label className="text-xs text-gray-600 mb-1 block">
+                  State/Province {!['US', 'CA', 'AU'].includes(fedexCountry) && <span className="text-gray-400">(Optional)</span>}
+                </label>
                 {fedexCountry === 'US' ? (
                   <>
                     <button
@@ -896,6 +996,107 @@ export default function ShippingCalculator() {
             </div>
           </div>
 
+          {/* Additional Services */}
+          <div className="mb-6">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+              <Layers size={16} />
+              Additional Services (Optional)
+            </label>
+            <div className="space-y-3">
+              {/* Photo Service */}
+              <button
+                onClick={() => setPhotoService(!photoService)}
+                className={`w-full p-4 rounded-xl text-left transition-all border-2 ${
+                  photoService
+                    ? 'border-purple-500 bg-purple-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg mt-0.5 ${
+                    photoService ? 'bg-purple-100' : 'bg-gray-100'
+                  }`}>
+                    <Camera size={18} className={photoService ? 'text-purple-600' : 'text-gray-600'} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-gray-900">Photo Service</span>
+                      <span className="text-sm font-bold text-gray-900">¥500</span>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      Receive up to 3 photos of your items before shipping for quality inspection
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Package Reinforcement */}
+              <button
+                onClick={() => setReinforcement(!reinforcement)}
+                className={`w-full p-4 rounded-xl text-left transition-all border-2 ${
+                  reinforcement
+                    ? 'border-amber-500 bg-amber-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:border-amber-300 hover:bg-amber-50'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg mt-0.5 ${
+                    reinforcement ? 'bg-amber-100' : 'bg-gray-100'
+                  }`}>
+                    <svg className={`w-[18px] h-[18px] ${reinforcement ? 'text-amber-600' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-gray-900">Package Reinforcement</span>
+                      <span className="text-sm font-bold text-gray-900">¥1,000</span>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      Reinforced corners and bubble wrap for fragile items
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Consolidation */}
+              <button
+                onClick={() => setConsolidation(!consolidation)}
+                className={`w-full p-4 rounded-xl text-left transition-all border-2 ${
+                  consolidation
+                    ? 'border-green-500 bg-green-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg mt-0.5 ${
+                    consolidation ? 'bg-green-100' : 'bg-gray-100'
+                  }`}>
+                    <Package2 size={18} className={consolidation ? 'text-green-600' : 'text-gray-600'} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-gray-900">Package Consolidation</span>
+                      <span className="text-sm font-bold text-green-600">Free</span>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      Combine multiple packages into one to save on shipping costs
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className="flex items-start gap-2 text-xs text-green-700 mt-3 bg-green-50 p-3 rounded-lg">
+              <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <p>
+                These services are applied after your items arrive at our warehouse in Japan. The calculator shows estimated costs for planning purposes.
+              </p>
+            </div>
+          </div>
+
           {/* Calculate Button */}
           <div className="mb-6">
             <button
@@ -931,28 +1132,104 @@ export default function ShippingCalculator() {
               </div>
 
               <div className="space-y-3">
-                {fedexOptions.map((option: any, idx: number) => (
-                  <div key={idx} className="bg-white border-2 border-green-200 rounded-xl p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="font-bold text-gray-900">{option.serviceName}</p>
-                        {option.deliveryDays && (
-                          <p className="text-xs text-gray-600 mt-1">
-                            Estimated delivery: {option.deliveryDays} business days
-                          </p>
-                        )}
+                {fedexOptions.map((option: any, idx: number) => {
+                  // Calculate customs duty if item value is provided
+                  const customsDuty = fedexItemValue && parseFloat(fedexItemValue) > 0
+                    ? calculateCustomsDuty(fedexCountry, parseFloat(fedexItemValue))
+                    : null;
+
+                  return (
+                    <div key={idx} className="bg-white border-2 border-green-200 rounded-xl p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-bold text-gray-900">{option.serviceName}</p>
+                          {option.deliveryDays && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              Estimated delivery: {option.deliveryDays} business days
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-600 mb-1">Shipping Cost</p>
+                          <p className="text-2xl font-bold text-green-600">{formatPrice(option.rateJPY)}</p>
+
+                          {/* Additional Services & Grand Total */}
+                          {(fedexItemValue && parseFloat(fedexItemValue) > 0 && customsDuty) || photoService || reinforcement ? (
+                            <div className="mt-3 pt-3 border-t border-purple-200 space-y-2">
+                              {/* Additional Services */}
+                              {(photoService || reinforcement) && (
+                                <div className="text-xs space-y-1 mb-2">
+                                  {photoService && (
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-gray-600 flex items-center gap-1">
+                                        <Camera size={12} className="text-purple-600" />
+                                        Photo Service:
+                                      </span>
+                                      <span className="font-medium text-gray-700">{formatPrice(500)}</span>
+                                    </div>
+                                  )}
+                                  {reinforcement && (
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-gray-600 flex items-center gap-1">
+                                        <svg className="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        Reinforcement:
+                                      </span>
+                                      <span className="font-medium text-gray-700">{formatPrice(1000)}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Customs Duty Breakdown */}
+                              {fedexItemValue && parseFloat(fedexItemValue) > 0 && customsDuty && (
+                                <div className="text-xs space-y-1">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-gray-600">Item Value:</span>
+                                    <span className="font-medium text-gray-700">{formatPrice(parseFloat(fedexItemValue))}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-gray-600">Customs Duty:</span>
+                                    <span className="font-medium text-gray-700">{formatPrice(customsDuty.dutyAmount)}</span>
+                                  </div>
+                                  {customsDuty.isTaxFree ? (
+                                    <p className="text-green-600 font-semibold mt-1">
+                                      ✓ {customsDuty.description}
+                                    </p>
+                                  ) : (
+                                    <p className="text-amber-600 font-semibold mt-1">
+                                      {customsDuty.description}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Grand Total */}
+                              <div className="pt-2 border-t border-purple-300">
+                                <p className="text-xs text-gray-600 mb-1">Grand Total</p>
+                                <p className="text-xl font-bold text-purple-600">
+                                  {formatPrice(
+                                    option.rateJPY +
+                                    (photoService ? 500 : 0) +
+                                    (reinforcement ? 1000 : 0) +
+                                    (fedexItemValue && parseFloat(fedexItemValue) > 0 ? parseFloat(fedexItemValue) : 0) +
+                                    (customsDuty ? customsDuty.dutyAmount : 0)
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-green-600">{formatPrice(option.rateJPY)}</p>
-                      </div>
+                      {option.estimatedDeliveryDate && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Estimated arrival: {new Date(option.estimatedDeliveryDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </p>
+                      )}
                     </div>
-                    {option.estimatedDeliveryDate && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        Estimated arrival: {new Date(option.estimatedDeliveryDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="flex items-start gap-2 text-xs text-green-700 mt-4 bg-green-100 border border-green-300 p-3 rounded-lg">
@@ -1005,7 +1282,7 @@ export default function ShippingCalculator() {
               </div>
 
               {/* Additional Services Costs */}
-              {(photoService || consolidation) && (
+              {(photoService || reinforcement || consolidation) && (
                 <div className="space-y-2 pt-2 border-t border-blue-100">
                   {photoService && (
                     <div className="flex justify-between items-center text-sm">
@@ -1014,6 +1291,17 @@ export default function ShippingCalculator() {
                         Photo Service
                       </span>
                       <span className="font-semibold text-gray-900">¥500</span>
+                    </div>
+                  )}
+                  {reinforcement && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600 flex items-center gap-2">
+                        <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Package Reinforcement
+                      </span>
+                      <span className="font-semibold text-gray-900">¥1,000</span>
                     </div>
                   )}
                   {consolidation && (
@@ -1028,13 +1316,26 @@ export default function ShippingCalculator() {
                 </div>
               )}
 
-              {/* Total */}
+              {/* Total Shipping Cost */}
               <div className="flex justify-between items-center pt-3 border-t-2 border-blue-200">
-                <span className="text-lg font-bold text-gray-900">Total Estimated Cost:</span>
+                <span className="text-lg font-bold text-gray-900">Total Shipping Cost:</span>
                 <span className={`text-2xl font-bold ${service === 'EMS' ? 'text-blue-600' : 'text-green-600'}`}>
-                  {formatPrice(shippingCost + (photoService ? 500 : 0))}
+                  {formatPrice(shippingCost + (photoService ? 500 : 0) + (reinforcement ? 1000 : 0))}
                 </span>
               </div>
+
+              {/* Grand Total (Shipping + Item Value) */}
+              {itemValue && parseFloat(itemValue) > 0 && (
+                <div className="flex justify-between items-center pt-3 border-t-2 border-purple-200 bg-purple-50 -mx-4 px-4 py-3 rounded-lg mt-3">
+                  <div>
+                    <span className="text-lg font-bold text-gray-900">Grand Total:</span>
+                    <p className="text-xs text-gray-600 mt-0.5">Shipping + Item Value</p>
+                  </div>
+                  <span className="text-2xl font-bold text-purple-600">
+                    {formatPrice(shippingCost + (photoService ? 500 : 0) + (reinforcement ? 1000 : 0) + parseFloat(itemValue))}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className={`flex items-start gap-2 border rounded-lg p-3 mt-4 ${service === 'EMS' ? 'bg-blue-100 border-blue-300' : 'bg-green-100 border-green-300'}`}>

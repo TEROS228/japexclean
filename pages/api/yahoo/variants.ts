@@ -56,8 +56,6 @@ export default async function handler(
   const normalizedUrl = normalizeUrl(targetUrl);
 
   try {
-    console.log(`[Yahoo Variants] Processing URL: ${targetUrl}`);
-
     const browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -70,11 +68,6 @@ export default async function handler(
     });
 
     const page = await browser.newPage();
-
-    // Перехватываем console.log из браузера
-    page.on('console', msg => {
-      console.log('[Browser Console]', msg.text());
-    });
 
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -98,11 +91,11 @@ export default async function handler(
 
     await page.goto(targetUrl, {
       waitUntil: 'domcontentloaded',
-      timeout: 60000
+      timeout: 30000
     });
 
-    // Wait for JavaScript to execute and variant elements to load
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Wait for JavaScript to execute and variant elements to load (reduced from 3000ms)
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     const result = await page.evaluate(() => {
       const groups: Array<{ name: string; options: Array<{ value: string; available: boolean }> }> = [];
@@ -115,49 +108,37 @@ export default async function handler(
 
       if (priceWrap) {
         const priceText = priceWrap.textContent || '';
-        console.log('[Debug] Price area text:', priceText.substring(0, 300));
 
         // Сначала проверяем платную доставку (например "送料770円")
         // Паттерн: "送料" + цифры + "円"
         const paidShippingPattern = /送料\s*\d+\s*円/;
         if (paidShippingPattern.test(priceText)) {
           postageFlag = 0;
-          console.log('[Debug] Found PAID shipping in price area');
         }
         // Только если не нашли платную доставку, проверяем бесплатную
         else if (priceText.includes('送料無料')) {
           postageFlag = 1;
-          console.log('[Debug] Found FREE shipping in price area');
         }
       } else {
         // Fallback: ищем элементы с классами
         const freeShippingElements = document.querySelectorAll('.styles_postageFree__ZnOe3, [class*="postageFree"]');
-        console.log('[Debug] Free shipping elements with class:', freeShippingElements.length);
 
         if (freeShippingElements.length > 0) {
           postageFlag = 1;
-          console.log('[Debug] Found free shipping indicator (class-based)');
         } else {
           // Проверяем в области доставки более узко
           const postageElements = document.querySelectorAll('[class*="postage"], [class*="shipping"]');
           postageElements.forEach((el) => {
             const text = el.textContent?.trim() || '';
-            // Проверяем платную доставку
             if (/送料\s*\d+\s*円/.test(text)) {
               postageFlag = 0;
-              console.log('[Debug] Found PAID shipping:', text.substring(0, 100));
             }
-            // Проверяем бесплатную только если еще не установлен флаг платной
             else if (postageFlag === 0 && text.includes('送料無料')) {
               postageFlag = 1;
-              console.log('[Debug] Found FREE shipping:', text.substring(0, 100));
             }
           });
         }
       }
-
-      console.log('[Debug] Final postageFlag:', postageFlag);
-      // ========== КОНЕЦ ПАРСИНГА ДОСТАВКИ ==========
 
       // Yahoo Shopping хранит данные в script тегах
       let stockTableData = null;
@@ -172,8 +153,6 @@ export default async function handler(
 
         // Ищем selectOptionList (новый формат для некоторых товаров)
         if (text.includes('selectOptionList')) {
-          console.log('[Debug] Found script with selectOptionList');
-
           try {
             const listStart = text.indexOf('"selectOptionList"');
             if (listStart !== -1) {
@@ -194,20 +173,15 @@ export default async function handler(
               }
 
               const jsonStr = text.substring(arrStart, arrEnd);
-              console.log('[Debug] selectOptionList array length:', jsonStr.length);
 
               selectOptionListData = JSON.parse(jsonStr);
-              console.log('[Debug] Successfully parsed selectOptionList from JSON');
             }
           } catch (e: any) {
-            console.log('[Debug] Failed to parse selectOptionList:', e.message);
           }
         }
 
         // Ищем stockTableTwoAxis
         if (text.includes('stockTableTwoAxis')) {
-          console.log('[Debug] Found script with stockTableTwoAxis');
-
           try {
             // stockTableTwoAxis - это ключ внутри JSON объекта
             // Ищем паттерн: "stockTableTwoAxis":{...}
@@ -232,21 +206,16 @@ export default async function handler(
               }
 
               const jsonStr = text.substring(objStart, objEnd);
-              console.log('[Debug] Extracted object length:', jsonStr.length);
 
               stockTableData = JSON.parse(jsonStr);
-              console.log('[Debug] Successfully parsed stockTableTwoAxis from JSON');
             }
           } catch (e: any) {
-            console.log('[Debug] Failed to parse stockTableTwoAxis:', e.message);
           }
         }
 
         // Ищем individualItemOptionList
         if (text.includes('individualItemOptionList')) {
-          console.log('[Debug] Found script with individualItemOptionList');
-
-          try {
+          try{
             // individualItemOptionList - это ключ внутри JSON объекта
             // Ищем паттерн: "individualItemOptionList":[...]
             const listStart = text.indexOf('"individualItemOptionList"');
@@ -270,20 +239,15 @@ export default async function handler(
               }
 
               const jsonStr = text.substring(arrStart, arrEnd);
-              console.log('[Debug] Extracted array length:', jsonStr.length);
 
               optionListData = JSON.parse(jsonStr);
-              console.log('[Debug] Successfully parsed individualItemOptionList from JSON');
             }
           } catch (e: any) {
-            console.log('[Debug] Failed to parse individualItemOptionList:', e.message);
           }
         }
 
         // Ищем itemOptions или actualItemOptionList (содержит stock информацию)
         if (text.includes('"itemOptions"') || text.includes('"actualItemOptionList"')) {
-          console.log('[Debug] Found script with itemOptions/actualItemOptionList');
-
           try {
             let listStart = text.indexOf('"itemOptions"');
             let fieldName = '"itemOptions"';
@@ -311,13 +275,10 @@ export default async function handler(
               }
 
               const jsonStr = text.substring(arrStart, arrEnd);
-              console.log(`[Debug] ${fieldName} array length:`, jsonStr.length);
 
               itemOptionsData = JSON.parse(jsonStr);
-              console.log(`[Debug] Successfully parsed ${fieldName} from JSON`);
             }
           } catch (e: any) {
-            console.log('[Debug] Failed to parse itemOptions/actualItemOptionList:', e.message);
           }
         }
       });
@@ -326,44 +287,21 @@ export default async function handler(
       const win = window as any;
       if (!stockTableData && win.stockTableTwoAxis) {
         stockTableData = win.stockTableTwoAxis;
-        console.log('[Debug] Found stockTableTwoAxis in window');
       }
       if (!optionListData && win.individualItemOptionList) {
         optionListData = win.individualItemOptionList;
-        console.log('[Debug] Found individualItemOptionList in window');
       }
       if (!selectOptionListData && win.selectOptionList) {
         selectOptionListData = win.selectOptionList;
-        console.log('[Debug] Found selectOptionList in window');
       }
       if (!itemOptionsData && win.itemOptions) {
         itemOptionsData = win.itemOptions;
-        console.log('[Debug] Found itemOptions in window');
       }
       if (!itemOptionsData && win.actualItemOptionList) {
         itemOptionsData = win.actualItemOptionList;
-        console.log('[Debug] Found actualItemOptionList in window');
-      }
-
-      console.log('[Debug] stockTableData exists:', !!stockTableData);
-      console.log('[Debug] optionListData exists:', !!optionListData);
-      console.log('[Debug] selectOptionListData exists:', !!selectOptionListData);
-      console.log('[Debug] itemOptionsData exists:', !!itemOptionsData);
-
-      // Логируем структуру данных
-      if (stockTableData) {
-        console.log('[Debug] stockTableData keys:', Object.keys(stockTableData));
-        console.log('[Debug] stockTableData.firstOption exists:', !!stockTableData.firstOption);
-        console.log('[Debug] Full stockTableData:', JSON.stringify(stockTableData).substring(0, 500));
-      }
-      if (optionListData) {
-        console.log('[Debug] optionListData type:', Array.isArray(optionListData) ? 'array' : typeof optionListData);
-        console.log('[Debug] optionListData length:', optionListData.length);
-        console.log('[Debug] Full optionListData:', JSON.stringify(optionListData).substring(0, 500));
       }
 
       if (stockTableData && stockTableData.firstOption) {
-        console.log('[Debug] Using stockTableTwoAxis with firstOption');
 
         // Первая ось - обычно цвета
         const firstAxisOptions: Array<{ value: string; available: boolean }> = [];
@@ -471,7 +409,6 @@ export default async function handler(
 
       // Сначала пробуем individualItemOptionList (приоритетный, более точный)
       if (optionListData && Array.isArray(optionListData) && optionListData.length > 0) {
-        console.log('[Debug] Using individualItemOptionList');
         const optionList = optionListData;
 
         // Создаем map из itemOptions для получения stock информации
@@ -488,7 +425,6 @@ export default async function handler(
               });
             }
           });
-          console.log('[Debug] Built stock map with', stockMap.size, 'entries');
         }
 
         // Также проверяем DOM элементы для stock информации и цен
@@ -526,10 +462,7 @@ export default async function handler(
               }
             }
           });
-          console.log('[Debug] Built DOM stock map with', domStockMap.size, 'entries');
-          console.log('[Debug] Built DOM price map with', domPriceMap.size, 'entries');
         } catch (e: any) {
-          console.log('[Debug] Failed to parse DOM stock:', e.message);
         }
 
         optionList.forEach((group: any) => {
@@ -554,7 +487,6 @@ export default async function handler(
             // Если есть DOM данные, используем их (самые точные)
             if (domStockMap.size > 0 && value && domStockMap.has(value)) {
               available = domStockMap.get(value) === true;
-              console.log('[Debug] DOM stock for', value, ':', available);
             }
             // Если есть stockMap, используем данные оттуда
             else if (stockMap.size > 0 && value && stockMap.has(value)) {
@@ -566,7 +498,6 @@ export default async function handler(
               const price = domPriceMap.get(value);
               if (price) {
                 value = `${value} (${price})`;
-                console.log('[Debug] Added price from DOM:', value);
               }
             }
 
@@ -588,11 +519,7 @@ export default async function handler(
 
       // Если individualItemOptionList пуст, пробуем selectOptionList
       if (selectOptionListData && Array.isArray(selectOptionListData)) {
-        console.log('[Debug] Using selectOptionList, length:', selectOptionListData.length);
-        console.log('[Debug] selectOptionListData structure:', JSON.stringify(selectOptionListData).substring(0, 1000));
-
         selectOptionListData.forEach((group: any, index: number) => {
-          console.log(`[Debug] Processing selectOptionList group ${index}:`, JSON.stringify(group).substring(0, 500));
 
           let groupName = group.name || 'Option';
 
@@ -606,14 +533,12 @@ export default async function handler(
           // Пропускаем группы, которые не являются вариантами товара
           // (например, информация о доставке)
           if (groupName.includes('配送') || groupName.includes('地域')) {
-            console.log('[Debug] Skipping group (delivery/region):', groupName);
             return;
           }
 
           const options: Array<{ value: string; available: boolean }> = [];
 
           if (group.choiceList && Array.isArray(group.choiceList)) {
-            console.log(`[Debug] Group ${groupName} has choiceList with ${group.choiceList.length} items`);
             group.choiceList.forEach((choice: any) => {
               let displayValue = choice.name;
 
@@ -627,17 +552,12 @@ export default async function handler(
                 available: choice.isSelectable !== false
               });
             });
-          } else {
-            console.log(`[Debug] Group ${groupName} has no choiceList or it's not an array`);
           }
 
           if (options.length > 0) {
             groups.push({ name: groupName, options });
-            console.log(`[Debug] Added group ${groupName} with ${options.length} options`);
           }
         });
-
-        console.log('[Debug] After selectOptionList parsing, groups.length:', groups.length);
 
         // Только возвращаем результат если нашли группы
         if (groups.length > 0) {
@@ -675,10 +595,7 @@ export default async function handler(
 
       // Fallback 2: парсинг радио-кнопок с классом Radio (формат с Radio__input)
       if (groups.length === 0) {
-        console.log('[Debug] Trying to parse Radio buttons');
-
         const radioInputs = document.querySelectorAll('input.Radio__input[type="radio"]');
-        console.log('[Debug] Found radio inputs:', radioInputs.length);
 
         // Группируем по атрибуту name
         const radioGroups = new Map<string, Array<{ value: string; available: boolean }>>();
@@ -709,8 +626,6 @@ export default async function handler(
           }
         });
 
-        console.log('[Debug] Found radio groups:', radioGroups.size);
-
         // Преобразуем в groups
         for (const [groupName, options] of radioGroups) {
           if (options.length > 0) {
@@ -723,18 +638,14 @@ export default async function handler(
             else if (groupName === 'セット' || groupName === '商品タイプ') translatedName = 'Type';
 
             groups.push({ name: translatedName, options });
-            console.log(`[Debug] Added radio group ${translatedName} with ${options.length} options`);
           }
         }
       }
 
       // Fallback 3: парсинг кнопок с data-cl-params (новый формат Yahoo)
       if (groups.length === 0) {
-        console.log('[Debug] Trying to parse buttons with data-cl-params');
-
         // Ищем все кнопки с data-cl-params
         const axisButtons = document.querySelectorAll('button[data-cl-params]');
-        console.log('[Debug] Found buttons with data-cl-params:', axisButtons.length);
 
         // Группируем кнопки по axis
         const axisGroups = new Map<string, Array<{ value: string; available: boolean; price?: string }>>();
@@ -769,8 +680,6 @@ export default async function handler(
           }
         });
 
-        console.log('[Debug] Found axis groups:', axisGroups.size);
-
         // Преобразуем в groups с названиями
         const axisNames = ['Type', 'Variant', 'Size', 'Option'];
         let axisIndex = 0;
@@ -786,8 +695,6 @@ export default async function handler(
 
       // Fallback 3: парсинг кнопок и радио-кнопок (для других магазинов)
       if (groups.length === 0) {
-        console.log('[Debug] Trying generic button/radio parsing');
-
         // Ищем группы вариантов по различным селекторам
         const variantGroups = document.querySelectorAll('.elChoice, .Choice, [class*="choice"], [class*="variant"]');
 
@@ -823,11 +730,6 @@ export default async function handler(
 
     const { groups: variantGroups, colorSizeMapping, postageFlag } = result;
 
-    console.log(`[Yahoo Variants] Found ${variantGroups.length} variant groups`);
-    console.log(`[Yahoo Variants] postageFlag: ${postageFlag}`);
-    console.log(`[Yahoo Variants] Groups:`, JSON.stringify(variantGroups, null, 2));
-    console.log(`[Yahoo Variants] Color-Size Mapping:`, JSON.stringify(colorSizeMapping, null, 2));
-
     // Convert to flat list for compatibility
     const allVariants: YahooVariant[] = [];
     for (const group of variantGroups) {
@@ -844,8 +746,6 @@ export default async function handler(
         });
       }
     }
-
-    console.log(`[Yahoo Variants] Total variants: ${allVariants.length}`);
 
     return res.status(200).json({
       success: true,

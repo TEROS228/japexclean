@@ -9,21 +9,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { weight, toCountry, toCity, toState, toPostalCode, isCommercial } = req.body;
 
-    if (!weight || !toCountry || !toCity || !toState || !toPostalCode) {
+    if (!weight || !toCountry || !toCity || !toPostalCode) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+
+    // State/Province is required only for US, CA, and AU
+    const requiresState = ['US', 'CA', 'AU'].includes(toCountry);
+    if (requiresState && !toState) {
+      return res.status(400).json({ error: 'State/Province is required for this country' });
+    }
+
+    console.log('📦 FedEx Rate Request:', {
+      weight: parseFloat(weight),
+      toCountry,
+      toCity,
+      toState: toState || 'N/A',
+      toPostalCode
+    });
 
     const result = await getAllFedExRates({
       weight: parseFloat(weight),
       fromCountry: 'JP',
       toCountry,
       toCity,
-      toState,
+      toState: toState || '',
       toPostalCode,
       isCommercial: isCommercial || false,
       itemValueJPY: 10000, // Примерная стоимость для калькулятора
       itemDescription: 'General Merchandise'
     });
+
+    console.log('✅ FedEx Rate Response:', result);
 
     return res.status(200).json(result);
   } catch (error) {

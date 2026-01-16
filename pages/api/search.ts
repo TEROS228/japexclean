@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { searchRakutenProducts } from "@/lib/rakuten";
 import { rankSearchResults, normalizeJapaneseQuery } from "@/lib/search-ranking";
+import { filterIrrelevantProducts, intelligentRanking } from "@/lib/search-intelligence";
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,27 +14,31 @@ export default async function handler(
   // Cache for 4 hours
   res.setHeader('Cache-Control', 'public, s-maxage=14400, stale-while-revalidate=7200');
 
-  const { query, page } = req.query;
+  const { query, page, minPrice, maxPrice } = req.query;
 
   if (!query || typeof query !== "string") {
     return res.status(400).json({ error: "Query parameter is required" });
   }
 
   const pageNum = Number(page) || 1;
+  const min = minPrice ? Number(minPrice) : undefined;
+  const max = maxPrice ? Number(maxPrice) : undefined;
 
   try {
     // Нормализуем японский запрос
     const normalizedQuery = normalizeJapaneseQuery(query.trim());
 
-    const products = await searchRakutenProducts(normalizedQuery, pageNum);
+    const products = await searchRakutenProducts(normalizedQuery, pageNum, 30, min, max);
 
-    // Применяем умное ранжирование только для первой страницы
-    // (для остальных страниц используем стандартную сортировку API)
+    // Debug logs отключены для производительности
+    // console.log(`[Search API] Query: "${query}" -> "${normalizedQuery}", found ${products.length} products from Rakuten API`);
+
+    // Применяем только умное ранжирование для первой страницы, БЕЗ фильтрации
     const rankedProducts = pageNum === 1
-      ? rankSearchResults(products, normalizedQuery)
+      ? intelligentRanking(products, normalizedQuery)
       : products;
 
-    console.log(`[Search API] Query: "${query}" -> "${normalizedQuery}", found ${rankedProducts.length} products`);
+    // console.log(`[Search API] Returning ${rankedProducts.length} products`);
 
     return res.status(200).json({
       success: true,

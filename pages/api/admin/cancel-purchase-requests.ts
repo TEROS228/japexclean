@@ -46,6 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           select: {
             title: true,
             image: true,
+            price: true,
             quantity: true,
             orderId: true,
             marketplace: true,

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import { broadcastUpdate } from "@/lib/sync";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { AnalyticsChart } from "@/components/AnalyticsChart";
+import { RevenueChart } from "@/components/RevenueChart";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -24,7 +26,29 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showPackageModal, setShowPackageModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'orders' | 'warehouse' | 'consolidation' | 'photos' | 'reinforcement' | 'disposal' | 'cancelPurchase' | 'messages' | 'shipping' | 'compensation' | 'damaged'>('orders');
+  const [activeTab, setActiveTab] = useState<'statistics' | 'orders' | 'warehouse' | 'consolidation' | 'photos' | 'reinforcement' | 'disposal' | 'cancelPurchase' | 'messages' | 'shipping' | 'compensation' | 'damaged'>('statistics');
+  const [statistics, setStatistics] = useState<any>(null);
+  const [statsPeriod, setStatsPeriod] = useState<'day' | 'week' | 'month' | 'year' | 'all'>('month');
+
+  // Statistics password protection
+  const [showStatisticsPasswordModal, setShowStatisticsPasswordModal] = useState(false);
+  const [statisticsPassword, setStatisticsPassword] = useState("");
+  const [rememberDevice, setRememberDevice] = useState(false);
+  const [hasStatisticsAccess, setHasStatisticsAccess] = useState(false);
+  const [accessChecked, setAccessChecked] = useState(false);
+
+  // Current admin user and permissions
+  const [currentAdminUser, setCurrentAdminUser] = useState<any>(null);
+  const [userPermissions, setUserPermissions] = useState<Record<string, boolean>>({});
+  const [isAdminChecked, setIsAdminChecked] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Team management
+  const [adminTeam, setAdminTeam] = useState<any[]>([]);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [editingAdmin, setEditingAdmin] = useState<any>(null);
+
   const [consolidationPackages, setConsolidationPackages] = useState<any[]>([]);
   const [photoRequests, setPhotoRequests] = useState<any[]>([]);
   const [reinforcementRequests, setReinforcementRequests] = useState<any[]>([]);
@@ -79,6 +103,78 @@ export default function AdminPage() {
     return groups;
   };
 
+  // Fetch current admin user and permissions
+  const fetchCurrentAdminUser = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setIsAdminChecked(true);
+        setIsAdmin(false);
+        return;
+      }
+
+      const response = await fetch('/api/admin/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentAdminUser(data.user);
+        setUserPermissions(data.user.permissions || {});
+        setIsAdmin(true);
+        setIsAdminChecked(true);
+      } else if (response.status === 403) {
+        setIsAdmin(false);
+        setIsAdminChecked(true);
+      } else {
+        setIsAdmin(false);
+        setIsAdminChecked(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch current admin user:', error);
+      setIsAdmin(false);
+      setIsAdminChecked(true);
+    }
+  };
+
+  // Check if user has permission to access a tab
+  const hasPermission = (tab: string): boolean => {
+    // Statistics tab is always accessible for all admins
+    if (tab === 'statistics') return true;
+
+    // If user data hasn't loaded yet, deny access temporarily
+    if (!currentAdminUser) {
+      return false;
+    }
+
+    // If adminPermissions is null/undefined, user has full access (backward compatibility for old admins)
+    if (!currentAdminUser.adminPermissions || currentAdminUser.adminPermissions === null) {
+      return true;
+    }
+
+    // If permissions are set, check specific permission
+    return userPermissions[tab] === true;
+  };
+
+  // Fetch statistics
+  const fetchStatistics = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch(`/api/admin/statistics?period=${statsPeriod}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStatistics(data.statistics);
+      }
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+    }
+  };
+
   // Fetch unread messages count
   const fetchUnreadCount = async () => {
     try {
@@ -100,10 +196,195 @@ export default function AdminPage() {
     }
   };
 
+  // Fetch admin team
+  const fetchAdminTeam = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch('/api/admin/team', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAdminTeam(data.admins);
+      }
+    } catch (error) {
+      console.error('Failed to fetch admin team:', error);
+    }
+  };
+
+  // Add new admin
+  const handleAddAdmin = async () => {
+    if (!newAdminEmail.trim()) {
+      alert('Please enter an email');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const permissions = selectedPermissions.reduce((acc, tab) => {
+        acc[tab] = true;
+        return acc;
+      }, {} as Record<string, boolean>);
+
+      const response = await fetch('/api/admin/team', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ email: newAdminEmail, permissions })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Admin added successfully!');
+        setNewAdminEmail("");
+        setSelectedPermissions([]);
+        fetchAdminTeam();
+      } else {
+        alert(data.error || 'Failed to add admin');
+      }
+    } catch (error) {
+      console.error('Failed to add admin:', error);
+      alert('Error adding admin');
+    }
+  };
+
+  // Update admin permissions
+  const handleUpdatePermissions = async (admin: any, permissions: string[]) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const permissionsObj = permissions.reduce((acc, tab) => {
+        acc[tab] = true;
+        return acc;
+      }, {} as Record<string, boolean>);
+
+      const response = await fetch('/api/admin/team', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ userId: admin.id, permissions: permissionsObj })
+      });
+
+      if (response.ok) {
+        alert('Permissions updated!');
+        fetchAdminTeam();
+        setEditingAdmin(null);
+      } else {
+        alert('Failed to update permissions');
+      }
+    } catch (error) {
+      console.error('Failed to update permissions:', error);
+      alert('Error updating permissions');
+    }
+  };
+
+  // Remove admin
+  const handleRemoveAdmin = async (admin: any) => {
+    if (!confirm(`Remove admin access for ${admin.email}?`)) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+
+      const response = await fetch('/api/admin/team', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ userId: admin.id })
+      });
+
+      if (response.ok) {
+        alert('Admin removed successfully!');
+        fetchAdminTeam();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to remove admin');
+      }
+    } catch (error) {
+      console.error('Failed to remove admin:', error);
+      alert('Error removing admin');
+    }
+  };
+
+  // Handle statistics password verification
+  const handleStatisticsPasswordSubmit = () => {
+    // IMPORTANT: Change this password to your own secure password
+    const STATISTICS_PASSWORD = "zzllqqppwwaa937";
+
+    if (statisticsPassword === STATISTICS_PASSWORD) {
+      setHasStatisticsAccess(true);
+      setShowStatisticsPasswordModal(false);
+      setStatisticsPassword("");
+
+      // Save access token if "remember device" is checked
+      if (rememberDevice) {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
+
+        const token = {
+          granted: true,
+          expiresAt: expiresAt.toISOString(),
+        };
+
+        localStorage.setItem('statistics_access_token', JSON.stringify(token));
+      }
+
+      // Fetch statistics
+      fetchStatistics();
+    } else {
+      alert('Incorrect password');
+      setStatisticsPassword("");
+    }
+  };
+
+  // Check for saved statistics access token on mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem('statistics_access_token');
+    if (savedToken) {
+      try {
+        const { expiresAt } = JSON.parse(savedToken);
+        if (new Date(expiresAt) > new Date()) {
+          setHasStatisticsAccess(true);
+        } else {
+          localStorage.removeItem('statistics_access_token');
+        }
+      } catch (error) {
+        localStorage.removeItem('statistics_access_token');
+      }
+    }
+    setAccessChecked(true);
+
+    // Fetch current admin user permissions
+    fetchCurrentAdminUser();
+  }, []);
+
+  // Check statistics access when switching to statistics tab
+  useEffect(() => {
+    if (accessChecked && activeTab === 'statistics' && !hasStatisticsAccess) {
+      setShowStatisticsPasswordModal(true);
+    }
+  }, [activeTab, accessChecked, hasStatisticsAccess]);
+
+  // Fetch statistics when period changes
+  useEffect(() => {
+    if (activeTab === 'statistics' && hasStatisticsAccess) {
+      fetchStatistics();
+      fetchAdminTeam();
+    }
+  }, [statsPeriod, activeTab, hasStatisticsAccess]);
+
   // Hide header when any modal is open
   useEffect(() => {
     const header = document.querySelector('header');
-    if ((showPackageModal || showTrackingModal || showConsolidationModal || showRefundModal) && header) {
+    if ((showPackageModal || showTrackingModal || showConsolidationModal || showRefundModal || showStatisticsPasswordModal) && header) {
       header.style.display = 'none';
     } else if (header) {
       header.style.display = '';
@@ -114,7 +395,7 @@ export default function AdminPage() {
         header.style.display = '';
       }
     };
-  }, [showPackageModal, showTrackingModal, showConsolidationModal, showRefundModal]);
+  }, [showPackageModal, showTrackingModal, showConsolidationModal, showRefundModal, showStatisticsPasswordModal]);
 
   const fetchConsolidationRequests = async () => {
     try {
@@ -621,14 +902,37 @@ export default function AdminPage() {
     }
   };
 
-  // TEMPORARILY DISABLED FOR DEBUG
-  // if (loading) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center">
-  //       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-  //     </div>
-  //   );
-  // }
+  // Show loading while checking admin status
+  if (!isAdminChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied if not admin
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <p className="text-gray-600 mb-6">You don't have permission to access the admin panel.</p>
+          <Link href="/" className="inline-block bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
+            Go to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -644,11 +948,31 @@ export default function AdminPage() {
         <div className="mb-8 overflow-x-auto pb-2">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 min-w-max">
             <button
-              onClick={() => setActiveTab('orders')}
+              onClick={() => setActiveTab('statistics')}
+              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
+                activeTab === 'statistics'
+                  ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30 scale-105'
+                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-violet-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-violet-500'
+              }`}
+            >
+              <div className="text-2xl mb-1">📊</div>
+              <div className="text-sm font-bold">Statistics</div>
+            </button>
+
+            <button
+              onClick={() => {
+                if (hasPermission('orders')) {
+                  setActiveTab('orders');
+                } else {
+                  alert('Access Denied: You do not have permission to access this tab');
+                }
+              }}
               className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 activeTab === 'orders'
                   ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-green-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-green-500'
+                  : hasPermission('orders')
+                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-green-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-green-500'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
               }`}
             >
               <div className="text-2xl mb-1">📋</div>
@@ -656,16 +980,24 @@ export default function AdminPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('warehouse')}
+              onClick={() => {
+                if (hasPermission('warehouse')) {
+                  setActiveTab('warehouse');
+                } else {
+                  alert('Access Denied: You do not have permission to access this tab');
+                }
+              }}
               className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 activeTab === 'warehouse'
                   ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-blue-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-blue-500'
+                  : hasPermission('warehouse')
+                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-blue-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-blue-500'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
               }`}
             >
               <div className="text-2xl mb-1">📦</div>
               <div className="text-sm font-bold">Warehouse</div>
-              {warehouseItems.length > 0 && (
+              {hasPermission('warehouse') && warehouseItems.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
                   {warehouseItems.length}
                 </span>
@@ -673,16 +1005,24 @@ export default function AdminPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('consolidation')}
+              onClick={() => {
+                if (hasPermission('consolidation')) {
+                  setActiveTab('consolidation');
+                } else {
+                  alert('Access Denied: You do not have permission to access this tab');
+                }
+              }}
               className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 activeTab === 'consolidation'
                   ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg shadow-purple-500/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-purple-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-purple-500'
+                  : hasPermission('consolidation')
+                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-purple-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-purple-500'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
               }`}
             >
               <div className="text-2xl mb-1">🎁</div>
               <div className="text-sm font-bold">Consolidation</div>
-              {consolidationPackages.length > 0 && (
+              {hasPermission('consolidation') && consolidationPackages.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
                   {consolidationPackages.length}
                 </span>
@@ -690,16 +1030,24 @@ export default function AdminPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('photos')}
+              onClick={() => {
+                if (hasPermission('photos')) {
+                  setActiveTab('photos');
+                } else {
+                  alert('Access Denied: You do not have permission to access this tab');
+                }
+              }}
               className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 activeTab === 'photos'
                   ? 'bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg shadow-pink-500/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-pink-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-pink-500'
+                  : hasPermission('photos')
+                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-pink-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-pink-500'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
               }`}
             >
               <div className="text-2xl mb-1">📸</div>
               <div className="text-sm font-bold">Photos</div>
-              {photoRequests.length > 0 && (
+              {hasPermission('photos') && photoRequests.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-gradient-to-br from-pink-500 to-rose-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
                   {photoRequests.length}
                 </span>
@@ -707,16 +1055,24 @@ export default function AdminPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('reinforcement')}
+              onClick={() => {
+                if (hasPermission('reinforcement')) {
+                  setActiveTab('reinforcement');
+                } else {
+                  alert('Access Denied: You do not have permission to access this tab');
+                }
+              }}
               className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 activeTab === 'reinforcement'
                   ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-amber-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-amber-500'
+                  : hasPermission('reinforcement')
+                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-amber-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-amber-500'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
               }`}
             >
               <div className="text-2xl mb-1">🛡️</div>
               <div className="text-sm font-bold">Reinforcement</div>
-              {reinforcementRequests.length > 0 && (
+              {hasPermission('reinforcement') && reinforcementRequests.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-gradient-to-br from-amber-500 to-orange-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
                   {reinforcementRequests.length}
                 </span>
@@ -724,16 +1080,24 @@ export default function AdminPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('disposal')}
+              onClick={() => {
+                if (hasPermission('disposal')) {
+                  setActiveTab('disposal');
+                } else {
+                  alert('Access Denied: You do not have permission to access this tab');
+                }
+              }}
               className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 activeTab === 'disposal'
                   ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-orange-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-orange-500'
+                  : hasPermission('disposal')
+                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-orange-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-orange-500'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
               }`}
             >
               <div className="text-2xl mb-1">♻️</div>
               <div className="text-sm font-bold">Disposal</div>
-              {disposalRequests.length > 0 && (
+              {hasPermission('disposal') && disposalRequests.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-gradient-to-br from-orange-500 to-orange-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
                   {disposalRequests.length}
                 </span>
@@ -741,16 +1105,24 @@ export default function AdminPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('cancelPurchase')}
+              onClick={() => {
+                if (hasPermission('cancelPurchase')) {
+                  setActiveTab('cancelPurchase');
+                } else {
+                  alert('Access Denied: You do not have permission to access this tab');
+                }
+              }}
               className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 activeTab === 'cancelPurchase'
                   ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-red-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-red-500'
+                  : hasPermission('cancelPurchase')
+                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-red-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-red-500'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
               }`}
             >
               <div className="text-2xl mb-1">❌</div>
               <div className="text-sm font-bold">Cancel</div>
-              {cancelPurchaseRequests.length > 0 && (
+              {hasPermission('cancelPurchase') && cancelPurchaseRequests.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
                   {cancelPurchaseRequests.length}
                 </span>
@@ -758,16 +1130,24 @@ export default function AdminPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('messages')}
+              onClick={() => {
+                if (hasPermission('messages')) {
+                  setActiveTab('messages');
+                } else {
+                  alert('Access Denied: You do not have permission to access this tab');
+                }
+              }}
               className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 activeTab === 'messages'
                   ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-indigo-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-indigo-500'
+                  : hasPermission('messages')
+                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-indigo-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-indigo-500'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
               }`}
             >
               <div className="text-2xl mb-1">💬</div>
               <div className="text-sm font-bold">Messages</div>
-              {unreadMessagesCount > 0 && (
+              {hasPermission('messages') && unreadMessagesCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
                   {unreadMessagesCount}
                 </span>
@@ -775,16 +1155,24 @@ export default function AdminPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('shipping')}
+              onClick={() => {
+                if (hasPermission('shipping')) {
+                  setActiveTab('shipping');
+                } else {
+                  alert('Access Denied: You do not have permission to access this tab');
+                }
+              }}
               className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 activeTab === 'shipping'
                   ? 'bg-gradient-to-br from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-cyan-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-cyan-500'
+                  : hasPermission('shipping')
+                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-cyan-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-cyan-500'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
               }`}
             >
               <div className="text-2xl mb-1">📮</div>
               <div className="text-sm font-bold">Shipping</div>
-              {shippingRequests.length > 0 && (
+              {hasPermission('shipping') && shippingRequests.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-gradient-to-br from-cyan-500 to-cyan-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
                   {shippingRequests.length}
                 </span>
@@ -792,16 +1180,24 @@ export default function AdminPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('compensation')}
+              onClick={() => {
+                if (hasPermission('compensation')) {
+                  setActiveTab('compensation');
+                } else {
+                  alert('Access Denied: You do not have permission to access this tab');
+                }
+              }}
               className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 activeTab === 'compensation'
                   ? 'bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-lg shadow-rose-500/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-rose-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-rose-500'
+                  : hasPermission('compensation')
+                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-rose-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-rose-500'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
               }`}
             >
               <div className="text-2xl mb-1">💰</div>
               <div className="text-sm font-bold">Compensation</div>
-              {compensationRequests.length > 0 && (
+              {hasPermission('compensation') && compensationRequests.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-gradient-to-br from-rose-500 to-rose-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
                   {compensationRequests.length}
                 </span>
@@ -809,16 +1205,24 @@ export default function AdminPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('damaged')}
+              onClick={() => {
+                if (hasPermission('damaged')) {
+                  setActiveTab('damaged');
+                } else {
+                  alert('Access Denied: You do not have permission to access this tab');
+                }
+              }}
               className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 activeTab === 'damaged'
                   ? 'bg-gradient-to-br from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-red-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-red-600'
+                  : hasPermission('damaged')
+                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-red-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-red-600'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
               }`}
             >
               <div className="text-2xl mb-1">⚠️</div>
               <div className="text-sm font-bold">Damaged</div>
-              {damagedItemRequests.length > 0 && (
+              {hasPermission('damaged') && damagedItemRequests.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-gradient-to-br from-red-600 to-red-700 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
                   {damagedItemRequests.length}
                 </span>
@@ -827,8 +1231,513 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Statistics Tab */}
+        {activeTab === 'statistics' && hasStatisticsAccess && (
+          <div className="space-y-8">
+            {/* Period Selector */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Performance Overview</h2>
+              <div className="flex gap-2 bg-gray-100 rounded-lg p-1">
+                {[
+                  { value: 'day', label: 'Today' },
+                  { value: 'week', label: '7 days' },
+                  { value: 'month', label: '30 days' },
+                  { value: 'year', label: 'Year' },
+                  { value: 'all', label: 'All time' },
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setStatsPeriod(value as any)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                      statsPeriod === value
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Statistics Cards */}
+            {statistics ? (
+              <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Orders Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Orders</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-1">{(statistics.ordersCount || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    {statistics.growth?.orders !== 0 && (
+                      <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
+                        (statistics.growth?.orders || 0) > 0
+                          ? 'bg-green-50 text-green-700'
+                          : 'bg-red-50 text-red-700'
+                      }`}>
+                        <svg className={`w-4 h-4 ${(statistics.growth?.orders || 0) > 0 ? 'rotate-0' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                        <span className="text-sm font-semibold">{Math.abs(statistics.growth?.orders || 0).toFixed(1)}%</span>
+                      </div>
+                    )}
+                  </div>
+                  {statsPeriod !== 'all' && (
+                    <div className="pt-4 border-t border-gray-100">
+                      <p className="text-xs text-gray-500">Total: <span className="font-semibold text-gray-700">{(statistics.allTimeOrders || 0).toLocaleString()}</span> orders all time</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Customers Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
+                        <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Customers</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-1">{(statistics.totalCustomers || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t border-gray-100">
+                    <p className="text-xs text-gray-500">Registered users</p>
+                  </div>
+                </div>
+
+                {/* Revenue Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Revenue</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-1">¥{(statistics.totalRevenue || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    {(statistics.growth?.revenue || 0) !== 0 && (
+                      <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
+                        (statistics.growth?.revenue || 0) > 0
+                          ? 'bg-green-50 text-green-700'
+                          : 'bg-red-50 text-red-700'
+                      }`}>
+                        <svg className={`w-4 h-4 ${(statistics.growth?.revenue || 0) > 0 ? 'rotate-0' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                        <span className="text-sm font-semibold">{Math.abs(statistics.growth?.revenue || 0).toFixed(1)}%</span>
+                      </div>
+                    )}
+                  </div>
+                  {statsPeriod !== 'all' && (
+                    <div className="pt-4 border-t border-gray-100">
+                      <p className="text-xs text-gray-500">Total: <span className="font-semibold text-gray-700">¥{(statistics.allTimeRevenue || 0).toLocaleString()}</span> all time</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Visits Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
+                        <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Visitors</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-1">{(statistics.visitsCount || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    {(statistics.growth?.visits || 0) !== 0 && (
+                      <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
+                        (statistics.growth?.visits || 0) > 0
+                          ? 'bg-green-50 text-green-700'
+                          : 'bg-red-50 text-red-700'
+                      }`}>
+                        <svg className={`w-4 h-4 ${(statistics.growth?.visits || 0) > 0 ? 'rotate-0' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                        <span className="text-sm font-semibold">{Math.abs(statistics.growth?.visits || 0).toFixed(1)}%</span>
+                      </div>
+                    )}
+                  </div>
+                  {statsPeriod !== 'all' && (
+                    <div className="pt-4 border-t border-gray-100">
+                      <p className="text-xs text-gray-500">Total: <span className="font-semibold text-gray-700">{(statistics.allTimeVisits || 0).toLocaleString()}</span> visits all time</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Conversion Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                {/* Unique Buyers */}
+                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <h3 className="text-white/80 text-sm font-semibold uppercase tracking-wide mb-2">People Bought</h3>
+                  <p className="text-4xl font-black mb-2">{(statistics.uniqueBuyers || 0).toLocaleString()}</p>
+                  <p className="text-white/70 text-sm">Unique customers who made purchases</p>
+                </div>
+
+                {/* Conversion Rate */}
+                <div className="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                    </div>
+                  </div>
+                  <h3 className="text-white/80 text-sm font-semibold uppercase tracking-wide mb-2">Conversion Rate</h3>
+                  <p className="text-4xl font-black mb-2">{(statistics.conversionRate || 0).toFixed(1)}%</p>
+                  <p className="text-white/70 text-sm">
+                    {(statistics.uniqueBuyers || 0).toLocaleString()} buyers / {(statistics.visitsCount || 0).toLocaleString()} visitors
+                  </p>
+                </div>
+              </div>
+
+              {/* Business Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                {/* Average Order Value */}
+                <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <h3 className="text-white/80 text-sm font-semibold uppercase tracking-wide mb-2">Average Order Value</h3>
+                  <p className="text-4xl font-black mb-2">¥{(statistics.averageOrderValue || 0).toLocaleString()}</p>
+                  <p className="text-white/70 text-sm">
+                    Average cart value per order
+                  </p>
+                </div>
+
+                {/* Repeat Purchase Rate */}
+                <div className="bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </div>
+                  </div>
+                  <h3 className="text-white/80 text-sm font-semibold uppercase tracking-wide mb-2">Repeat Purchase Rate</h3>
+                  <p className="text-4xl font-black mb-2">{(statistics.repeatPurchaseRate || 0).toFixed(1)}%</p>
+                  <p className="text-white/70 text-sm">
+                    Customers who made multiple purchases
+                  </p>
+                </div>
+              </div>
+
+              {/* Conversion Funnel */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-8">
+                <div className="border-b border-gray-200 p-6">
+                  <h3 className="text-lg font-bold text-gray-900">Conversion Funnel</h3>
+                  <p className="text-sm text-gray-500 mt-1">Track user journey from visit to first purchase</p>
+                </div>
+                <div className="p-8">
+                  <div className="max-w-3xl mx-auto">
+                    <div className="relative">
+                      {/* Connecting line */}
+                      <div className="absolute left-12 top-24 bottom-24 w-0.5 bg-gray-200"></div>
+
+                      <div className="space-y-6">
+                        {/* Visitors */}
+                        <div className="relative">
+                          <div className="flex items-start gap-6">
+                            <div className="flex-shrink-0 w-24 h-24 rounded-2xl bg-blue-50 border-2 border-blue-200 flex items-center justify-center relative z-10">
+                              <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1 bg-gray-50 rounded-xl p-6 border border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Step 1: Visitors</p>
+                                  <p className="text-4xl font-black text-gray-900">{(statistics.funnel?.visitors || 0).toLocaleString()}</p>
+                                  <p className="text-sm text-gray-500 mt-2">Unique visitors in this period</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          {/* Conversion indicator */}
+                          <div className="flex items-center gap-3 mt-4 ml-32">
+                            <div className="h-12 w-1 bg-blue-200 rounded-full"></div>
+                            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                              </svg>
+                              <span className="text-sm font-bold text-green-700">{(statistics.funnel?.visitToRegistrationRate || 0).toFixed(1)}% converted</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Registrations */}
+                        <div className="relative">
+                          <div className="flex items-start gap-6">
+                            <div className="flex-shrink-0 w-24 h-24 rounded-2xl bg-purple-50 border-2 border-purple-200 flex items-center justify-center relative z-10">
+                              <svg className="w-10 h-10 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1 bg-gray-50 rounded-xl p-6 border border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Step 2: Registrations</p>
+                                  <p className="text-4xl font-black text-gray-900">{(statistics.funnel?.newRegistrations || 0).toLocaleString()}</p>
+                                  <p className="text-sm text-gray-500 mt-2">New users created accounts</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          {/* Conversion indicator */}
+                          <div className="flex items-center gap-3 mt-4 ml-32">
+                            <div className="h-12 w-1 bg-purple-200 rounded-full"></div>
+                            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                              </svg>
+                              <span className="text-sm font-bold text-green-700">{(statistics.funnel?.registrationToFirstOrderRate || 0).toFixed(1)}% converted</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* First Orders */}
+                        <div className="relative">
+                          <div className="flex items-start gap-6">
+                            <div className="flex-shrink-0 w-24 h-24 rounded-2xl bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center relative z-10">
+                              <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1 bg-gray-50 rounded-xl p-6 border border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Step 3: First Orders</p>
+                                  <p className="text-4xl font-black text-gray-900">{(statistics.funnel?.firstOrders || 0).toLocaleString()}</p>
+                                  <p className="text-sm text-gray-500 mt-2">Users made their first purchase</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Analytics Chart */}
+              <div className="mt-8">
+                <AnalyticsChart />
+              </div>
+
+              {/* Revenue Chart */}
+              <div className="mt-8">
+                <RevenueChart />
+              </div>
+
+              {/* Team Management */}
+              <div className="mt-8 bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="border-b border-gray-200 p-6">
+                  <h3 className="text-lg font-bold text-gray-900">Team Management</h3>
+                  <p className="text-sm text-gray-500 mt-1">Manage admin access and permissions</p>
+                </div>
+
+                <div className="p-6">
+                  {/* Add New Admin Form */}
+                  <div className="bg-gray-50 rounded-xl p-6 mb-6 border border-gray-200">
+                    <h4 className="text-sm font-bold text-gray-900 mb-4">Add New Admin</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <input
+                          type="email"
+                          value={newAdminEmail}
+                          onChange={(e) => setNewAdminEmail(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="admin@example.com"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">User must be registered on the site first</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {['orders', 'warehouse', 'consolidation', 'photos', 'reinforcement', 'disposal', 'cancelPurchase', 'messages', 'shipping', 'compensation', 'damaged'].map((tab) => (
+                            <label key={tab} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedPermissions.includes(tab)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedPermissions([...selectedPermissions, tab]);
+                                  } else {
+                                    setSelectedPermissions(selectedPermissions.filter(t => t !== tab));
+                                  }
+                                }}
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700 capitalize">{tab}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleAddAdmin}
+                        className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                      >
+                        Add Admin
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Admin List */}
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900 mb-4">Current Admins ({adminTeam.length})</h4>
+                    <div className="space-y-3">
+                      {adminTeam.map((admin) => {
+                        const permissions = admin.adminPermissions ? JSON.parse(admin.adminPermissions) : {};
+                        const permissionTabs = Object.keys(permissions).filter(key => permissions[key]);
+                        const isEditing = editingAdmin?.id === admin.id;
+
+                        return (
+                          <div key={admin.id} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <p className="font-medium text-gray-900">{admin.email}</p>
+                                {admin.name && (
+                                  <p className="text-sm text-gray-500">{admin.name} {admin.secondName || ''}</p>
+                                )}
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Added {new Date(admin.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    if (isEditing) {
+                                      setEditingAdmin(null);
+                                    } else {
+                                      setEditingAdmin(admin);
+                                    }
+                                  }}
+                                  className="px-3 py-1.5 text-sm border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                                >
+                                  {isEditing ? 'Cancel' : 'Edit'}
+                                </button>
+                                <button
+                                  onClick={() => handleRemoveAdmin(admin)}
+                                  className="px-3 py-1.5 text-sm border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+
+                            {isEditing ? (
+                              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-sm font-medium text-gray-900 mb-2">Edit Permissions</p>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+                                  {['orders', 'warehouse', 'consolidation', 'photos', 'reinforcement', 'disposal', 'cancelPurchase', 'messages', 'shipping', 'compensation', 'damaged'].map((tab) => (
+                                    <label key={tab} className="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        defaultChecked={permissions[tab]}
+                                        onChange={(e) => {
+                                          const currentPermissions = editingAdmin.permissions || permissionTabs;
+                                          if (e.target.checked) {
+                                            setEditingAdmin({
+                                              ...editingAdmin,
+                                              permissions: [...currentPermissions, tab]
+                                            });
+                                          } else {
+                                            setEditingAdmin({
+                                              ...editingAdmin,
+                                              permissions: currentPermissions.filter((t: string) => t !== tab)
+                                            });
+                                          }
+                                        }}
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                      />
+                                      <span className="text-sm text-gray-700 capitalize">{tab}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                                <button
+                                  onClick={() => handleUpdatePermissions(editingAdmin, editingAdmin.permissions || permissionTabs)}
+                                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                                >
+                                  Save Changes
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap gap-2">
+                                {permissionTabs.length > 0 ? (
+                                  permissionTabs.map((tab) => (
+                                    <span key={tab} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded capitalize">
+                                      {tab}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-gray-400">No permissions assigned</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {adminTeam.length === 0 && (
+                        <div className="text-center py-8 text-gray-500 text-sm">
+                          No admin team members yet. Add one above.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading statistics...</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Orders Tab */}
-        {activeTab === 'orders' && (
+        {activeTab === 'orders' && hasPermission('orders') && (
           <div className="space-y-4">
             {orders.filter(order => !order.confirmed).length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -1019,7 +1928,7 @@ export default function AdminPage() {
         )}
 
         {/* Warehouse Tab */}
-        {activeTab === 'warehouse' && (
+        {activeTab === 'warehouse' && hasPermission('warehouse') && (
           <div className="space-y-4">
             {/* Search Bar */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
@@ -1361,7 +2270,7 @@ export default function AdminPage() {
         )}
 
         {/* Consolidation Requests Tab */}
-        {activeTab === 'consolidation' && (
+        {activeTab === 'consolidation' && hasPermission('consolidation') && (
           <div className="space-y-6">
             {consolidationPackages.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -1504,7 +2413,7 @@ export default function AdminPage() {
         )}
 
         {/* Product Photos Tab */}
-        {activeTab === 'photos' && (
+        {activeTab === 'photos' && hasPermission('photos') && (
           <div className="space-y-6">
             {photoRequests.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -1537,7 +2446,7 @@ export default function AdminPage() {
         )}
 
         {/* Package Reinforcement Tab */}
-        {activeTab === 'reinforcement' && (
+        {activeTab === 'reinforcement' && hasPermission('reinforcement') && (
           <div className="space-y-6">
             {reinforcementRequests.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -1566,7 +2475,7 @@ export default function AdminPage() {
         )}
 
         {/* Disposal Requests Tab */}
-        {activeTab === 'disposal' && (
+        {activeTab === 'disposal' && hasPermission('disposal') && (
           <div className="space-y-4">
             {disposalRequests.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -1720,7 +2629,7 @@ export default function AdminPage() {
         )}
 
         {/* Cancel Purchase Requests Tab */}
-        {activeTab === 'cancelPurchase' && (
+        {activeTab === 'cancelPurchase' && hasPermission('cancelPurchase') && (
           <div className="space-y-4">
             {cancelPurchaseRequests.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -1899,7 +2808,9 @@ export default function AdminPage() {
                       <button
                         onClick={() => {
                           setSelectedCancelPackage(pkg);
-                          setRefundAmount("");
+                          // Автоматически заполняем сумму возврата стоимостью товара
+                          const itemPrice = pkg.orderItem?.price || 0;
+                          setRefundAmount(itemPrice.toString());
                           setShowRefundModal(true);
                         }}
                         className="w-full px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 font-medium shadow-sm hover:shadow-md transition-all"
@@ -1915,7 +2826,7 @@ export default function AdminPage() {
         )}
 
         {/* Messages Tab */}
-        {activeTab === 'messages' && (
+        {activeTab === 'messages' && hasPermission('messages') && (
           <AdminMessagesSection
             messages={messages}
             selectedUser={selectedUser}
@@ -1925,154 +2836,124 @@ export default function AdminPage() {
         )}
 
         {/* Shipping Requests Tab */}
-        {activeTab === 'shipping' && (
-          <div className="space-y-4">
+        {activeTab === 'shipping' && hasPermission('shipping') && (
+          <div className="bg-white rounded-xl border border-gray-200">
             {shippingRequests.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+              <div className="p-12 text-center">
                 <p className="text-gray-500">No shipping requests at the moment</p>
               </div>
             ) : (
-              shippingRequests.map((pkg) => (
-                <div key={pkg.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">{pkg.user?.email || 'Unknown User'}</h3>
-                      {pkg.consolidated ? (
-                        <p className="text-sm font-mono">
-                          Package ID <span className="px-1.5 py-0.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded shadow">{pkg.id}</span>
-                        </p>
-                      ) : (
-                        <p className="text-sm font-mono">
-                          Order <span className="px-1.5 py-0.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded shadow">#{pkg.orderItem.order?.orderNumber ? String(pkg.orderItem.order.orderNumber).padStart(6, '0') : pkg.orderItem.orderId.slice(0, 8)}</span>
-                        </p>
-                      )}
-                      <p className="text-sm text-gray-500">Requested shipping</p>
-                    </div>
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                      📮 Ready to Ship
-                    </span>
-                  </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="text-left py-4 px-6 text-xs font-bold text-gray-600 uppercase tracking-wider">Customer</th>
+                      <th className="text-left py-4 px-6 text-xs font-bold text-gray-600 uppercase tracking-wider">Package</th>
+                      <th className="text-left py-4 px-6 text-xs font-bold text-gray-600 uppercase tracking-wider">Destination</th>
+                      <th className="text-left py-4 px-6 text-xs font-bold text-gray-600 uppercase tracking-wider">Method</th>
+                      <th className="text-left py-4 px-6 text-xs font-bold text-gray-600 uppercase tracking-wider">Weight</th>
+                      <th className="text-left py-4 px-6 text-xs font-bold text-gray-600 uppercase tracking-wider">Requested</th>
+                      <th className="text-right py-4 px-6 text-xs font-bold text-gray-600 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {shippingRequests.map((pkg) => (
+                      <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
+                        {/* Customer */}
+                        <td className="py-4 px-6">
+                          <div className="text-sm font-medium text-gray-900">{pkg.user?.email || 'Unknown User'}</div>
+                          {pkg.user?.name && <div className="text-xs text-gray-500">{pkg.user.name}</div>}
+                        </td>
 
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    {pkg.consolidated ? (
-                      // Для консолидированных пакетов показываем все товары
-                      <div>
-                        <h4 className="text-xs font-semibold text-green-700 mb-2 flex items-center gap-1">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Consolidated Package ({(pkg.consolidatedPackages?.length || 0) + 1} items)
-                        </h4>
-                        <div className="space-y-2">
-                          {/* Главный товар */}
-                          <div className="flex items-center gap-3 p-2 bg-white rounded border border-green-200">
-                            {pkg.orderItem.image && (
-                              <img src={pkg.orderItem.image} alt={pkg.orderItem.title} className="w-12 h-12 rounded object-cover" />
+                        {/* Package */}
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            {pkg.orderItem?.image && (
+                              <img src={pkg.orderItem.image} alt="" className="w-12 h-12 rounded border border-gray-200 object-cover" />
                             )}
-                            <div className="flex-1">
-                              <p className="text-xs font-medium text-gray-900">{pkg.orderItem.title}</p>
-                              <p className="text-xs text-gray-500">Qty: {pkg.orderItem.quantity}</p>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
+                                {pkg.consolidated ? `Consolidated (${(pkg.consolidatedPackages?.length || 0) + 1} items)` : pkg.orderItem?.title || 'N/A'}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {pkg.consolidated ? (
+                                  <span className="text-green-600 font-medium">Package {pkg.id.slice(0, 8)}</span>
+                                ) : (
+                                  `Order #${pkg.orderItem?.order?.orderNumber ? String(pkg.orderItem.order.orderNumber).padStart(6, '0') : pkg.orderItem?.orderId?.slice(0, 8) || 'N/A'}`
+                                )}
+                              </div>
                             </div>
                           </div>
-                          {/* Объединенные товары */}
-                          {pkg.consolidatedPackages && pkg.consolidatedPackages.length > 0 && (
-                            <>
-                              {pkg.consolidatedPackages.map((consolidatedPkg: any) => (
-                                <div key={consolidatedPkg.id} className="flex items-center gap-3 p-2 bg-white rounded border border-gray-200">
-                                  {consolidatedPkg.orderItem.image && (
-                                    <img src={consolidatedPkg.orderItem.image} alt={consolidatedPkg.orderItem.title} className="w-12 h-12 rounded object-cover" />
-                                  )}
-                                  <div className="flex-1">
-                                    <p className="text-xs font-medium text-gray-900">{consolidatedPkg.orderItem.title}</p>
-                                    <p className="text-xs text-gray-500">Qty: {consolidatedPkg.orderItem.quantity}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </>
-                          )}
-                        </div>
-                        {/* Информация о посылке */}
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          {pkg.trackingNumber && (
-                            <p className="text-xs text-gray-600 font-mono">Tracking: {pkg.trackingNumber}</p>
-                          )}
-                          {pkg.weight && (
-                            <p className="text-xs text-gray-600 mt-1">Total Weight: {pkg.weight} kg</p>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      // Для обычных пакетов показываем как раньше
-                      <div className="flex items-center gap-3">
-                        {pkg.orderItem.image && (
-                          <img src={pkg.orderItem.image} alt={pkg.orderItem.title} className="w-20 h-20 rounded object-cover" />
-                        )}
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{pkg.orderItem.title}</p>
-                          <p className="text-xs text-gray-500">Qty: {pkg.orderItem.quantity}</p>
-                          {pkg.trackingNumber && (
-                            <p className="text-xs text-gray-600 font-mono mt-1">Tracking: {pkg.trackingNumber}</p>
-                          )}
-                          {pkg.weight && (
-                            <p className="text-xs text-gray-600 mt-1">Weight: {pkg.weight} kg</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                        </td>
 
-                  <div className="flex gap-3 text-xs mb-4">
-                    {pkg.shippingMethod && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">📮 {pkg.shippingMethod.toUpperCase()}</span>
-                    )}
-                    {pkg.photoService && (
-                      <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">📸 Photo Service</span>
-                    )}
-                    {pkg.additionalInsurance > 0 && (
-                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded font-medium">
-                        🛡️ Insured: ¥{(20000 + pkg.additionalInsurance).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
+                        {/* Destination */}
+                        <td className="py-4 px-6">
+                          {pkg.shippingAddress ? (
+                            <div>
+                              <div className="text-sm text-gray-900">{pkg.shippingAddress.city}, {pkg.shippingAddress.state}</div>
+                              <div className="text-xs text-gray-500">{pkg.shippingAddress.country}</div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">No address</span>
+                          )}
+                        </td>
 
-                  {/* Shipping Address */}
-                  {pkg.shippingAddress && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                      <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Shipping Address
-                      </h4>
-                      <div className="text-sm text-gray-700 space-y-1">
-                        <p className="font-medium">{pkg.shippingAddress.name}</p>
-                        <p>{pkg.shippingAddress.address}</p>
-                        {pkg.shippingAddress.apartment && <p>{pkg.shippingAddress.apartment}</p>}
-                        <p>{pkg.shippingAddress.city}, {pkg.shippingAddress.state} {pkg.shippingAddress.postalCode}</p>
-                        <p className="font-medium">{pkg.shippingAddress.country}</p>
-                        {pkg.shippingAddress.phoneNumber && <p>📞 {pkg.shippingAddress.phoneNumber}</p>}
-                      </div>
-                    </div>
-                  )}
+                        {/* Method */}
+                        <td className="py-4 px-6">
+                          <div className="flex flex-col gap-1">
+                            {pkg.shippingMethod && (
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 w-fit">
+                                {pkg.shippingMethod.toUpperCase()}
+                              </span>
+                            )}
+                            {pkg.photoService && (
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-50 text-purple-700 w-fit">
+                                Photo
+                              </span>
+                            )}
+                          </div>
+                        </td>
 
-                  <button
-                    onClick={() => {
-                      setSelectedShippingPackage(pkg);
-                      setShowTrackingModal(true);
-                    }}
-                    className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 font-medium shadow-sm hover:shadow-md transition-all"
-                  >
-                    ✓ Mark as Shipped & Add Tracking
-                  </button>
-                </div>
-              ))
+                        {/* Weight */}
+                        <td className="py-4 px-6">
+                          <div className="text-sm text-gray-900">{pkg.weight ? `${pkg.weight} kg` : '—'}</div>
+                        </td>
+
+                        {/* Requested */}
+                        <td className="py-4 px-6">
+                          <div className="text-xs text-gray-500">
+                            {new Date(pkg.shippingRequestedAt || pkg.updatedAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-4 px-6 text-right">
+                          <button
+                            onClick={() => {
+                              setSelectedShippingPackage(pkg);
+                              setShowTrackingModal(true);
+                            }}
+                            className="inline-flex items-center px-3 py-1.5 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                          >
+                            Mark Shipped
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
 
         {/* Compensation Requests Tab */}
-        {activeTab === 'compensation' && (
+        {activeTab === 'compensation' && hasPermission('compensation') && (
           <div className="space-y-4">
             {compensationRequests.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -2548,7 +3429,7 @@ export default function AdminPage() {
         )}
 
         {/* Damaged Items Tab */}
-        {activeTab === 'damaged' && (
+        {activeTab === 'damaged' && hasPermission('damaged') && (
           <div className="space-y-4">
             {damagedItemRequests.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -2556,249 +3437,28 @@ export default function AdminPage() {
               </div>
             ) : (
               damagedItemRequests.map((request) => (
-                <div key={request.id} className="bg-white rounded-xl shadow-sm border-2 border-red-200 p-6">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-200">
+                <div key={request.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">{request.user?.email || 'Unknown User'}</h3>
                       {request.user?.name && <p className="text-sm text-gray-600">{request.user.name} {request.user.secondName || ''}</p>}
-                      <p className="text-xs text-gray-500 mt-1">
-                        Submitted {new Date(request.createdAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                      request.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      request.status === 'approved' ? 'bg-green-100 text-green-700' :
-                      'bg-red-100 text-red-700'
+                    <span className={`px-3 py-1 rounded text-xs font-medium ${
+                      request.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                      request.status === 'approved' ? 'bg-green-50 text-green-700' :
+                      'bg-red-50 text-red-700'
                     }`}>
-                      {request.status.toUpperCase()}
+                      {request.status}
                     </span>
                   </div>
-
-                  {/* Package Info */}
-                  <div className="bg-red-50 rounded-lg p-4 mb-4 border border-red-200">
-                    <h4 className="text-sm font-semibold text-red-900 mb-2 flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                      Package Information
-                    </h4>
-                    {request.package && (
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-700">Tracking:</span>
-                          <span className="font-mono text-gray-900">{request.package.trackingNumber || 'N/A'}</span>
-                        </div>
-                        {request.package.orderItem && (
-                          <>
-                            {request.package.orderItem.order?.orderNumber && (
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-gray-700">Order ID:</span>
-                                <span className="font-mono text-gray-900 bg-white px-2 py-1 rounded border border-red-300">
-                                  #{String(request.package.orderItem.order.orderNumber).padStart(6, '0')}
-                                </span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Item:</span>
-                              <span className="text-gray-900">{request.package.orderItem.title}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">Price:</span>
-                              <span className="font-mono text-gray-900">¥{request.package.orderItem.price?.toLocaleString()}</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Damage Description */}
-                  <div className="mb-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Damage Description</h4>
-                    <p className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 rounded-lg p-3 border border-gray-200">{request.description}</p>
-                  </div>
-
-                  {/* Photos */}
-                  {(() => {
-                    try {
-                      const photos = request.photos ? JSON.parse(request.photos) : [];
-                      return photos.length > 0 && (
-                        <div className="mb-4">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Photos ({photos.length})</h4>
-                          <div className="grid grid-cols-3 gap-3">
-                            {photos.map((photo: string, index: number) => (
-                              <a
-                                key={index}
-                                href={photo}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-red-500 transition-colors group"
-                              >
-                                <img
-                                  src={photo}
-                                  alt={`Damage ${index + 1}`}
-                                  className="w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
-                                  <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                  </svg>
-                                </div>
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    } catch (error) {
-                      console.error('Error parsing photos:', error);
-                      return null;
-                    }
-                  })()}
-
-                  {/* Refund Information */}
-                  {request.refundRequested && (
-                    <div className="mb-4">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                        </svg>
-                        Refund Information
-                      </h4>
-                      <div className="bg-purple-50 rounded-lg p-3 border border-purple-200 space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-700">Status:</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                            request.refundProcessed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            {request.refundProcessed ? 'Processed' : 'Pending'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-700">Method:</span>
-                          <span className="text-gray-900">
-                            {request.refundMethod === 'balance' ? 'Account Balance' :
-                             request.refundMethod === 'stripe' ? 'Stripe (Card)' : 'PayPal'}
-                          </span>
-                        </div>
-                        {request.refundEmail && (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-700">Email:</span>
-                            <span className="text-gray-900 font-mono text-xs">{request.refundEmail}</span>
-                          </div>
-                        )}
-                        {request.refundCardLast4 && (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-700">Card Last 4:</span>
-                            <span className="text-gray-900 font-mono">****{request.refundCardLast4}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Admin Notes */}
-                  {request.adminNotes && (
-                    <div className="mb-4">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Admin Notes</h4>
-                      <p className="text-sm text-gray-600 bg-blue-50 rounded-lg p-3 border border-blue-200">{request.adminNotes}</p>
-                    </div>
-                  )}
-
-                  {/* Update Form */}
-                  <div className="border-t pt-4 mt-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Update Request</h4>
-                    <form
-                      onSubmit={async (e) => {
-                        e.preventDefault();
-                        const form = e.target as HTMLFormElement;
-                        const formData = new FormData(form);
-                        const status = formData.get('status') as string;
-                        const adminNotes = formData.get('adminNotes') as string;
-                        const refundProcessed = formData.get('refundProcessed') === 'true';
-
-                        try {
-                          const token = localStorage.getItem('auth_token');
-                          const response = await fetch('/api/admin/damaged-item-requests', {
-                            method: 'PATCH',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({
-                              requestId: request.id,
-                              status,
-                              adminNotes,
-                              refundProcessed: request.refundRequested ? refundProcessed : undefined,
-                            }),
-                          });
-
-                          if (response.ok) {
-                            alert('Request updated successfully');
-                            fetchDamagedItemRequests();
-                          } else {
-                            alert('Failed to update request');
-                          }
-                        } catch (error) {
-                          console.error('Error updating request:', error);
-                          alert('Error updating request');
-                        }
-                      }}
-                      className="space-y-3"
-                    >
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                          <select
-                            name="status"
-                            defaultValue={request.status}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm"
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Admin Notes</label>
-                          <input
-                            type="text"
-                            name="adminNotes"
-                            defaultValue={request.adminNotes || ''}
-                            placeholder="Add notes..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Refund Status - only show if refund was requested */}
-                      {request.refundRequested && (
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Refund Status</label>
-                          <select
-                            name="refundProcessed"
-                            defaultValue={request.refundProcessed ? 'true' : 'false'}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
-                          >
-                            <option value="false">Pending</option>
-                            <option value="true">Processed</option>
-                          </select>
-                        </div>
-                      )}
-
-                      <button
-                        type="submit"
-                        className="w-full px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 font-medium shadow-sm hover:shadow-md transition-all text-sm"
-                      >
-                        Update Request
-                      </button>
-                    </form>
+                  <div className="text-sm text-gray-900 mb-2">{request.description}</div>
+                  <div className="text-xs text-gray-500">
+                    Submitted {new Date(request.createdAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
                   </div>
                 </div>
               ))
@@ -2806,6 +3466,88 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* Statistics Password Modal */}
+      {showStatisticsPasswordModal && (
+        <div className="fixed inset-0 bg-slate-900/25 backdrop-blur-xl flex items-center justify-center z-50 p-4">
+          <style jsx>{`
+            @keyframes rise {
+              from {
+                transform: translateY(14px) scale(0.96);
+                opacity: 0;
+              }
+              to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+              }
+            }
+            .modal-rise {
+              animation: rise 0.3s ease;
+            }
+          `}</style>
+          <div className="w-[360px] bg-gradient-to-b from-white to-slate-50 rounded-[22px] p-7 shadow-[0_30px_80px_rgba(15,23,42,0.25)] modal-rise relative">
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowStatisticsPasswordModal(false);
+                setStatisticsPassword("");
+                setRememberDevice(false);
+                setActiveTab('orders');
+              }}
+              className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors"
+            >
+              <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h2 className="text-xl font-bold text-slate-900 mb-1.5">Confirm access</h2>
+            <p className="text-sm text-slate-500 mb-5">Please enter your password to continue</p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleStatisticsPasswordSubmit();
+              }}
+            >
+              <div className="bg-slate-100 rounded-[14px] px-4 py-3.5 mb-4 border border-slate-200 transition-all focus-within:border-green-500 focus-within:shadow-[0_0_0_4px_rgba(34,197,94,0.15)]">
+                <input
+                  type="password"
+                  value={statisticsPassword}
+                  onChange={(e) => setStatisticsPassword(e.target.value)}
+                  className="w-full bg-transparent border-none outline-none text-[15px] text-slate-900 placeholder:text-slate-400"
+                  placeholder="Password"
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <label className="flex items-center gap-2.5 text-sm text-slate-600 mb-5.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="rememberDevice"
+                  checked={rememberDevice}
+                  onChange={(e) => setRememberDevice(e.target.checked)}
+                  className="w-4 h-4 accent-green-500"
+                />
+                Remember this device for 30 days
+              </label>
+
+              <button
+                type="submit"
+                className="w-full py-3.5 rounded-[14px] border-none bg-gradient-to-br from-green-500 to-green-600 text-white text-[15px] font-semibold cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_25px_rgba(34,197,94,0.35)]"
+              >
+                Continue
+              </button>
+
+              <div className="mt-4 text-center text-xs text-slate-400">
+                Your data is protected with encryption
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Package Modal */}
       {showPackageModal && selectedItem && (
@@ -3271,6 +4013,13 @@ export default function AdminPage() {
               <p className="font-medium text-gray-900">{selectedCancelPackage.user.email}</p>
               <p className="text-xs text-gray-500 mt-2">
                 Package: {selectedCancelPackage.orderItem.title}
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+              <p className="text-sm font-medium text-blue-900 mb-1">Item Price:</p>
+              <p className="text-3xl font-bold text-blue-600">
+                ¥{selectedCancelPackage.orderItem.price?.toLocaleString()}
               </p>
             </div>
 

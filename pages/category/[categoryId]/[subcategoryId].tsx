@@ -32,7 +32,7 @@ const SubcategoryPage: NextPage<Props> = ({
   const router = useRouter();
   const { setProducts, getSubcategoryState, resetSubcategory } = useProductsContext();
   const { marketplace } = useMarketplace();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, getCurrencySymbol } = useCurrency();
 
   const [activeSubcategoryId, setActiveSubcategoryId] = useState<string>(subcategoryId);
   const [currentSubcategoryName, setCurrentSubcategoryName] = useState<string>(subcategoryName);
@@ -41,6 +41,8 @@ const SubcategoryPage: NextPage<Props> = ({
   const [sortOrder, setSortOrder] = useState<string>(initialSort);
   const [loading, setLoading] = useState(false);
   const [navigatingToProduct, setNavigatingToProduct] = useState(false);
+  const [priceMin, setPriceMin] = useState<string>("");
+  const [priceMax, setPriceMax] = useState<string>("");
 
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
@@ -76,6 +78,10 @@ const SubcategoryPage: NextPage<Props> = ({
 
     // Показываем анимацию загрузки
     setNavigatingToProduct(true);
+
+    // Сохраняем фильтры по цене
+    sessionStorage.setItem(`priceMin-subcat-${activeSubcategoryId}`, priceMin);
+    sessionStorage.setItem(`priceMax-subcat-${activeSubcategoryId}`, priceMax);
 
     // Для Yahoo товаров сохраняем данные товара
     if (product._source === 'yahoo') {
@@ -126,15 +132,19 @@ const SubcategoryPage: NextPage<Props> = ({
 
     setLoading(true);
     try {
+      // Добавляем параметры фильтрации по цене
+      const minPriceParam = priceMin ? `&minPrice=${encodeURIComponent(priceMin)}` : '';
+      const maxPriceParam = priceMax ? `&maxPrice=${encodeURIComponent(priceMax)}` : '';
+
       const endpoint = marketplace === "yahoo"
         ? `/api/yahoo/products?categoryId=${encodeURIComponent(usedSubcatId)}&page=${pageNum}&sort=${encodeURIComponent(usedOrder)}`
-        : `/api/products?genreId=${encodeURIComponent(usedSubcatId)}&page=${pageNum}&sort=${encodeURIComponent(usedOrder)}`;
+        : `/api/products?genreId=${encodeURIComponent(usedSubcatId)}&page=${pageNum}&sort=${encodeURIComponent(usedOrder)}${minPriceParam}${maxPriceParam}`;
 
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error("Failed to fetch products");
       const data = await res.json();
 
-      // API уже возвращает отсортированные данные, не нужно сортировать на клиенте
+      // API уже возвращает отсортированные и отфильтрованные данные
       setProductsState(data);
       setCurrentPage(pageNum);
       setSortOrder(usedOrder);
@@ -167,9 +177,30 @@ const SubcategoryPage: NextPage<Props> = ({
   const handleSubcategoryClick = (subcat: { id: number; name: string }) => {
     const id = String(subcat.id);
     setCategoriesDropdownOpen(false);
+    // Сбрасываем фильтры перед переходом
+    setPriceMin("");
+    setPriceMax("");
     // Навигация через router для обновления URL и триггера SSR
     router.push(`/category/${categoryId}/${id}`);
   };
+
+  // Ref для отслеживания инициализации фильтров
+  const filtersInitialized = useRef(false);
+
+  // Перезагружаем данные при изменении фильтров
+  useEffect(() => {
+    // Пропускаем первую загрузку - данные уже есть от SSR
+    if (!filtersInitialized.current) {
+      filtersInitialized.current = true;
+      return;
+    }
+
+    console.log(`[Subcategory] 🔍 Filter changed: priceMin="${priceMin}", priceMax="${priceMax}"`);
+
+    // Перезагружаем с новыми фильтрами
+    fetchPage(currentPage, sortOrder, activeSubcategoryId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceMin, priceMax]);
 
   // Обновляем товары когда приходят новые данные от SSR
   useEffect(() => {
@@ -190,6 +221,20 @@ const SubcategoryPage: NextPage<Props> = ({
     setCurrentSubcategoryName(subcategoryName);
     setCurrentPage(page);
     setSortOrder(sort);
+    filtersInitialized.current = false; // Сбрасываем флаг фильтров при смене подкатегории
+
+    // Восстанавливаем фильтры по цене
+    const savedPriceMin = sessionStorage.getItem(`priceMin-subcat-${subcategoryId}`);
+    const savedPriceMax = sessionStorage.getItem(`priceMax-subcat-${subcategoryId}`);
+
+    if (savedPriceMin) {
+      setPriceMin(savedPriceMin);
+      sessionStorage.removeItem(`priceMin-subcat-${subcategoryId}`);
+    }
+    if (savedPriceMax) {
+      setPriceMax(savedPriceMax);
+      sessionStorage.removeItem(`priceMax-subcat-${subcategoryId}`);
+    }
 
     // Загружаем только если нет данных от SSR
     if (!initialProducts || initialProducts.length === 0) {
@@ -394,12 +439,62 @@ const SubcategoryPage: NextPage<Props> = ({
           </div>
         </div>
 
+        {/* Price Filter */}
+        <div className="mb-6 bg-white rounded-2xl border-2 border-gray-100 p-4 sm:p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="font-bold text-gray-900 text-base sm:text-lg">Price Filter</h3>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 flex-1">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">From:</label>
+                <input
+                  type="text"
+                  placeholder={`Min ${getCurrencySymbol()}`}
+                  value={priceMin}
+                  onChange={(e) => setPriceMin(e.target.value)}
+                  className="w-28 sm:w-32 px-3 sm:px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition-all text-sm"
+                />
+              </div>
+
+              <span className="text-gray-400 font-bold">—</span>
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">To:</label>
+                <input
+                  type="text"
+                  placeholder={`Max ${getCurrencySymbol()}`}
+                  value={priceMax}
+                  onChange={(e) => setPriceMax(e.target.value)}
+                  className="w-28 sm:w-32 px-3 sm:px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition-all text-sm"
+                />
+              </div>
+
+              {(priceMin || priceMax) && (
+                <button
+                  onClick={() => {
+                    setPriceMin("");
+                    setPriceMax("");
+                  }}
+                  className="px-4 sm:px-6 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium text-sm shadow-sm"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
           <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white border-2 border-gray-100 rounded-xl">
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
-            <span className="font-semibold text-gray-900 text-sm sm:text-base">{products.length || 0}</span>
+            <span className="font-semibold text-gray-900 text-sm sm:text-base">{products.length}</span>
             <span className="text-gray-600 text-sm sm:text-base">items</span>
           </div>
         </div>
@@ -421,7 +516,7 @@ const SubcategoryPage: NextPage<Props> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
             </div>
-            <p className="text-gray-500 text-lg">No products found in this subcategory.</p>
+            <p className="text-gray-500 text-lg">{priceMin || priceMax ? "No products found in this price range. Try adjusting the filters." : "No products found in this subcategory."}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5">

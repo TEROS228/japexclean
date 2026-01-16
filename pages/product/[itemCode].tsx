@@ -5,6 +5,7 @@ import { useCart } from "@/context/CartContext";
 import { useNotification } from "@/context/NotificationContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import ProductLoadingOverlay from "@/components/ProductLoadingOverlay";
+import FavouriteButton from "@/components/FavouriteButton";
 
 interface VariantValue {
   value: string;
@@ -39,6 +40,8 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const [mainImage, setMainImage] = useState(PLACEHOLDER_IMAGE);
   const [quantity, setQuantity] = useState(1);
   const [minLoadingTime, setMinLoadingTime] = useState(true); // Минимальное время показа анимации
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
   // Логируем postageFlag для отладки
   useEffect(() => {
@@ -330,7 +333,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
         setVariantError(null);
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 секунд для Puppeteer с кликами
 
         // Используем разные API endpoints для Yahoo и Rakuten
         const apiEndpoint = productSource === 'yahoo'
@@ -360,7 +363,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
           if (data.postageFlag !== undefined && data.postageFlag !== null && !didCancel) {
             console.log('[Variants API] Updating postageFlag from variants API:', data.postageFlag);
             setProduct((prev: any) => {
-              // Проверяем что значение действительно изменилось
+              // Используем значение из API напрямую, так как оно более надежное
               if (prev.postageFlag === data.postageFlag) return prev;
               return {
                 ...prev,
@@ -675,32 +678,155 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   }, [product?.itemPrice, additionalPrice, hasAbsolutePrices, selectedOptions, variants]);
 
   const handleOptionChange = (optionName: string, value: string) => {
+    console.log(`\n[handleOptionChange] Called with optionName="${optionName}", value="${value}"`);
+    console.log('[handleOptionChange] colorSizeMapping:', colorSizeMapping);
+
     setSelectedOptions(prev => {
+      console.log('[handleOptionChange] Previous options:', prev);
       const newOptions = { ...prev, [optionName]: value };
 
-      // Если изменился цвет и есть colorSizeMapping, автоматически выбираем первый доступный размер
-      if ((optionName === 'Color' || optionName === 'カラー') && Object.keys(colorSizeMapping).length > 0) {
-        const sizesForColor = colorSizeMapping[value];
-        if (sizesForColor && sizesForColor.length > 0) {
-          // Найти первый доступный размер
-          const firstAvailable = sizesForColor.find(s => s.available);
-          if (firstAvailable) {
-            newOptions['Size'] = firstAvailable.value;
-            newOptions['サイズ'] = firstAvailable.value;
-          } else {
-            // Если все sold out для этого цвета, НЕ выбираем размер
-            // Пользователь увидит что все размеры недоступны
-            newOptions['Size'] = '';
-            newOptions['サイズ'] = '';
+      if (Object.keys(colorSizeMapping).length === 0) {
+        console.log('[handleOptionChange] No colorSizeMapping, returning simple update');
+        return newOptions;
+      }
+
+      // Определяем структуру mapping
+      const firstKey = Object.keys(colorSizeMapping)[0];
+      const isSizeFirst = variants.some(v =>
+        (v.optionName.includes('Size') || v.optionName.includes('サイズ')) &&
+        v.values.some(val => val.value === firstKey)
+      );
+
+      console.log('[handleOptionChange] firstKey:', firstKey, 'isSizeFirst:', isSizeFirst);
+
+      if (isSizeFirst) {
+        // Структура: colorSizeMapping[size] -> colors[]
+
+        // Если изменился размер, выбираем первый доступный цвет для этого размера
+        if (optionName.includes('Size') || optionName.includes('サイズ')) {
+          console.log('[handleOptionChange] Size changed to:', value);
+          const colorsForSize = colorSizeMapping[value];
+          console.log('[handleOptionChange] Colors for size:', colorsForSize);
+
+          if (colorsForSize && colorsForSize.length > 0) {
+            // Находим название опции цвета
+            const colorOptionName = Object.keys(newOptions).find(key => key.includes('Color') || key.includes('カラー'));
+            const currentColor = colorOptionName ? newOptions[colorOptionName] : undefined;
+            console.log('[handleOptionChange] Current color:', currentColor);
+
+            const isCurrentColorAvailable = colorsForSize.find(c => c.value === currentColor && c.available);
+            console.log('[handleOptionChange] Is current color available?', isCurrentColorAvailable);
+
+            if (!isCurrentColorAvailable) {
+              // Текущий цвет недоступен для выбранного размера, выбираем первый доступный
+              const firstAvailable = colorsForSize.find(c => c.available);
+              console.log('[handleOptionChange] First available color:', firstAvailable);
+
+              if (firstAvailable) {
+                if (colorOptionName) {
+                  newOptions[colorOptionName] = firstAvailable.value;
+                }
+                console.log('[handleOptionChange] Changed color to:', firstAvailable.value);
+              } else {
+                if (colorOptionName) {
+                  newOptions[colorOptionName] = '';
+                }
+                console.log('[handleOptionChange] No available colors, clearing selection');
+              }
+            }
+          }
+        }
+
+        // Если изменился цвет, проверяем что он доступен для текущего размера
+        if (optionName.includes('Color') || optionName.includes('カラー')) {
+          // Находим название опции размера
+          const sizeOptionName = Object.keys(newOptions).find(key => key.includes('Size') || key.includes('サイズ'));
+          const currentSize = sizeOptionName ? newOptions[sizeOptionName] : undefined;
+          if (currentSize) {
+            const colorsForSize = colorSizeMapping[currentSize];
+            if (colorsForSize) {
+              const isColorAvailable = colorsForSize.find(c => c.value === value && c.available);
+              if (!isColorAvailable) {
+                // Цвет недоступен для текущего размера, выбираем первый доступный размер для этого цвета
+                const sizeWithThisColor = Object.keys(colorSizeMapping).find(size => {
+                  const colors = colorSizeMapping[size];
+                  return colors.some(c => c.value === value && c.available);
+                });
+                if (sizeWithThisColor && sizeOptionName) {
+                  newOptions[sizeOptionName] = sizeWithThisColor;
+                }
+              }
+            }
+          }
+        }
+      } else {
+        // Структура: colorSizeMapping[color] -> sizes[]
+
+        // Если изменился цвет, автоматически выбираем первый доступный размер
+        if (optionName.includes('Color') || optionName.includes('カラー')) {
+          console.log('[handleOptionChange] Color changed to:', value);
+          const sizesForColor = colorSizeMapping[value];
+          console.log('[handleOptionChange] Sizes for color:', sizesForColor);
+
+          if (sizesForColor && sizesForColor.length > 0) {
+            // Находим название опции размера
+            const sizeOptionName = Object.keys(newOptions).find(key => key.includes('Size') || key.includes('サイズ'));
+            const currentSize = sizeOptionName ? newOptions[sizeOptionName] : undefined;
+            console.log('[handleOptionChange] Current size:', currentSize);
+
+            const isCurrentSizeAvailable = sizesForColor.find(s => s.value === currentSize && s.available);
+            console.log('[handleOptionChange] Is current size available?', isCurrentSizeAvailable);
+
+            if (!isCurrentSizeAvailable) {
+              // Текущий размер недоступен для выбранного цвета, выбираем первый доступный
+              const firstAvailable = sizesForColor.find(s => s.available);
+              console.log('[handleOptionChange] First available size:', firstAvailable);
+
+              if (firstAvailable) {
+                if (sizeOptionName) {
+                  newOptions[sizeOptionName] = firstAvailable.value;
+                }
+                console.log('[handleOptionChange] Changed size to:', firstAvailable.value);
+              } else {
+                if (sizeOptionName) {
+                  newOptions[sizeOptionName] = '';
+                }
+                console.log('[handleOptionChange] No available sizes, clearing selection');
+              }
+            }
+          }
+        }
+
+        // Если изменился размер, проверяем что он доступен для текущего цвета
+        if (optionName.includes('Size') || optionName.includes('サイズ')) {
+          // Находим название опции цвета
+          const colorOptionName = Object.keys(newOptions).find(key => key.includes('Color') || key.includes('カラー'));
+          const currentColor = colorOptionName ? newOptions[colorOptionName] : undefined;
+          if (currentColor) {
+            const sizesForColor = colorSizeMapping[currentColor];
+            if (sizesForColor) {
+              const isSizeAvailable = sizesForColor.find(s => s.value === value && s.available);
+              if (!isSizeAvailable) {
+                // Размер недоступен для текущего цвета, выбираем первый доступный цвет для этого размера
+                const colorWithThisSize = Object.keys(colorSizeMapping).find(color => {
+                  const sizes = colorSizeMapping[color];
+                  return sizes.some(s => s.value === value && s.available);
+                });
+                if (colorWithThisSize && colorOptionName) {
+                  newOptions[colorOptionName] = colorWithThisSize;
+                }
+              }
+            }
           }
         }
       }
 
+      console.log('[handleOptionChange] Final options:', newOptions);
       return newOptions;
     });
   };
 
-  // Функция для получения отфильтрованных вариантов с учетом выбранного цвета
+  // Функция для получения отфильтрованных вариантов с учетом выбранного цвета/размера
   const getFilteredVariants = () => {
     if (!variants || variants.length === 0) return [];
 
@@ -709,35 +835,112 @@ export default function ProductPage({ product: initialProduct }: { product: any 
       return variants;
     }
 
+    // Определяем структуру mapping: Size->Color или Color->Size
+    const firstKey = Object.keys(colorSizeMapping)[0];
+    const isSizeFirst = variants.some(v =>
+      (v.optionName.includes('Size') || v.optionName.includes('サイズ')) &&
+      v.values.some(val => val.value === firstKey)
+    );
+
     const filtered = variants.map(variant => {
-      // Если это не Size вариант, оставляем как есть
-      if (variant.optionName !== 'Size' && variant.optionName !== 'サイズ') {
-        return variant;
-      }
+      if (isSizeFirst) {
+        // Структура: colorSizeMapping[size] -> colors[]
 
-      // Если есть выбранный цвет и mapping для него
-      const selectedColor = selectedOptions['Color'] || selectedOptions['カラー'];
+        // Обрабатываем Size варианты - обновляем доступность
+        if (variant.optionName.includes('Size') || variant.optionName.includes('サイズ')) {
+          const updatedValues = variant.values.map(v => {
+            const colorsForSize = colorSizeMapping[v.value];
+            if (colorsForSize) {
+              const hasAvailableColor = colorsForSize.some(c => c.available !== false);
+              return {
+                ...v,
+                isAvailable: hasAvailableColor
+              };
+            }
+            return v;
+          });
 
-      if (selectedColor && colorSizeMapping[selectedColor]) {
-        // Фильтруем sizes для выбранного цвета
-        const sizesForColor = colorSizeMapping[selectedColor];
-        const filteredValues = variant.values.filter(v =>
-          sizesForColor.some(s => s.value === v.value)
-        );
-
-        // Обновляем availability из mapping
-        const updatedValues = filteredValues.map(v => {
-          const sizeInfo = sizesForColor.find(s => s.value === v.value);
           return {
-            ...v,
-            isAvailable: sizeInfo?.available !== false
+            ...variant,
+            values: updatedValues
           };
-        });
+        }
 
-        return {
-          ...variant,
-          values: updatedValues
-        };
+        // Обрабатываем Color варианты - фильтруем по выбранному размеру
+        if (variant.optionName.includes('Color') || variant.optionName.includes('カラー')) {
+          // Находим название опции размера
+          const sizeOptionName = Object.keys(selectedOptions).find(key => key.includes('Size') || key.includes('サイズ'));
+          const selectedSize = sizeOptionName ? selectedOptions[sizeOptionName] : undefined;
+
+          if (selectedSize && colorSizeMapping[selectedSize]) {
+            const colorsForSize = colorSizeMapping[selectedSize];
+            const filteredValues = variant.values.filter(v =>
+              colorsForSize.some(c => c.value === v.value)
+            );
+
+            const updatedValues = filteredValues.map(v => {
+              const colorInfo = colorsForSize.find(c => c.value === v.value);
+              return {
+                ...v,
+                isAvailable: colorInfo?.available !== false
+              };
+            });
+
+            return {
+              ...variant,
+              values: updatedValues
+            };
+          }
+        }
+      } else {
+        // Структура: colorSizeMapping[color] -> sizes[]
+
+        // Обрабатываем Color варианты - обновляем доступность
+        if (variant.optionName.includes('Color') || variant.optionName.includes('カラー')) {
+          const updatedValues = variant.values.map(v => {
+            const sizesForColor = colorSizeMapping[v.value];
+            if (sizesForColor) {
+              const hasAvailableSize = sizesForColor.some(s => s.available !== false);
+              return {
+                ...v,
+                isAvailable: hasAvailableSize
+              };
+            }
+            return v;
+          });
+
+          return {
+            ...variant,
+            values: updatedValues
+          };
+        }
+
+        // Обрабатываем Size варианты - фильтруем по выбранному цвету
+        if (variant.optionName.includes('Size') || variant.optionName.includes('サイズ')) {
+          // Находим название опции цвета
+          const colorOptionName = Object.keys(selectedOptions).find(key => key.includes('Color') || key.includes('カラー'));
+          const selectedColor = colorOptionName ? selectedOptions[colorOptionName] : undefined;
+
+          if (selectedColor && colorSizeMapping[selectedColor]) {
+            const sizesForColor = colorSizeMapping[selectedColor];
+            const filteredValues = variant.values.filter(v =>
+              sizesForColor.some(s => s.value === v.value)
+            );
+
+            const updatedValues = filteredValues.map(v => {
+              const sizeInfo = sizesForColor.find(s => s.value === v.value);
+              return {
+                ...v,
+                isAvailable: sizeInfo?.available !== false
+              };
+            });
+
+            return {
+              ...variant,
+              values: updatedValues
+            };
+          }
+        }
       }
 
       return variant;
@@ -769,6 +972,32 @@ export default function ProductPage({ product: initialProduct }: { product: any 
     });
     showNotification("Added to cart successfully!");
   };
+
+  // Загрузка рекомендаций
+  useEffect(() => {
+    if (!product?.itemName) return;
+
+    const loadRecommendations = async () => {
+      setLoadingRecommendations(true);
+      try {
+        const res = await fetch(`/api/recommendations?itemName=${encodeURIComponent(product.itemName)}&limit=8`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.products) {
+            // Фильтруем текущий товар из рекомендаций
+            const filtered = data.products.filter((p: any) => p.itemCode !== product.itemCode);
+            setRecommendations(filtered);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load recommendations:', error);
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    };
+
+    loadRecommendations();
+  }, [product?.itemName, product?.itemCode]);
 
   const hasVariants = variants.length > 0;
   const canAddToCart = !loadingVariants;
@@ -848,17 +1077,40 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                   {product?.shopName || "Official Store"}
                 </div>
                 {product?.itemUrl && (
-                  <a
-                    href={product.itemUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-red-600 hover:bg-red-700 active:bg-red-700 text-white text-[10px] sm:text-xs font-medium rounded-md transition-colors duration-150 shadow-sm hover:shadow active:shadow touch-manipulation flex-shrink-0"
-                  >
-                    <span className="whitespace-nowrap">{product?._source === 'yahoo' ? 'Yahoo' : 'Rakuten'}</span>
-                    <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
+                  <div className="relative">
+                    {/* Animated Arrow with Text */}
+                    <div className="absolute top-0 right-full mr-3 sm:mr-4 flex items-center gap-1.5 sm:gap-2 pointer-events-none z-10 animate-bounce-gentle whitespace-nowrap">
+                      <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-[9px] sm:text-xs font-semibold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg shadow-lg relative">
+                        Click here to see more info
+                        <div className="absolute right-0 top-1/2 translate-x-1 -translate-y-1/2 w-2 h-2 bg-green-500 transform rotate-45"></div>
+                      </div>
+                      <svg
+                        className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 animate-pulse flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2.5}
+                          d="M17 8l4 4m0 0l-4 4m4-4H3"
+                        />
+                      </svg>
+                    </div>
+
+                    <a
+                      href={product.itemUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-red-600 hover:bg-red-700 active:bg-red-700 text-white text-[10px] sm:text-xs font-medium rounded-md transition-colors duration-150 shadow-sm hover:shadow active:shadow touch-manipulation flex-shrink-0 relative"
+                    >
+                      <span className="whitespace-nowrap">{product?._source === 'yahoo' ? 'Yahoo' : 'Rakuten'}</span>
+                      <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
                 )}
               </div>
               <h1 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 mb-2 leading-tight">
@@ -901,6 +1153,10 @@ export default function ProductPage({ product: initialProduct }: { product: any 
               {/* Варианты */}
               {loadingVariants ? (
                 <div className="space-y-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-4 w-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                    <p className="text-sm text-gray-600">Loading variants... this may take a moment</p>
+                  </div>
                   <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3"></div>
                   <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
                 </div>
@@ -984,17 +1240,33 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                 </div>
               </div>
 
-              {/* Кнопка добавления в корзину */}
-              <button
-                onClick={handleAddToCart}
-                disabled={!canAddToCart}
-                className="w-full bg-green-600 hover:bg-green-700 active:bg-green-700 text-white px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-bold disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-150 shadow-md hover:shadow-lg active:shadow-lg disabled:shadow-none flex items-center justify-center gap-2 touch-manipulation"
-              >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                <span>Add to Cart</span>
-              </button>
+              {/* Кнопки действий */}
+              <div className="flex gap-2 sm:gap-3">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={!canAddToCart}
+                  className="flex-1 bg-green-600 hover:bg-green-700 active:bg-green-700 text-white px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-bold disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-150 shadow-md hover:shadow-lg active:shadow-lg disabled:shadow-none flex items-center justify-center gap-2 touch-manipulation"
+                >
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                  <span>Add to Cart</span>
+                </button>
+                {product && (
+                  <FavouriteButton
+                    item={{
+                      itemCode: product.itemCode,
+                      itemName: product.itemName,
+                      itemPrice: product.itemPrice,
+                      itemUrl: product.itemUrl,
+                      imageUrl: mainImage !== PLACEHOLDER_IMAGE ? mainImage : product.imageUrl,
+                      _source: product.itemUrl?.includes('yahoo') ? 'yahoo' : 'rakuten',
+                    }}
+                    size="lg"
+                    className="!w-11 !h-11 sm:!w-12 sm:!h-12"
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1083,6 +1355,60 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Recommendations Section */}
+        {!loadingRecommendations && recommendations.length > 0 && (
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8 mt-6 sm:mt-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">You may also like</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {recommendations.map((item: any) => (
+                <a
+                  key={item.itemCode}
+                  href={`/product/${item.itemCode}${item.itemUrl ? `?url=${encodeURIComponent(item.itemUrl)}` : ''}`}
+                  className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden group"
+                >
+                  <div className="aspect-square relative overflow-hidden bg-gray-100">
+                    <img
+                      src={item.imageUrl || item.mediumImageUrls?.[0]?.imageUrl || PLACEHOLDER_IMAGE}
+                      alt={item.itemName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="p-2 sm:p-3">
+                    <h3 className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2 mb-1 sm:mb-2 min-h-[2.5rem]">
+                      {item.itemName}
+                    </h3>
+                    <div className="flex items-baseline gap-1 sm:gap-2">
+                      <span className="text-sm sm:text-lg font-bold text-gray-900">
+                        {formatPrice(item.itemPrice || 0)}
+                      </span>
+                    </div>
+                    {item.reviewAverage > 0 && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <svg
+                              key={star}
+                              className={`w-3 h-3 ${star <= Math.round(item.reviewAverage) ? 'text-yellow-400' : 'text-gray-200'}`}
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                        <span className="text-xs text-gray-600">
+                          ({item.reviewCount?.toLocaleString() || 0})
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </a>
+              ))}
             </div>
           </div>
         )}

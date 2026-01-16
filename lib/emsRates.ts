@@ -3,11 +3,11 @@
 
 export interface EMSRate {
   weight: number; // in kg
-  zone1: number;  // China, South Korea, Taiwan
-  zone2: number;  // Asia (excluding Zone 1)
-  zone3: number;  // Oceania, Canada, Mexico, Middle East, Europe
-  zone4: number;  // U.S. (including Guam)
-  zone5: number;  // Central/South America, Africa
+  zone1: number;  // First Zone: China, South Korea
+  zone2: number;  // Second Zone: Singapore, Thailand, Malaysia, Philippines, Vietnam, Indonesia
+  zone3: number;  // Third Zone: UK, Germany, France, Canada, Australia, New Zealand, Europe, Turkey
+  zone4: number;  // Zone 4: U.S. (SUSPENDED)
+  zone5: number;  // Fifth Zone: South Africa, Argentina, Brazil, Peru, Chile
 }
 
 export const emsRates: EMSRate[] = [
@@ -45,29 +45,46 @@ export const emsRates: EMSRate[] = [
 
 export const zones = {
   zone1: {
-    name: "Zone 1",
-    regions: ["China", "South Korea", "Taiwan"],
+    name: "First Zone",
+    regions: ["East Asia"],
+    countries: ["China", "South Korea"]
   },
   zone2: {
-    name: "Zone 2",
-    regions: ["Asia (excluding Zone 1)"],
-    countries: ["Hong Kong", "Macau", "Singapore", "Thailand", "Philippines", "Vietnam", "Malaysia", "India"]
+    name: "Second Zone",
+    regions: ["Southeast Asia"],
+    countries: ["Singapore", "Thailand", "Malaysia", "Philippines", "Vietnam", "Indonesia"]
   },
   zone3: {
-    name: "Zone 3",
-    regions: ["Oceania", "Canada", "Mexico", "Middle East", "Europe"],
-    countries: ["Australia", "New Zealand", "Canada", "Mexico", "UK", "Germany", "France", "Italy", "Spain"]
+    name: "Third Zone",
+    regions: ["Europe", "Oceania", "Canada", "Middle East"],
+    countries: [
+      // Oceania & Canada
+      "Australia", "New Zealand", "Canada",
+      // Western & Northern Europe
+      "United Kingdom", "Great Britain", "UK", "Germany", "France", "Austria", "Ireland",
+      "Spain", "Portugal", "Italy", "Norway", "Sweden", "Finland",
+      // Eastern & Central Europe
+      "Poland", "Czech Republic", "Czechia", "Hungary", "Slovakia", "Lithuania",
+      "Latvia", "Estonia", "Romania", "Bulgaria", "Croatia", "Greece",
+      // Middle East
+      "Turkey"
+    ]
   },
   zone4: {
     name: "Zone 4 - SUSPENDED",
     regions: ["United States - EMS SHIPPING CURRENTLY SUSPENDED"],
-    countries: ["USA", "Guam"],
+    countries: ["USA", "United States", "Guam"],
     suspended: true
   },
   zone5: {
-    name: "Zone 5",
-    regions: ["Central/South America", "Africa"],
-    countries: ["Brazil", "Argentina", "South Africa"]
+    name: "Fifth Zone",
+    regions: ["Africa", "South America"],
+    countries: [
+      // Africa
+      "South Africa",
+      // South America
+      "Argentina", "Brazil", "Peru", "Chile"
+    ]
   }
 };
 

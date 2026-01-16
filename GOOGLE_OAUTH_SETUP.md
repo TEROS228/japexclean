@@ -1,60 +1,65 @@
-# Google OAuth Setup Instructions
+# 🔐 Настройка Google OAuth
 
-## Step 1: Create Google OAuth Credentials
+Следуйте этим шагам для настройки авторизации через Google.
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the Google+ API:
-   - Go to "APIs & Services" > "Library"
-   - Search for "Google+ API"
-   - Click "Enable"
+## 1. Создайте Google Cloud Project
 
-4. Create OAuth 2.0 credentials:
-   - Go to "APIs & Services" > "Credentials"
-   - Click "Create Credentials" > "OAuth client ID"
-   - Select "Web application"
-   - Add authorized redirect URIs:
-     - For development: `http://localhost:3000/api/auth/callback/google`
-     - For production: `https://yourdomain.com/api/auth/callback/google`
-   - Click "Create"
+1. Перейдите в [Google Cloud Console](https://console.cloud.google.com/)
+2. Создайте новый проект или выберите существующий
+3. Включите Google+ API для вашего проекта
 
-5. Copy the Client ID and Client Secret
+## 2. Создайте OAuth 2.0 Credentials
 
-## Step 2: Add Environment Variables
+1. Перейдите в **APIs & Services** → **Credentials**
+2. Нажмите **Create Credentials** → **OAuth client ID**
+3. Выберите тип приложения: **Web application**
+4. Настройте:
+   - **Name**: Japrix OAuth Client
+   - **Authorized JavaScript origins**:
+     - `http://localhost:3000` (для разработки)
+     - `https://your-domain.com` (для production)
+   - **Authorized redirect URIs**:
+     - `http://localhost:3000/api/auth/callback/google` (для разработки)
+     - `https://your-domain.com/api/auth/callback/google` (для production)
 
-Create or update your `.env.local` file in the project root:
+5. Нажмите **Create**
+
+## 3. Скопируйте Credentials
+
+После создания вы получите:
+- **Client ID** - начинается с цифр и заканчивается на `.apps.googleusercontent.com`
+- **Client Secret** - секретный ключ
+
+## 4. Обновите `.env` файл
+
+Откройте файл `.env` и обновите следующие переменные:
 
 ```env
-# NextAuth
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-random-secret-key-here
-
-# Google OAuth
-GOOGLE_CLIENT_ID=your-google-client-id-here
-GOOGLE_CLIENT_SECRET=your-google-client-secret-here
+GOOGLE_CLIENT_ID=ваш-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=ваш-client-secret
 ```
 
-To generate a NEXTAUTH_SECRET, run:
-```bash
-openssl rand -base64 32
-```
-
-## Step 3: Restart Your Development Server
+## 5. Перезапустите сервер
 
 ```bash
 npm run dev
 ```
 
-## How It Works
+## ✅ Готово!
 
-- When users click "Continue with Google", they'll be redirected to Google's OAuth page
-- After authorization, they'll be redirected back to your app
-- If it's their first time signing in, a new user account will be created automatically in your database
-- Users who sign in with Google don't need a password
+Теперь на страницах входа и регистрации появится кнопка **"Continue with Google"**.
 
-## Features
+При клике пользователь будет перенаправлен на страницу авторизации Google, а после успешного входа вернется обратно в приложение.
 
-✅ Automatic user creation on first Google sign-in
-✅ User data stored in your Prisma database
-✅ Works alongside email/password authentication
-✅ Secure JWT-based sessions
+## 🔒 Безопасность
+
+- ❌ **НЕ коммитьте** файл `.env` в Git
+- ✅ Файл `.env` уже добавлен в `.gitignore`
+- ✅ Храните credentials в безопасности
+- ✅ Для production используйте отдельные credentials
+
+## 📝 Примечания
+
+- Google OAuth автоматически предоставляет email, имя и фото пользователя
+- Не требуется пароль при входе через Google
+- Пользователь может войти как через email/password, так и через Google

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { verifyToken } from '../../../lib/jwt';
 import { prisma } from '../../../lib/prisma';
+import { createRewardCoupon } from '../../../lib/coupons';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -73,8 +74,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const updatedOrder = await prisma.order.update({
         where: { id: orderId },
-        data: { confirmed: true }
+        data: { confirmed: true },
+        include: {
+          items: true
+        }
       });
+
+      // Считаем сумму ТОЛЬКО товаров (без комиссии)
+      const itemsTotal = updatedOrder.items.reduce((sum, item) => {
+        return sum + (item.price * item.quantity);
+      }, 0);
+
+      // Если товары на сумму >= 5000 иен (без учёта комиссии), создаем купон на скидку 800 иен
+      if (itemsTotal >= 5000) {
+        try {
+          const coupon = await createRewardCoupon(updatedOrder.userId);
+
+          // Создаем уведомление о новом купоне
+          await prisma.notification.create({
+            data: {
+              userId: updatedOrder.userId,
+              type: 'coupon_reward',
+              title: 'New Coupon Available!',
+              message: `Congratulations! You've earned a ¥800 discount coupon for your order over ¥5,000. Use code ${coupon.code} on your next purchase.`,
+              read: false
+            }
+          });
+
+          console.log(`✅ Created reward coupon ${coupon.code} for user ${updatedOrder.userId} (items total: ¥${itemsTotal})`);
+        } catch (error) {
+          console.error('Error creating reward coupon:', error);
+          // Не падаем, даже если купон не создался
+        }
+      }
 
       return res.status(200).json({ success: true, order: updatedOrder });
     }

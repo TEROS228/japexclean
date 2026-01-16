@@ -34,76 +34,110 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu'
+        '--disable-blink-features=AutomationControlled',
+        '--window-size=1920,1080'
       ]
     });
 
     const page = await browser.newPage();
 
-    // Включаем логирование из браузера (только ошибки)
-    // page.on('console', msg => {
-    //   console.log('[Browser]', msg.text());
-    // });
+    await page.setViewport({ width: 1920, height: 1080 });
 
-    // Устанавливаем User-Agent чтобы сайт не блокировал
     await page.setUserAgent(
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
     );
 
-    // Блокируем ненужные ресурсы для ускорения загрузки (НЕ блокируем JS!)
+    // Убираем признаки автоматизации
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, 'languages', { get: () => ['ja-JP', 'ja', 'en-US', 'en'] });
+    });
+
+    // Блокируем ТОЛЬКО картинки - JS и CSS нужны для рендеринга!
     await page.setRequestInterception(true);
     page.on('request', (request) => {
       const resourceType = request.resourceType();
-      const url = request.url();
 
-      // Блокируем только тяжелые ресурсы, НО НЕ JAVASCRIPT
-      if (
-        resourceType === 'image' ||
-        resourceType === 'font' ||
-        resourceType === 'media' ||
-        resourceType === 'stylesheet'
-      ) {
+      if (resourceType === 'image' || resourceType === 'font' || resourceType === 'media') {
         request.abort();
       } else {
         request.continue();
       }
     });
 
-    // Переходим на страницу с retry стратегией
-    let navigationSuccess = false;
-    const navigationStrategies = [
-      { waitUntil: 'domcontentloaded' as const, timeout: 30000 },
-      { waitUntil: 'load' as const, timeout: 20000 },
-      { waitUntil: undefined, timeout: 15000 }
-    ];
+    console.log('[Rakuten Parser] Browser configured');
+    console.log('[Rakuten Parser] Navigating to:', url);
 
-    for (const strategy of navigationStrategies) {
-      try {
-        const options: any = { timeout: strategy.timeout };
-        if (strategy.waitUntil) {
-          options.waitUntil = strategy.waitUntil;
-        }
-
-        await page.goto(url, options);
-        navigationSuccess = true;
-        break;
-      } catch (navigationError: any) {
-
-        // Если это последняя стратегия, логируем ошибку и продолжаем
-        if (strategy === navigationStrategies[navigationStrategies.length - 1]) {
-          console.error('[Rakuten Parser] All navigation strategies failed, attempting to parse anyway');
-        }
+    // Логируем все запросы
+    page.on('response', async (response) => {
+      const url = response.url();
+      const status = response.status();
+      if (url.includes('rakuten.co.jp') && !url.includes('.jpg') && !url.includes('.png')) {
+        console.log('[Rakuten Parser] Response:', status, url.substring(0, 100));
       }
+    });
+
+    // Переходим на страницу - пробуем domcontentloaded вместо networkidle
+    let navigationSuccess = false;
+    try {
+      console.log('[Rakuten Parser] Starting navigation...');
+      await page.goto(url, {
+        waitUntil: 'domcontentloaded',
+        timeout: 20000
+      });
+      navigationSuccess = true;
+      console.log('[Rakuten Parser] ✓ Navigation completed (domcontentloaded)');
+    } catch (navigationError: any) {
+      console.error('[Rakuten Parser] ✗ Navigation failed:', navigationError.message);
     }
 
-    // Ждём появления основного контента товара
-    await page.waitForSelector('body', { timeout: 3000 }).catch(() => {});
+    // Ждем пока body появится
+    console.log('[Rakuten Parser] Waiting for body element...');
+    try {
+      await page.waitForSelector('body', { timeout: 10000 });
+      console.log('[Rakuten Parser] ✓ Body element found');
+    } catch (err) {
+      console.error('[Rakuten Parser] ✗ Body element not found!');
+    }
 
-    // Даём время для загрузки динамического контента
-    await new Promise(resolve => setTimeout(resolve, navigationSuccess ? 600 : 1000));
+    // Ждем пока document станет interactive или complete
+    console.log('[Rakuten Parser] Waiting for document ready...');
+    await page.waitForFunction(
+      () => document.readyState === 'interactive' || document.readyState === 'complete',
+      { timeout: 10000 }
+    ).catch(() => console.log('[Rakuten Parser] Document ready timeout'));
+
+    // Дополнительная задержка для загрузки скриптов
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Проверяем состояние страницы
+    const pageState = await page.evaluate(() => {
+      return {
+        readyState: document.readyState,
+        bodyExists: !!document.body,
+        bodyLength: document.body ? document.body.innerHTML.length : 0,
+        title: document.title,
+        url: window.location.href
+      };
+    });
+    console.log('[Rakuten Parser] Page state after wait:', pageState);
+
+    // Ждём появления контента с вариантами
+    try {
+      console.log('[Rakuten Parser] Waiting for content area...');
+      await Promise.race([
+        page.waitForSelector('[irc="SkuSelectionArea"]', { timeout: 5000 }),
+        page.waitForSelector('[irc="OptionArea"]', { timeout: 5000 }),
+        new Promise(resolve => setTimeout(resolve, 5000))
+      ]);
+      console.log('[Rakuten Parser] Content area wait completed');
+    } catch {
+      console.log('[Rakuten Parser] Content area wait timeout');
+    }
+
+    // Еще одна задержка для React рендеринга
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Сначала пытаемся найти данные в JavaScript переменных (быстрее и точнее)
     const variantsFromJS = await page.evaluate(() => {
@@ -257,6 +291,118 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
 
     // Иначе парсим DOM как раньше
     console.log('[Rakuten Parser] Trying DOM parsing...');
+
+    // Добавляем детальную диагностику
+    const pageInfo = await page.evaluate(() => {
+      const body = document.body;
+      const html = body ? body.innerHTML : 'NO BODY';
+
+      // Ищем все возможные варианты SkuArea
+      const skuArea1 = document.querySelector('[irc="SkuSelectionArea"]');
+      const skuArea2 = document.querySelector('.display-sku-area');
+      const skuArea3 = document.querySelector('[class*="sku"]');
+
+      // Ищем варианты OptionArea
+      const optionArea1 = document.querySelector('[irc="OptionArea"]');
+      const optionArea2 = document.querySelector('[class*="option"]');
+
+      // Все кнопки и селекты
+      const allButtons = document.querySelectorAll('button');
+      const allSelects = document.querySelectorAll('select');
+
+      // Ищем специфичные классы из HTML который показал пользователь
+      const spacerBlocks = document.querySelectorAll('.spacer--1O71j');
+      const textDisplays = document.querySelectorAll('.text-display--3jedW');
+
+      // Ищем варианты по aria-label
+      const buttonsWithAriaLabel = document.querySelectorAll('button[aria-label]');
+
+      // Ищем script теги с данными
+      const scripts = Array.from(document.querySelectorAll('script'));
+      const hasVariantSelectorsInScripts = scripts.some(s =>
+        (s.textContent || '').includes('variantSelectors')
+      );
+      const hasSkuInScripts = scripts.some(s =>
+        (s.textContent || '').includes('"sku"')
+      );
+
+      return {
+        hasBody: !!body,
+        bodyLength: html.length,
+
+        // SKU Area
+        hasSkuArea1: !!skuArea1,
+        hasSkuArea2: !!skuArea2,
+        hasSkuArea3: !!skuArea3,
+        skuArea1Html: skuArea1 ? skuArea1.outerHTML.substring(0, 500) : null,
+
+        // Option Area
+        hasOptionArea1: !!optionArea1,
+        hasOptionArea2: !!optionArea2,
+
+        // Элементы
+        buttonsCount: allButtons.length,
+        selectsCount: allSelects.length,
+        spacerBlocksCount: spacerBlocks.length,
+        textDisplaysCount: textDisplays.length,
+        buttonsWithAriaLabelCount: buttonsWithAriaLabel.length,
+
+        // Примеры текста
+        firstButtonsText: Array.from(allButtons).slice(0, 10).map(b => ({
+          text: b.textContent?.trim().substring(0, 50),
+          ariaLabel: b.getAttribute('aria-label'),
+          className: b.className
+        })),
+
+        spacerTexts: Array.from(spacerBlocks).slice(0, 20).map(el =>
+          el.textContent?.trim().substring(0, 100)
+        ),
+
+        // Scripts
+        hasVariantSelectorsInScripts,
+        hasSkuInScripts,
+        scriptsCount: scripts.length,
+
+        // HTML preview (если страница пустая)
+        htmlPreview: html.length < 1000 ? html : html.substring(0, 2000) + '...'
+      };
+    });
+
+    console.log('[Rakuten Parser] ========== DETAILED PAGE INFO ==========');
+    console.log('[Rakuten Parser] Body length:', pageInfo.bodyLength);
+    console.log('[Rakuten Parser] Buttons:', pageInfo.buttonsCount);
+    console.log('[Rakuten Parser] Buttons with aria-label:', pageInfo.buttonsWithAriaLabelCount);
+    console.log('[Rakuten Parser] Spacer blocks:', pageInfo.spacerBlocksCount);
+    console.log('[Rakuten Parser] Text displays:', pageInfo.textDisplaysCount);
+    console.log('[Rakuten Parser] SKU Areas:', {
+      type1: pageInfo.hasSkuArea1,
+      type2: pageInfo.hasSkuArea2,
+      type3: pageInfo.hasSkuArea3
+    });
+    console.log('[Rakuten Parser] Option Areas:', {
+      type1: pageInfo.hasOptionArea1,
+      type2: pageInfo.hasOptionArea2
+    });
+    console.log('[Rakuten Parser] Scripts:', {
+      total: pageInfo.scriptsCount,
+      hasVariantSelectors: pageInfo.hasVariantSelectorsInScripts,
+      hasSku: pageInfo.hasSkuInScripts
+    });
+
+    if (pageInfo.spacerBlocksCount > 0) {
+      console.log('[Rakuten Parser] Spacer texts (first 20):', pageInfo.spacerTexts);
+    }
+
+    if (pageInfo.buttonsWithAriaLabelCount > 0) {
+      console.log('[Rakuten Parser] First 10 buttons:', pageInfo.firstButtonsText);
+    }
+
+    if (pageInfo.bodyLength < 1000) {
+      console.log('[Rakuten Parser] ⚠️ PAGE LOOKS EMPTY! HTML:', pageInfo.htmlPreview);
+    }
+
+    console.log('[Rakuten Parser] ========================================');
+
     const variantsStructure = await page.evaluate(() => {
       const result: VariantGroup[] = [];
       const debug = {
@@ -274,30 +420,47 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
       const skuArea = document.querySelector('[irc="SkuSelectionArea"], .display-sku-area');
       debug.hasSkuArea = !!skuArea;
 
+      console.log('[DOM Parser] SKU Area found:', !!skuArea);
+
       if (skuArea) {
+        console.log('[DOM Parser] SKU Area HTML length:', skuArea.innerHTML.length);
+
         // Находим все группы вариантов (Цвет, Размер и т.д.)
         const groups = skuArea.querySelectorAll('.spacer--3J57F.block--_IJiJ.padding-bottom-small--UuLKJ');
         debug.skuGroupsCount = groups.length;
 
-      groups.forEach((group) => {
+        console.log('[DOM Parser] Found variant groups:', groups.length);
+        console.log('[DOM Parser] Group selector used: .spacer--3J57F.block--_IJiJ.padding-bottom-small--UuLKJ');
+
+      groups.forEach((group, groupIndex) => {
+        console.log('[DOM Parser] Processing group', groupIndex);
+
         // Находим название группы (любое)
         const labelElements = group.querySelectorAll('.text-display--2xC98');
         let groupName = '';
 
+        console.log('[DOM Parser] Label elements in group:', labelElements.length);
+
         for (const el of Array.from(labelElements)) {
           const text = el.textContent?.trim() || '';
+          console.log('[DOM Parser] Label text:', text);
           // Берём первый непустой текст, который не "未選択" (не выбрано)
           if (text && text.length > 0 && text.length < 50 && !text.includes('未選択')) {
             // Убираем двоеточие и берём только первую часть
             groupName = text.replace('：', '').replace(':', '').trim();
+            console.log('[DOM Parser] ✓ Group name found:', groupName);
             break;
           }
         }
 
-        if (!groupName) return;
+        if (!groupName) {
+          console.log('[DOM Parser] ✗ No group name found, skipping');
+          return;
+        }
 
         // Находим все кнопки вариантов в этой группе
         const buttons = group.querySelectorAll('button[class*="sku-button"]');
+        console.log('[DOM Parser] Buttons in group:', buttons.length);
         const options: { value: string; label: string; available: boolean; element: Element; price?: number }[] = [];
 
         buttons.forEach((button) => {
@@ -359,6 +522,8 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
         });
 
         if (options.length > 0) {
+          console.log('[DOM Parser] ✓ Found', options.length, 'options for group:', groupName);
+
           const variantGroup = {
             name: groupName,
             key: groupName,
@@ -379,12 +544,18 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
 
           if (isColorGroup) {
             colorGroup = variantGroup;
+            console.log('[DOM Parser] This is a COLOR group');
           } else if (isSizeGroup) {
             sizeGroup = variantGroup;
+            console.log('[DOM Parser] This is a SIZE group');
           }
+        } else {
+          console.log('[DOM Parser] ✗ No options found for group:', groupName);
         }
       });
       }
+
+      console.log('[DOM Parser] Total variant groups found:', result.length);
 
       // Стратегия 2: Select элементы в OptionArea (для товаров с выпадающими списками)
       const optionArea = document.querySelector('[irc="OptionArea"]');
@@ -471,176 +642,27 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
 
     let colorSizeMapping: Record<string, Array<{ value: string; available: boolean }>> = {};
 
-    // Если есть и цвета, и размеры - пропускаем быструю проверку
-    // Для таких товаров доступность определяется через colorSizeMapping
+    // Если есть и цвета, и размеры - пропускаем проверку через клики
+    // Доступность уже определена по классам кнопок в DOM
     const hasColorAndSize = colorGroup && sizeGroup;
 
-    if (!hasColorAndSize) {
-      // Быстрая проверка доступности через клик и модальное окно (только для товаров БЕЗ комбинаций)
-      // Сначала проверяем, какие варианты нужно проверить детально
-      const needsDetailedCheck: Array<{ group: VariantGroup; option: VariantOption }> = [];
+    // УБИРАЕМ проверку доступности через клики - она занимает слишком много времени
+    // Доступность определяется по классам кнопок (disabled, sold-out, conditional) в DOM парсинге
 
-      for (const group of groups) {
-        for (const option of group.options) {
-          // Если вариант уже помечен как недоступный по классам кнопки, пропускаем
-          if (!option.available) {
-            continue;
-          }
-
-          // Если available, нужно проверить детально (может быть sold out)
-          needsDetailedCheck.push({ group, option });
-        }
-      }
-
-    // Проверяем только те, что нужно
-    for (const { option } of needsDetailedCheck) {
-      try {
-        // СНАЧАЛА закрываем все открытые модалки от предыдущих кликов
-        await page.evaluate(() => {
-          const closeBtns = document.querySelectorAll('.top-close-button--1lun2, [class*="close-button"]');
-          closeBtns.forEach(btn => (btn as HTMLElement).click());
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Кликаем на вариант и сразу получаем ID кнопки для точного сопоставления
-        const clickResult = await page.evaluate((variantValue) => {
-          const button = document.querySelector(`button[aria-label="${variantValue}"]`) as HTMLButtonElement;
-          if (!button) return { clicked: false, buttonId: null };
-
-          // Добавляем временный ID для точного отслеживания
-          const tempId = `temp-btn-${Date.now()}`;
-          button.setAttribute('data-temp-id', tempId);
-          button.click();
-
-          return { clicked: true, buttonId: tempId };
-        }, option.value);
-
-        if (!clickResult.clicked) {
-          continue;
-        }
-
-        // Даем время модалке появиться
-        await new Promise(resolve => setTimeout(resolve, 400));
-
-        // Проверяем модальное окно - ищем ТОЛЬКО свежее окно с названием этого варианта
-        const soldOutInfo = await page.evaluate((variantValue) => {
-          // Ищем модалку, которая содержит ТОЧНОЕ название варианта в <span>
-          const modals = document.querySelectorAll('.spacer--3J57F.block--_IJiJ.padding-all-small--1KSBh');
-
-          for (const modal of Array.from(modals)) {
-            // Проверяем, что в модалке есть <span> с названием варианта
-            const spans = modal.querySelectorAll('span');
-            let hasExactVariantName = false;
-
-            for (const span of Array.from(spans)) {
-              if (span.textContent?.trim() === variantValue) {
-                hasExactVariantName = true;
-                break;
-              }
-            }
-
-            if (!hasExactVariantName) continue;
-
-            // Теперь проверяем статус в этой модалке
-            const text = modal.textContent || '';
-
-            if (text.includes('売り切れ')) {
-              return { found: true, status: 'sold out', variantMatch: true };
-            }
-
-            if (text.includes('再入荷')) {
-              return { found: true, status: 'restocking', variantMatch: true };
-            }
-
-            // Если нашли модалку с нужным вариантом, но нет статусов - значит доступен
-            return { found: false, status: '', variantMatch: true };
-          }
-
-          return { found: false, status: '', variantMatch: false };
-        }, option.value);
-
-        if (soldOutInfo.found) {
-          option.available = false;
-        }
-
-      } catch (err) {
-        // Игнорируем ошибки проверки
-      }
-    }
-    } // Закрываем else блок быстрой проверки
-
-    // Если есть и цвета, и размеры, проверяем доступность динамически
+    // Если есть и цвета, и размеры, создаем базовый маппинг БЕЗ кликов
+    // Используем данные из JS парсинга или создаем простой маппинг
     if (hasColorAndSize && colorGroup && sizeGroup) {
       const colorOpts = (colorGroup as VariantGroup).options as Array<{ value: string; label: string; available: boolean }>;
       const sizeOpts = (sizeGroup as VariantGroup).options as Array<{ value: string; label: string; available: boolean }>;
 
-      // Ограничиваем количество цветов для проверки (чтобы не было таймаута)
-      const colorsToCheck = colorOpts.slice(0, 15); // Максимум 15 цветов
-
-      // Для каждого цвета кликаем и проверяем доступность размеров
-      for (const colorOption of colorsToCheck) {
-        try {
-          // Если сам цвет недоступен, то все его размеры тоже недоступны
-          if (!colorOption.available) {
-            colorSizeMapping[colorOption.value] = sizeOpts.map(s => ({
-              value: s.value,
-              available: false
-            }));
-            continue;
-          }
-
-          // Кликаем на цвет
-          await page.evaluate((colorValue) => {
-            const colorBtn = document.querySelector(`button[aria-label="${colorValue}"]`);
-            if (colorBtn) {
-              (colorBtn as HTMLButtonElement).click();
-            }
-          }, colorOption.value);
-
-          await new Promise(resolve => setTimeout(resolve, 400));
-
-          // Проверяем состояние размеров после клика на цвет
-          const sizeAvailability = await page.evaluate((sizes: string[]) => {
-            return sizes.map(sizeValue => {
-              const sizeButton = document.querySelector(`button[aria-label="${sizeValue}"]`);
-              if (!sizeButton) {
-                return { value: sizeValue, available: false };
-              }
-
-              // Проверяем класс conditional (недоступен для текущего цвета)
-              const hasConditional = sizeButton.className.includes('conditional');
-              const isDisabled = sizeButton.hasAttribute('disabled') ||
-                                sizeButton.getAttribute('aria-disabled') === 'true';
-
-              return {
-                value: sizeValue,
-                available: !hasConditional && !isDisabled
-              };
-            });
-          }, sizeOpts.map(s => s.value));
-
-          colorSizeMapping[colorOption.value] = sizeAvailability;
-
-        } catch (err) {
-          // Fallback: все размеры доступны
-          colorSizeMapping[colorOption.value] = sizeOpts.map(s => ({
-            value: s.value,
-            available: s.available
-          }));
-        }
-      }
-
-      // Для остальных цветов (которые не проверили) добавляем все размеры как доступные
-      const uncheckedColors = colorOpts.slice(15);
-      if (uncheckedColors.length > 0) {
-        uncheckedColors.forEach(color => {
-          colorSizeMapping[color.value] = sizeOpts.map(s => ({
-            value: s.value,
-            available: s.available
-          }));
-        });
-      }
+      // Для каждого цвета добавляем все размеры
+      // Точность проверяется через JS парсинг (если данные есть)
+      colorOpts.forEach(color => {
+        colorSizeMapping[color.value] = sizeOpts.map(s => ({
+          value: s.value,
+          available: color.available && s.available // Оба должны быть доступны
+        }));
+      });
     }
 
     // Парсим информацию о бесплатной доставке

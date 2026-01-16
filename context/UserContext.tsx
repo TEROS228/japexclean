@@ -1,8 +1,11 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { USER_DATA_KEY, AUTH_TOKEN_KEY } from "@/lib/auth";
 
 type UserType = {
+  id?: string;
   name: string;
   secondName: string;
   email: string;
@@ -32,20 +35,92 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserType>(null);
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
+  const { data: session, status } = useSession();
 
-  // Загрузка данных из localStorage
+  // Синхронизация с NextAuth сессией
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
+    if (status === "loading") return; // Ждем пока загрузится сессия
 
+    if (status === "authenticated" && session?.user) {
+      const googleUser = session.user as any;
+
+      // Получаем JWT токен для Google пользователя
+      const syncGoogleUser = async () => {
+        try {
+          const response = await fetch('/api/auth/google-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+
+            // Сохраняем токен в localStorage
+            localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+
+            // Создаем объект пользователя
+            const newUser: UserType = {
+              name: data.user.name,
+              secondName: data.user.secondName,
+              email: data.user.email,
+              balance: data.user.balance
+            };
+
+            // Добавляем в список зарегистрированных если нужно
+            const storedUsers = localStorage.getItem("registeredUsers");
+            const users = storedUsers ? JSON.parse(storedUsers) : [];
+            const existingUserIndex = users.findIndex((u: RegisteredUser) => u.email === googleUser.email);
+
+            const registeredUser: RegisteredUser = {
+              ...newUser,
+              password: "" // Google пользователям не нужен пароль
+            };
+
+            if (existingUserIndex >= 0) {
+              users[existingUserIndex] = registeredUser;
+            } else {
+              users.push(registeredUser);
+            }
+
+            localStorage.setItem("registeredUsers", JSON.stringify(users));
+            setRegisteredUsers(users);
+            setUser(newUser);
+          }
+        } catch (error) {
+          console.error('[UserContext] Failed to sync Google user:', error);
+        }
+      };
+
+      syncGoogleUser();
+    }
+    // Если status === "unauthenticated", ничего не делаем
+    // потому что пользователь уже загружен из localStorage при монтировании
+  }, [session, status]);
+
+  // Загрузка данных из localStorage при монтировании
+  useEffect(() => {
     const storedUsers = localStorage.getItem("registeredUsers");
     if (storedUsers) setRegisteredUsers(JSON.parse(storedUsers));
+
+    // Загружаем текущего пользователя если он есть
+    const storedUser = localStorage.getItem(USER_DATA_KEY);
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+      } catch (error) {
+        console.error('[UserContext] Failed to parse user data:', error);
+      }
+    }
   }, []);
 
   // Сохраняем текущего пользователя при изменениях
   useEffect(() => {
-    if (user) localStorage.setItem("user", JSON.stringify(user));
-    else localStorage.removeItem("user");
+    if (user) {
+      localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_DATA_KEY);
+    }
   }, [user]);
 
   // Сохраняем список зарегистрированных пользователей
@@ -75,7 +150,16 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     return false;
   };
 
-  const logout = () => setUser(null);
+  const logout = async () => {
+    setUser(null);
+    // Очищаем токен из localStorage
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(USER_DATA_KEY);
+    // Выходим также из NextAuth если залогинены через Google
+    if (status === "authenticated") {
+      await signOut({ redirect: false });
+    }
+  };
 
   // Добавляет или списывает баланс
   const updateBalance = (amount: number) => {
@@ -99,12 +183,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   // Новая функция: обновление данных пользователя
   const refreshUser = () => {
     if (!user) return;
-    
+
     // Обновляем пользователя из registeredUsers (актуальные данные)
     const updatedUser = registeredUsers.find(u => u.email === user.email);
     if (updatedUser) {
       setUser({ ...updatedUser });
-      console.log("User data refreshed:", updatedUser);
     }
   };
 

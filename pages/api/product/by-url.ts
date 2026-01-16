@@ -48,19 +48,21 @@ export default async function handler(
     // Если Rakuten API не вернул товар, используем Puppeteer
     console.log("⚠️ Rakuten API failed, falling back to Puppeteer");
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--disable-gpu",
-        "--disable-web-security"
-      ],
-    });
+    let browser;
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-accelerated-2d-canvas",
+          "--disable-gpu",
+          "--disable-web-security"
+        ],
+      });
 
-    const page = await browser.newPage();
+      const page = await browser.newPage();
 
     // Блокируем ненужные ресурсы для ускорения
     await page.setRequestInterception(true);
@@ -79,7 +81,7 @@ export default async function handler(
 
     await page.goto(url, {
       waitUntil: "domcontentloaded", // Быстрее чем networkidle2
-      timeout: 15000, // Уменьшили timeout
+      timeout: 60000, // Увеличили timeout до 60 секунд
     });
 
     // Извлекаем данные товара с улучшенным парсингом
@@ -237,8 +239,6 @@ export default async function handler(
       };
     });
 
-    await browser.close();
-
     // Извлекаем itemCode из URL
     const itemCodeMatch = url.match(/item\.rakuten\.co\.jp\/[^\/]+\/([^\/\?]+)/);
     const itemCode = itemCodeMatch ? itemCodeMatch[1] : "";
@@ -282,6 +282,12 @@ export default async function handler(
     }
 
     return res.status(200).json(response);
+    } finally {
+      // Закрываем браузер в любом случае (успех или ошибка)
+      if (browser) {
+        await browser.close();
+      }
+    }
   } catch (error: any) {
     console.error("Error fetching product by URL:", error);
     return res.status(500).json({

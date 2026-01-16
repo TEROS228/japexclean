@@ -106,7 +106,7 @@ export async function searchYahooProducts(
   keyword: string,
   page: number = 1,
   hits: number = 20,
-  sort?: string
+  sort?: string | undefined
 ): Promise<YahooProduct[]> {
   if (!YAHOO_APP_ID) {
     console.error('[Yahoo Shopping] APP_ID not configured');
@@ -125,17 +125,16 @@ export async function searchYahooProducts(
       query: normalizedKeyword,
       results: String(hits),
       start: String(start),
-      // Сортировка по количеству отзывов (популярности) по умолчанию
-      sort: sort || '-review',
       // Только товары в наличии
       availability: '1',
-      // Поиск в заголовке и описании
+      // Поиск в заголовке и описании для лучшей релевантности
       search: '0',
     });
 
-    // Если сортировка явно не указана, используем -review (по количеству отзывов)
-    if (!sort) {
-      params.set('sort', '-review');
+    // Добавляем сортировку только если явно указана
+    // Без сортировки Yahoo возвращает по релевантности
+    if (sort) {
+      params.set('sort', sort);
     }
 
     const url = `${YAHOO_API_URL}?${params.toString()}`;

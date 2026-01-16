@@ -4,6 +4,7 @@ import { useState, Fragment, useRef, useEffect } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import useUserContext from "@/context/UserContext";
 import { useRouter } from "next/router";
+import { useMarketplace } from "@/context/MarketplaceContext";
 
 import { allCategories as categories } from "@/data/categories";
 import PrivacyNotice from '@/components/PrivacyNotice';
@@ -71,10 +72,37 @@ function useCountUp(end: number, duration: number = 2000, shouldStart: boolean =
 export default function Home() {
   const { user, login, signup, logout } = useUserContext();
   const router = useRouter();
+  const { marketplace, setMarketplace } = useMarketplace();
 
-  const [marketplace, setMarketplace] = useState("Rakuten");
   const [selectedCategory, setSelectedCategory] = useState<null | typeof categories[0]>(null);
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [showCategoryHint, setShowCategoryHint] = useState(false);
+  const [hintPosition, setHintPosition] = useState({ top: 0, left: 0 });
+
+  // Обновляем позицию подсказки при скролле
+  useEffect(() => {
+    if (!showCategoryHint) return;
+
+    const updateHintPosition = () => {
+      const categoriesBtn = document.getElementById('categories-button');
+      if (categoriesBtn) {
+        const rect = categoriesBtn.getBoundingClientRect();
+        setHintPosition({
+          top: rect.bottom + 10,
+          left: rect.left + rect.width / 2
+        });
+      }
+    };
+
+    // Обновляем позицию при скролле
+    window.addEventListener('scroll', updateHintPosition);
+    window.addEventListener('resize', updateHintPosition);
+
+    return () => {
+      window.removeEventListener('scroll', updateHintPosition);
+      window.removeEventListener('resize', updateHintPosition);
+    };
+  }, [showCategoryHint]);
 
   // Hero slider
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -210,6 +238,73 @@ export default function Home() {
       {/* Уведомление о приватности */}
       <PrivacyNotice />
 
+      {/* Category Hint Arrow - показываем после выбора маркетплейса */}
+      {showCategoryHint && hintPosition.top > 0 && (
+        <div
+          className="fixed z-50 pointer-events-none animate-fadeIn"
+          style={{
+            top: `${hintPosition.top}px`,
+            left: `${hintPosition.left}px`,
+            transform: 'translateX(-50%)'
+          }}
+        >
+          <div className="relative">
+            {/* Glowing Arrow pointing up with pulse animation */}
+            <div className="absolute left-1/2 -translate-x-1/2 -top-3 animate-bounce">
+              <div className="relative">
+                {/* Glow effect */}
+                <div className="absolute inset-0 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-b-[12px] border-b-purple-400 blur-sm opacity-60"></div>
+                {/* Arrow */}
+                <div className="relative w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[10px] border-b-white"></div>
+              </div>
+            </div>
+
+            {/* Beautiful gradient hint box */}
+            <div className="relative animate-pulse-slow">
+              {/* Outer glow */}
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 rounded-2xl blur-xl opacity-60"></div>
+
+              {/* Main card */}
+              <div className="relative bg-gradient-to-br from-purple-600 via-pink-600 to-red-600 p-[2px] rounded-2xl shadow-2xl">
+                <div className="bg-white rounded-[14px] px-5 sm:px-7 py-3 sm:py-4">
+                  <div className="flex items-center gap-3">
+                    {/* Animated icon */}
+                    <div className="flex-shrink-0 relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full blur opacity-40 animate-pulse"></div>
+                      <div className="relative w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-full flex items-center justify-center shadow-lg">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Text content */}
+                    <div className="flex-1">
+                      <div className="font-black text-base sm:text-lg bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent leading-tight">
+                        Choose a Category
+                      </div>
+                      <div className="text-xs sm:text-sm text-gray-600 font-medium mt-0.5">
+                        Start exploring products!
+                      </div>
+                    </div>
+
+                    {/* Close button */}
+                    <button
+                      onClick={() => setShowCategoryHint(false)}
+                      className="pointer-events-auto flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 bg-gray-100 hover:bg-gray-200 active:bg-gray-200 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
+                    >
+                      <svg className="w-4 h-4 text-gray-500 group-hover:text-gray-700 transition-colors" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section - Premium Modern Design */}
       <section ref={heroRef as React.RefObject<HTMLElement>} className="relative overflow-hidden" style={{ backgroundColor: '#faf9f6' }}>
         {/* Animated Background with Parallax */}
@@ -241,7 +336,7 @@ export default function Home() {
               </div>
 
               <h1 className={`text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight ${heroVisible ? 'animate-fadeInUp delay-100' : ''}`}>
-                <span className="text-gray-900">Your gateway to</span>
+                <span className="text-gray-900">Youre gateway to</span>
                 <span className="block mt-2 bg-gradient-to-r from-green-600 via-emerald-600 to-cyan-600 bg-clip-text text-transparent animate-gradient">
                   Japanese excellence
                 </span>
@@ -321,6 +416,184 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Marketplace Selection Section */}
+      <section className="bg-gradient-to-br from-gray-50 via-white to-gray-50 py-12 sm:py-16 lg:py-20 border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
+              Choose Your Marketplace
+            </h2>
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+              Shop from Japan's leading e-commerce platforms
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
+            {/* Rakuten Card */}
+            <button
+              onClick={() => {
+                setMarketplace("rakuten");
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                // Показываем подсказку через 1 секунду после скролла
+                setTimeout(() => {
+                  // Получаем позицию кнопки Categories
+                  const categoriesBtn = document.getElementById('categories-button');
+                  if (categoriesBtn) {
+                    const rect = categoriesBtn.getBoundingClientRect();
+                    setHintPosition({
+                      top: rect.bottom + 10,
+                      left: rect.left + rect.width / 2
+                    });
+                    console.log('[Category Hint] Categories button position:', { top: rect.bottom, left: rect.left, width: rect.width });
+                  } else {
+                    console.log('[Category Hint] Categories button not found!');
+                  }
+                  setShowCategoryHint(true);
+                  // Автоматически скрываем через 8 секунд
+                  setTimeout(() => setShowCategoryHint(false), 8000);
+                }, 1000);
+              }}
+              className={`group relative bg-white rounded-2xl p-6 sm:p-8 border-2 transition-all duration-300 hover:shadow-2xl hover:scale-105 active:scale-95 ${
+                marketplace === "rakuten"
+                  ? "border-red-500 shadow-xl shadow-red-100"
+                  : "border-gray-200 hover:border-red-300"
+              }`}
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                {/* Rakuten Icon */}
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center transition-all ${
+                  marketplace === "rakuten" ? "bg-red-500" : "bg-red-100 group-hover:bg-red-500"
+                }`}>
+                  <svg className={`w-10 h-10 sm:w-12 sm:h-12 transition-colors ${
+                    marketplace === "rakuten" ? "text-white" : "text-red-500 group-hover:text-white"
+                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Rakuten</h3>
+                  <p className="text-sm sm:text-base text-gray-600">
+                    Japan's largest marketplace with 50M+ products
+                  </p>
+                </div>
+
+                {/* Features */}
+                <div className="space-y-2 w-full pt-2">
+                  <div className="flex items-center gap-2 text-left">
+                    <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm text-gray-700">Wide product selection</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-left">
+                    <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm text-gray-700">Verified sellers</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-left">
+                    <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm text-gray-700">Best for variety</span>
+                  </div>
+                </div>
+
+                {/* Selected Badge */}
+                {marketplace === "rakuten" && (
+                  <div className="absolute top-4 right-4 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    Selected
+                  </div>
+                )}
+              </div>
+            </button>
+
+            {/* Yahoo Shopping Card */}
+            <button
+              onClick={() => {
+                setMarketplace("yahoo");
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                // Показываем подсказку через 1 секунду после скролла
+                setTimeout(() => {
+                  // Получаем позицию кнопки Categories
+                  const categoriesBtn = document.getElementById('categories-button');
+                  if (categoriesBtn) {
+                    const rect = categoriesBtn.getBoundingClientRect();
+                    setHintPosition({
+                      top: rect.bottom + 10,
+                      left: rect.left + rect.width / 2
+                    });
+                    console.log('[Category Hint] Categories button position:', { top: rect.bottom, left: rect.left, width: rect.width });
+                  } else {
+                    console.log('[Category Hint] Categories button not found!');
+                  }
+                  setShowCategoryHint(true);
+                  // Автоматически скрываем через 8 секунд
+                  setTimeout(() => setShowCategoryHint(false), 8000);
+                }, 1000);
+              }}
+              className={`group relative bg-white rounded-2xl p-6 sm:p-8 border-2 transition-all duration-300 hover:shadow-2xl hover:scale-105 active:scale-95 ${
+                marketplace === "yahoo"
+                  ? "border-purple-500 shadow-xl shadow-purple-100"
+                  : "border-gray-200 hover:border-purple-300"
+              }`}
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                {/* Yahoo Icon */}
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center transition-all ${
+                  marketplace === "yahoo" ? "bg-purple-500" : "bg-purple-100 group-hover:bg-purple-500"
+                }`}>
+                  <svg className={`w-10 h-10 sm:w-12 sm:h-12 transition-colors ${
+                    marketplace === "yahoo" ? "text-white" : "text-purple-500 group-hover:text-white"
+                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Yahoo Shopping</h3>
+                  <p className="text-sm sm:text-base text-gray-600">
+                    Popular platform with competitive prices
+                  </p>
+                </div>
+
+                {/* Features */}
+                <div className="space-y-2 w-full pt-2">
+                  <div className="flex items-center gap-2 text-left">
+                    <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm text-gray-700">Great deals</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-left">
+                    <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm text-gray-700">Trusted brands</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-left">
+                    <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm text-gray-700">Best for value</span>
+                  </div>
+                </div>
+
+                {/* Selected Badge */}
+                {marketplace === "yahoo" && (
+                  <div className="absolute top-4 right-4 bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    Selected
+                  </div>
+                )}
+              </div>
+            </button>
           </div>
         </div>
       </section>
