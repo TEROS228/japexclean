@@ -271,16 +271,18 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
 
     setLoading(true);
     try {
-      // Добавляем параметры фильтрации по цене
-      const minPriceParam = priceMin ? `&minPrice=${encodeURIComponent(priceMin)}` : '';
-      const maxPriceParam = priceMax ? `&maxPrice=${encodeURIComponent(priceMax)}` : '';
+      // Добавляем параметры фильтрации по цене только если они заполнены
+      const minPriceValue = priceMin?.trim();
+      const maxPriceValue = priceMax?.trim();
+      const minPriceParam = minPriceValue && minPriceValue !== '0' ? `&minPrice=${encodeURIComponent(minPriceValue)}` : '';
+      const maxPriceParam = maxPriceValue && maxPriceValue !== '0' ? `&maxPrice=${encodeURIComponent(maxPriceValue)}` : '';
 
       // Используем isYahooCategory напрямую вместо marketplace для надежности
       const endpoint = isYahooCategory
         ? `/api/yahoo/products?categoryId=${encodeURIComponent(categoryId)}&page=${pageNum}&sort=${encodeURIComponent(usedOrder)}`
         : `/api/products?genreId=${encodeURIComponent(categoryId)}&page=${pageNum}&sort=${encodeURIComponent(usedOrder)}${minPriceParam}${maxPriceParam}`;
 
-      console.log('[Category Page] Fetching:', { categoryId, pageNum, sort: usedOrder, minPrice: priceMin, maxPrice: priceMax, endpoint });
+      console.log('[Category Page] Fetching:', { categoryId, pageNum, sort: usedOrder, minPrice: minPriceValue, maxPrice: maxPriceValue, endpoint });
 
       const res = await fetch(endpoint);
       if (!res.ok) {
