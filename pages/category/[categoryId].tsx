@@ -26,6 +26,8 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
   const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
   const [priceMin, setPriceMin] = useState<string>("");
   const [priceMax, setPriceMax] = useState<string>("");
+  const [priceMinInput, setPriceMinInput] = useState<string>("");
+  const [priceMaxInput, setPriceMaxInput] = useState<string>("");
 
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const categoriesDropdownRef = useRef<HTMLDivElement>(null);
@@ -167,8 +169,14 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
       }
 
       // Восстанавливаем фильтры по цене
-      if (savedPriceMin) setPriceMin(savedPriceMin);
-      if (savedPriceMax) setPriceMax(savedPriceMax);
+      if (savedPriceMin) {
+        setPriceMin(savedPriceMin);
+        setPriceMinInput(savedPriceMin);
+      }
+      if (savedPriceMax) {
+        setPriceMax(savedPriceMax);
+        setPriceMaxInput(savedPriceMax);
+      }
 
       // Восстанавливаем позицию после загрузки
       setTimeout(() => {
@@ -212,8 +220,9 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
     setSortOrder("");
     setPriceMin("");
     setPriceMax("");
+    setPriceMinInput("");
+    setPriceMaxInput("");
     hasLoadedRef.current = false;
-    filtersInitialized.current = false; // Сбрасываем флаг фильтров
 
     // Если есть товары от SSR/клиентской навигации - используем их
     if (initialProducts && initialProducts.length > 0) {
@@ -342,18 +351,10 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
     router.push(`/category/${subcategoryId}`);
   };
 
-  // Ref для отслеживания инициализации фильтров
-  const filtersInitialized = useRef(false);
-
-  // Перезагружаем данные при изменении фильтров
-  useEffect(() => {
-    // Пропускаем первую загрузку - данные уже есть от SSR
-    if (!hasLoadedRef.current || !filtersInitialized.current) {
-      filtersInitialized.current = true;
-      return;
-    }
-
-    console.log(`[Category] 🔍 Filter changed: priceMin="${priceMin}", priceMax="${priceMax}"`);
+  // Применить фильтр по цене
+  const applyPriceFilter = () => {
+    setPriceMin(priceMinInput);
+    setPriceMax(priceMaxInput);
 
     // Сбрасываем на первую страницу и перезагружаем с новыми фильтрами
     setLoadedPages({});
@@ -361,10 +362,10 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
     setMaxPageLoaded(1);
 
     if (!isRestoring) {
-      fetchPage(1);
+      // Небольшая задержка чтобы state обновился
+      setTimeout(() => fetchPage(1), 50);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priceMin, priceMax]);
+  };
 
   // Получить товары для текущей страницы (фильтрация происходит на сервере)
   const currentProducts = loadedPages[currentPage] || [];
@@ -576,8 +577,9 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
                 <input
                   type="text"
                   placeholder={`Min ${getCurrencySymbol()}`}
-                  value={priceMin}
-                  onChange={(e) => setPriceMin(e.target.value)}
+                  value={priceMinInput}
+                  onChange={(e) => setPriceMinInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && applyPriceFilter()}
                   className="w-28 sm:w-32 px-3 sm:px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition-all text-sm"
                 />
               </div>
@@ -589,17 +591,31 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
                 <input
                   type="text"
                   placeholder={`Max ${getCurrencySymbol()}`}
-                  value={priceMax}
-                  onChange={(e) => setPriceMax(e.target.value)}
+                  value={priceMaxInput}
+                  onChange={(e) => setPriceMaxInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && applyPriceFilter()}
                   className="w-28 sm:w-32 px-3 sm:px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition-all text-sm"
                 />
               </div>
+
+              <button
+                onClick={applyPriceFilter}
+                className="px-4 sm:px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-medium text-sm shadow-sm"
+              >
+                Apply
+              </button>
 
               {(priceMin || priceMax) && (
                 <button
                   onClick={() => {
                     setPriceMin("");
                     setPriceMax("");
+                    setPriceMinInput("");
+                    setPriceMaxInput("");
+                    setLoadedPages({});
+                    setCurrentPage(1);
+                    setMaxPageLoaded(1);
+                    fetchPage(1);
                   }}
                   className="px-4 sm:px-6 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium text-sm shadow-sm"
                 >
