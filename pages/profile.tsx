@@ -29,6 +29,8 @@ export default function ProfilePage() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [currencyKey, setCurrencyKey] = useState(0);
+  const tabsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, left: 0 });
 
   // Force re-render all sections when currency changes
   useEffect(() => {
@@ -100,6 +102,24 @@ export default function ProfilePage() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [selectedPhoto]);
 
+  // Update indicator position when activeTab changes
+  useEffect(() => {
+    const activeIndex = tabs.findIndex(tab => tab.id === activeTab);
+    const activeButton = tabsRef.current[activeIndex];
+
+    if (activeButton) {
+      const rect = activeButton.getBoundingClientRect();
+      const parentRect = activeButton.parentElement?.getBoundingClientRect();
+
+      if (parentRect) {
+        setIndicatorStyle({
+          width: rect.width,
+          left: rect.left - parentRect.left
+        });
+      }
+    }
+  }, [activeTab]);
+
   if (!mounted || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -155,32 +175,41 @@ export default function ProfilePage() {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="bg-white sm:bg-gradient-to-r sm:from-slate-50 sm:to-gray-50 p-3 sm:p-4">
-            <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-2">
-              {tabs.map((tab) => {
+        <div className="bg-white rounded-[14px] sm:rounded-[20px] overflow-hidden" style={{ boxShadow: '0 10px 30px rgba(34,197,94,.12)' }}>
+          <div className="p-[10px_12px_6px] sm:p-[14px_16px_8px] overflow-x-auto scrollbar-hide">
+            <div className="flex gap-[18px] sm:gap-6 relative">
+              {tabs.map((tab, index) => {
                 const Icon = tab.icon;
                 const showBadge = tab.id === 'messages' && unreadMessagesCount > 0;
                 return (
                   <button
                     key={tab.id}
+                    ref={(el) => { tabsRef.current[index] = el; }}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex-shrink-0 flex items-center gap-2 min-w-[110px] sm:flex-1 h-11 px-4 rounded-full text-[13px] sm:text-sm font-medium whitespace-nowrap relative transition-all duration-[250ms] ${
+                    className={`relative bg-transparent border-none px-[2px] sm:px-1 py-2 sm:py-3 text-[13px] sm:text-[15px] font-medium whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 sm:gap-2 ${
                       activeTab === tab.id
-                        ? "bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-lg shadow-gray-900/25"
-                        : "bg-white text-gray-900 border border-gray-200 hover:shadow-lg hover:shadow-gray-900/8"
+                        ? "text-green-600 font-semibold"
+                        : "text-gray-600 active:opacity-70"
                     }`}
                   >
-                    <Icon size={16} className="flex-shrink-0" strokeWidth={2} />
-                    <span className="font-medium">{tab.label}</span>
+                    <Icon size={16} className="sm:hidden flex-shrink-0" strokeWidth={2} />
+                    <span>{tab.label}</span>
                     {showBadge && (
-                      <span className="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 to-pink-600 text-white text-[10px] sm:text-xs rounded-full min-w-[18px] h-[18px] sm:min-w-[22px] sm:h-[22px] px-1 flex items-center justify-center font-bold border-2 border-white shadow-lg">
+                      <span className="ml-1 bg-gradient-to-br from-red-500 to-pink-600 text-white text-[10px] sm:text-xs rounded-full min-w-[18px] h-[18px] sm:min-w-[22px] sm:h-[22px] px-1 flex items-center justify-center font-bold border-2 border-white shadow-lg">
                         {unreadMessagesCount}
                       </span>
                     )}
                   </button>
                 );
               })}
+              {/* Indicator */}
+              <div
+                className="absolute bottom-0 h-[3px] sm:h-1 rounded-full bg-gradient-to-r from-green-500 to-green-300 transition-all duration-300 ease-out"
+                style={{
+                  width: `${indicatorStyle.width}px`,
+                  transform: `translateX(${indicatorStyle.left}px)`
+                }}
+              />
             </div>
           </div>
 
