@@ -922,7 +922,7 @@ export default function CartPage() {
               ) : mounted ? (
                 <div className="mb-4 border-2 border-red-200 bg-red-50 rounded-xl p-4">
                   <p className="text-sm text-red-700 mb-3">⚠️ No delivery address found. Please add an address first.</p>
-                  <Link href="/profile?tab=addresses" target="_blank">
+                  <Link href="/profile?tab=addresses">
                     <button className="text-xs bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium">
                       Add Address
                     </button>
