@@ -156,17 +156,8 @@ export default function ProfilePage() {
 
         {/* Tabs */}
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-3 sm:p-4 relative">
-            {/* Mobile scroll hint */}
-            <div className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none z-10">
-              <div className="bg-gradient-to-l from-slate-50 via-slate-50 to-transparent pr-2 pl-8">
-                <svg className="w-5 h-5 text-gray-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory sm:overflow-visible pb-1">
+          <div className="bg-white sm:bg-gradient-to-r sm:from-slate-50 sm:to-gray-50 p-3 sm:p-4">
+            <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-2">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const showBadge = tab.id === 'messages' && unreadMessagesCount > 0;
@@ -174,14 +165,14 @@ export default function ProfilePage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex-shrink-0 snap-start sm:flex-1 min-w-[90px] sm:min-w-0 px-3 sm:px-5 py-3 rounded-xl text-xs sm:text-sm font-semibold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 relative transition-all duration-200 ${
+                    className={`flex-shrink-0 flex items-center gap-2 min-w-[110px] sm:flex-1 h-11 px-4 rounded-full text-[13px] sm:text-sm font-medium whitespace-nowrap relative transition-all duration-250 ${
                       activeTab === tab.id
-                        ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30"
-                        : "bg-white text-gray-600 hover:bg-gray-100 border-2 border-gray-200 hover:border-gray-300"
+                        ? "bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-lg shadow-gray-900/25 active:scale-96"
+                        : "bg-white text-gray-900 border border-gray-200 hover:shadow-lg hover:shadow-gray-900/8 active:scale-96"
                     }`}
                   >
-                    <Icon size={18} className="flex-shrink-0" strokeWidth={2.5} />
-                    <span className="text-[11px] sm:text-sm font-semibold whitespace-nowrap">{tab.label}</span>
+                    <Icon size={16} className="flex-shrink-0" strokeWidth={2} />
+                    <span className="font-medium">{tab.label}</span>
                     {showBadge && (
                       <span className="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 to-pink-600 text-white text-[10px] sm:text-xs rounded-full min-w-[18px] h-[18px] sm:min-w-[22px] sm:h-[22px] px-1 flex items-center justify-center font-bold border-2 border-white shadow-lg">
                         {unreadMessagesCount}
