@@ -157,7 +157,7 @@ export default function ProfilePage() {
         {/* Tabs */}
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-3 sm:p-4">
-            <div className="flex gap-2">
+            <div className="grid grid-cols-4 sm:flex gap-2">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const showBadge = tab.id === 'messages' && unreadMessagesCount > 0;
@@ -165,7 +165,7 @@ export default function ProfilePage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex-1 px-4 sm:px-5 py-3 rounded-xl text-xs sm:text-sm font-semibold flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 relative ${
+                    className={`flex-1 px-2 sm:px-5 py-3 rounded-xl text-xs sm:text-sm font-semibold flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 relative ${
                       activeTab === tab.id
                         ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
                         : "text-gray-600 hover:bg-gray-100"
