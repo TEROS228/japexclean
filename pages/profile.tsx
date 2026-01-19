@@ -165,10 +165,10 @@ export default function ProfilePage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex-shrink-0 flex items-center gap-2 min-w-[110px] sm:flex-1 h-11 px-4 rounded-full text-[13px] sm:text-sm font-medium whitespace-nowrap relative transition-all duration-250 ${
+                    className={`flex-shrink-0 flex items-center gap-2 min-w-[110px] sm:flex-1 h-11 px-4 rounded-full text-[13px] sm:text-sm font-medium whitespace-nowrap relative transition-all duration-200 ease-out active:scale-[0.96] ${
                       activeTab === tab.id
-                        ? "bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-lg shadow-gray-900/25 active:scale-96"
-                        : "bg-white text-gray-900 border border-gray-200 hover:shadow-lg hover:shadow-gray-900/8 active:scale-96"
+                        ? "bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-lg shadow-gray-900/25"
+                        : "bg-white text-gray-900 border border-gray-200 hover:shadow-lg hover:shadow-gray-900/8"
                     }`}
                   >
                     <Icon size={16} className="flex-shrink-0" strokeWidth={2} />
