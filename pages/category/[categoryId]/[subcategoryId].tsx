@@ -43,6 +43,8 @@ const SubcategoryPage: NextPage<Props> = ({
   const [navigatingToProduct, setNavigatingToProduct] = useState(false);
   const [priceMin, setPriceMin] = useState<string>("");
   const [priceMax, setPriceMax] = useState<string>("");
+  const [priceMinInput, setPriceMinInput] = useState<string>("");
+  const [priceMaxInput, setPriceMaxInput] = useState<string>("");
 
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
@@ -182,27 +184,20 @@ const SubcategoryPage: NextPage<Props> = ({
     // Сбрасываем фильтры перед переходом
     setPriceMin("");
     setPriceMax("");
+    setPriceMinInput("");
+    setPriceMaxInput("");
     // Навигация через router для обновления URL и триггера SSR
     router.push(`/category/${categoryId}/${id}`);
   };
 
-  // Ref для отслеживания инициализации фильтров
-  const filtersInitialized = useRef(false);
-
-  // Перезагружаем данные при изменении фильтров
-  useEffect(() => {
-    // Пропускаем первую загрузку - данные уже есть от SSR
-    if (!filtersInitialized.current) {
-      filtersInitialized.current = true;
-      return;
-    }
-
-    console.log(`[Subcategory] 🔍 Filter changed: priceMin="${priceMin}", priceMax="${priceMax}"`);
+  // Применить фильтр по цене
+  const applyPriceFilter = () => {
+    setPriceMin(priceMinInput);
+    setPriceMax(priceMaxInput);
 
     // Перезагружаем с новыми фильтрами
-    fetchPage(currentPage, sortOrder, activeSubcategoryId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priceMin, priceMax]);
+    setTimeout(() => fetchPage(1, sortOrder, activeSubcategoryId), 50);
+  };
 
   // Обновляем товары когда приходят новые данные от SSR
   useEffect(() => {
@@ -223,7 +218,6 @@ const SubcategoryPage: NextPage<Props> = ({
     setCurrentSubcategoryName(subcategoryName);
     setCurrentPage(page);
     setSortOrder(sort);
-    filtersInitialized.current = false; // Сбрасываем флаг фильтров при смене подкатегории
 
     // Восстанавливаем фильтры по цене
     const savedPriceMin = sessionStorage.getItem(`priceMin-subcat-${subcategoryId}`);
@@ -231,10 +225,12 @@ const SubcategoryPage: NextPage<Props> = ({
 
     if (savedPriceMin) {
       setPriceMin(savedPriceMin);
+      setPriceMinInput(savedPriceMin);
       sessionStorage.removeItem(`priceMin-subcat-${subcategoryId}`);
     }
     if (savedPriceMax) {
       setPriceMax(savedPriceMax);
+      setPriceMaxInput(savedPriceMax);
       sessionStorage.removeItem(`priceMax-subcat-${subcategoryId}`);
     }
 
@@ -457,8 +453,9 @@ const SubcategoryPage: NextPage<Props> = ({
                 <input
                   type="text"
                   placeholder={`Min ${getCurrencySymbol()}`}
-                  value={priceMin}
-                  onChange={(e) => setPriceMin(e.target.value)}
+                  value={priceMinInput}
+                  onChange={(e) => setPriceMinInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && applyPriceFilter()}
                   className="w-28 sm:w-32 px-3 sm:px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition-all text-sm"
                 />
               </div>
@@ -470,17 +467,28 @@ const SubcategoryPage: NextPage<Props> = ({
                 <input
                   type="text"
                   placeholder={`Max ${getCurrencySymbol()}`}
-                  value={priceMax}
-                  onChange={(e) => setPriceMax(e.target.value)}
+                  value={priceMaxInput}
+                  onChange={(e) => setPriceMaxInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && applyPriceFilter()}
                   className="w-28 sm:w-32 px-3 sm:px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition-all text-sm"
                 />
               </div>
+
+              <button
+                onClick={applyPriceFilter}
+                className="px-4 sm:px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-medium text-sm shadow-sm"
+              >
+                Apply
+              </button>
 
               {(priceMin || priceMax) && (
                 <button
                   onClick={() => {
                     setPriceMin("");
                     setPriceMax("");
+                    setPriceMinInput("");
+                    setPriceMaxInput("");
+                    fetchPage(1, sortOrder, activeSubcategoryId);
                   }}
                   className="px-4 sm:px-6 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium text-sm shadow-sm"
                 >

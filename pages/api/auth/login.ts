@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { generateToken } from '@/lib/jwt';
+import bcrypt from 'bcrypt';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('Login API called');
@@ -26,8 +27,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Проверяем пароль
-    if (password !== user.password) {
+    // Проверяем пароль с помощью bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 

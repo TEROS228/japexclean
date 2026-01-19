@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import Stripe from "stripe";
+import { verifyToken } from "@/lib/jwt";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-08-27.basil",
@@ -8,6 +9,19 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  // Проверяем авторизацию
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const token = authHeader.substring(7);
+  const decoded = verifyToken(token);
+
+  if (!decoded || !decoded.userId) {
+    return res.status(401).json({ error: "Invalid token" });
   }
 
   try {
@@ -30,6 +44,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           quantity: 1,
         },
       ],
+      metadata: {
+        userId: decoded.userId,
+        userEmail: decoded.email || "",
+        originalAmount: amount.toString(),
+      },
       success_url: `${req.headers.origin}/balance/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.origin}/balance/cancel`,
     });

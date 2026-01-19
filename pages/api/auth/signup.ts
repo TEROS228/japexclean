@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { generateToken } from '@/lib/jwt';
+import bcrypt from 'bcrypt';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('Signup API called');
@@ -17,13 +18,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // Валидация пароля: минимум 5 символов и хотя бы 1 цифра
-    if (password.length < 5) {
-      return res.status(400).json({ message: 'Password must be at least 5 characters long' });
+    // Валидация пароля: минимум 8 символов, 1 цифра, 1 заглавная буква
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters long' });
     }
 
     if (!/\d/.test(password)) {
       return res.status(400).json({ message: 'Password must contain at least 1 number' });
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({ message: 'Password must contain at least 1 uppercase letter' });
     }
 
     // Проверяем нет ли уже пользователя в БАЗЕ ДАННЫХ
@@ -35,13 +40,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(409).json({ message: 'User already exists' });
     }
 
+    // Хешируем пароль перед сохранением
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     // Создаем нового пользователя в БАЗЕ ДАННЫХ
     const newUser = await prisma.user.create({
       data: {
         name,
         secondName,
         email,
-        password,
+        password: hashedPassword,
         balance: 0
       }
     });
