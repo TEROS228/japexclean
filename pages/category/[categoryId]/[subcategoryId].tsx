@@ -132,9 +132,11 @@ const SubcategoryPage: NextPage<Props> = ({
 
     setLoading(true);
     try {
-      // Добавляем параметры фильтрации по цене
-      const minPriceParam = priceMin ? `&minPrice=${encodeURIComponent(priceMin)}` : '';
-      const maxPriceParam = priceMax ? `&maxPrice=${encodeURIComponent(priceMax)}` : '';
+      // Добавляем параметры фильтрации по цене только если они заполнены
+      const minPriceValue = priceMin?.trim();
+      const maxPriceValue = priceMax?.trim();
+      const minPriceParam = minPriceValue && minPriceValue !== '0' ? `&minPrice=${encodeURIComponent(minPriceValue)}` : '';
+      const maxPriceParam = maxPriceValue && maxPriceValue !== '0' ? `&maxPrice=${encodeURIComponent(maxPriceValue)}` : '';
 
       const endpoint = marketplace === "yahoo"
         ? `/api/yahoo/products?categoryId=${encodeURIComponent(usedSubcatId)}&page=${pageNum}&sort=${encodeURIComponent(usedOrder)}`
