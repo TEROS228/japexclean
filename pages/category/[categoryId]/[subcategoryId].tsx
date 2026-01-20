@@ -108,12 +108,14 @@ const SubcategoryPage: NextPage<Props> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchPage = async (pageNum: number, order?: string, subcatId?: string) => {
+  const fetchPage = async (pageNum: number, order?: string, subcatId?: string, minPrice?: string, maxPrice?: string) => {
     const usedOrder = order ?? sortOrder;
     const usedSubcatId = subcatId ?? activeSubcategoryId;
+    const usedMinPrice = minPrice !== undefined ? minPrice : priceMin;
+    const usedMaxPrice = maxPrice !== undefined ? maxPrice : priceMax;
 
     const savedState = getSubcategoryState(usedSubcatId);
-    if (savedState?.pagesCache?.[pageNum] && savedState.sortOrder === usedOrder) {
+    if (!minPrice && !maxPrice && savedState?.pagesCache?.[pageNum] && savedState.sortOrder === usedOrder) {
       setProductsState(savedState.pagesCache[pageNum]);
       setCurrentPage(pageNum);
       setSortOrder(usedOrder);
@@ -135,8 +137,8 @@ const SubcategoryPage: NextPage<Props> = ({
     setLoading(true);
     try {
       // Добавляем параметры фильтрации по цене только если они заполнены
-      const minPriceValue = priceMin?.trim();
-      const maxPriceValue = priceMax?.trim();
+      const minPriceValue = usedMinPrice?.trim();
+      const maxPriceValue = usedMaxPrice?.trim();
       const minPriceParam = minPriceValue && minPriceValue !== '0' ? `&minPrice=${encodeURIComponent(minPriceValue)}` : '';
       const maxPriceParam = maxPriceValue && maxPriceValue !== '0' ? `&maxPrice=${encodeURIComponent(maxPriceValue)}` : '';
 
@@ -195,8 +197,8 @@ const SubcategoryPage: NextPage<Props> = ({
     setPriceMin(priceMinInput);
     setPriceMax(priceMaxInput);
 
-    // Перезагружаем с новыми фильтрами
-    setTimeout(() => fetchPage(1, sortOrder, activeSubcategoryId), 50);
+    // Передаем значения напрямую, не ждем state update
+    fetchPage(1, sortOrder, activeSubcategoryId, priceMinInput, priceMaxInput);
   };
 
   // Обновляем товары когда приходят новые данные от SSR

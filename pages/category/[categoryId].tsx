@@ -267,13 +267,13 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchPage = async (pageNum: number, order?: string) => {
+  const fetchPage = async (pageNum: number, order?: string, minPrice?: string, maxPrice?: string) => {
     if (pageNum < 1) return;
     const usedOrder = order ?? sortOrder;
 
     // Проверяем кеш только если сортировка и фильтры не изменились
     // Если передан параметр order, значит сортировка изменилась и кеш не валиден
-    if (!order && loadedPages[pageNum] && loadedPages[pageNum].length > 0) {
+    if (!order && !minPrice && !maxPrice && loadedPages[pageNum] && loadedPages[pageNum].length > 0) {
       setCurrentPage(pageNum);
       return;
     }
@@ -281,8 +281,8 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
     setLoading(true);
     try {
       // Добавляем параметры фильтрации по цене только если они заполнены
-      const minPriceValue = priceMin?.trim();
-      const maxPriceValue = priceMax?.trim();
+      const minPriceValue = (minPrice !== undefined ? minPrice : priceMin)?.trim();
+      const maxPriceValue = (maxPrice !== undefined ? maxPrice : priceMax)?.trim();
       const minPriceParam = minPriceValue && minPriceValue !== '0' ? `&minPrice=${encodeURIComponent(minPriceValue)}` : '';
       const maxPriceParam = maxPriceValue && maxPriceValue !== '0' ? `&maxPrice=${encodeURIComponent(maxPriceValue)}` : '';
 
@@ -362,8 +362,8 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
     setMaxPageLoaded(1);
 
     if (!isRestoring) {
-      // Небольшая задержка чтобы state обновился
-      setTimeout(() => fetchPage(1), 50);
+      // Передаем значения напрямую, не ждем state update
+      fetchPage(1, undefined, priceMinInput, priceMaxInput);
     }
   };
 
