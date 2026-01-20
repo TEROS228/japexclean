@@ -188,7 +188,7 @@ export default function ProfilePage() {
         {/* Tabs */}
         <div className="bg-white rounded-[14px] sm:rounded-[20px] overflow-hidden" style={{ boxShadow: '0 10px 30px rgba(34,197,94,.12)' }}>
           <div className="p-[10px_12px_6px] sm:p-[14px_16px_8px] overflow-x-auto scrollbar-hide">
-            <div className="flex gap-[18px] sm:gap-6 relative">
+            <div className="flex gap-[18px] sm:gap-0 sm:justify-between relative">
               {tabs.map((tab, index) => {
                 const Icon = tab.icon;
                 const showBadge = tab.id === 'messages' && unreadMessagesCount > 0;
@@ -197,7 +197,7 @@ export default function ProfilePage() {
                     key={tab.id}
                     ref={(el) => { tabsRef.current[index] = el; }}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`relative bg-transparent border-none px-[2px] sm:px-1 py-2 sm:py-3 text-[13px] sm:text-[15px] font-medium whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 sm:gap-2 ${
+                    className={`relative bg-transparent border-none px-[2px] sm:px-6 py-2 sm:py-3 text-[13px] sm:text-[15px] font-medium whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 sm:flex-1 ${
                       activeTab === tab.id
                         ? "text-green-600 font-semibold"
                         : "text-gray-600 active:opacity-70"
