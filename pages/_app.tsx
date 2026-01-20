@@ -19,6 +19,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import Header from "@/components/Header";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import LeadMagnetPopup from "@/components/LeadMagnetPopup";
 import { useRouter } from "next/router";
 import React from "react";
 
@@ -108,6 +109,9 @@ function MyApp({ Component, pageProps }: AppProps) {
                         <main>
                           <Component {...pageProps} />
                         </main>
+
+                        {/* Lead Magnet Popup */}
+                        <LeadMagnetPopup />
                         </ProductsProvider>
                       </CartProvider>
                     </FavouritesProvider>

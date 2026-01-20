@@ -17,9 +17,12 @@ export default function SignUpModal({
   const [secondName, setSecondName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [step, setStep] = useState<'register' | 'verify'>('register');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(true);
   const { data: session, status } = useSession();
   const [wasAuthenticating, setWasAuthenticating] = useState(false);
 
@@ -27,6 +30,9 @@ export default function SignUpModal({
   useEffect(() => {
     if (!isOpen) {
       setWasAuthenticating(false);
+      setStep('register');
+      setCode('');
+      setError('');
     }
   }, [isOpen]);
 
@@ -58,7 +64,7 @@ export default function SignUpModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name || !secondName || !email || !password) {
@@ -81,10 +87,44 @@ export default function SignUpModal({
     setError("");
 
     try {
-      const res = await fetch("/api/auth/signup", {
+      // Отправляем код верификации на email
+      const response = await fetch('/api/send-verification-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send verification code');
+      }
+
+      // Переходим к вводу кода
+      setStep('verify');
+    } catch (err: any) {
+      setError(err.message || "Error sending verification code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!code || code.length !== 6) {
+      setError("Please enter the 6-digit code");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/auth/signup-with-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, secondName, email, password }),
+        body: JSON.stringify({ name, secondName, email, password, code, marketingConsent }),
       });
 
       const data = await res.json();
@@ -108,6 +148,12 @@ export default function SignUpModal({
     }
   };
 
+  const handleBackToRegister = () => {
+    setStep('register');
+    setCode('');
+    setError('');
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fadeIn"
@@ -124,8 +170,12 @@ export default function SignUpModal({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h2>
-          <p className="text-gray-600">Join Japrix and start shopping</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            {step === 'register' ? 'Create Account' : 'Verify Email'}
+          </h2>
+          <p className="text-gray-600">
+            {step === 'register' ? 'Join Japrix and start shopping' : `Code sent to ${email}`}
+          </p>
         </div>
 
         {error && (
@@ -139,7 +189,8 @@ export default function SignUpModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        {step === 'register' ? (
+        <form onSubmit={handleRegisterSubmit} className="space-y-5">
           {/* Name */}
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-gray-700">First Name</label>
@@ -265,6 +316,61 @@ export default function SignUpModal({
             </div>
           </div>
 
+          {/* Marketing consent checkbox */}
+          <label className="custom-checkbox flex items-center gap-3 cursor-pointer user-select-none">
+            <input
+              type="checkbox"
+              checked={marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+              className="hidden"
+            />
+            <span className="checkbox-box flex items-center justify-center w-[22px] h-[22px] min-w-[22px] border-[1.8px] border-[#22c55e] rounded-md transition-all duration-250">
+              <svg className="checkbox-check w-[14px] h-[10px] stroke-white stroke-[2.2] fill-none" style={{strokeLinecap: 'round', strokeLinejoin: 'round', strokeDasharray: 20, strokeDashoffset: marketingConsent ? 0 : 20, transition: 'stroke-dashoffset 0.3s ease'}} viewBox="0 0 16 12">
+                <path d="M1.5 6.5 L6.2 10.5 L14.5 1.5" />
+              </svg>
+            </span>
+            <span className="text-xs text-slate-600">
+              I agree to receive marketing emails and promotional offers from Japrix
+            </span>
+          </label>
+
+          {/* Buttons */}
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
+            <button
+              type="button"
+              className="flex-1 px-6 py-3 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="group flex-1 relative px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-xl hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-400 transition-all duration-300 shadow-lg hover:shadow-xl disabled:shadow-none overflow-hidden hover:scale-105 active:scale-95"
+              disabled={loading}
+            >
+              <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></span>
+              <span className="relative flex items-center justify-center gap-2">
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending code...
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </>
+                )}
+              </span>
+            </button>
+          </div>
+
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
@@ -301,21 +407,33 @@ export default function SignUpModal({
             </svg>
             Continue with Google
           </button>
+        </form>
+        ) : (
+        <form onSubmit={handleVerifySubmit} className="space-y-5">
+          {/* Verification Code */}
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 text-center">Enter 6-Digit Code</label>
+            <div className="relative">
+              <input
+                className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl text-center text-2xl font-mono tracking-widest focus:border-green-500 focus:ring-4 focus:ring-green-500/20 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                type="text"
+                placeholder="000000"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                maxLength={6}
+                required
+                disabled={loading}
+              />
+            </div>
+            <p className="text-xs text-gray-500 text-center">Code expires in 10 minutes</p>
+          </div>
 
           {/* Buttons */}
-          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
-            <button
-              type="button"
-              className="flex-1 px-6 py-3 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </button>
+          <div className="flex flex-col gap-3 pt-4">
             <button
               type="submit"
-              className="group flex-1 relative px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-xl hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-400 transition-all duration-300 shadow-lg hover:shadow-xl disabled:shadow-none overflow-hidden hover:scale-105 active:scale-95"
-              disabled={loading}
+              className="group relative px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-xl hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-400 transition-all duration-300 shadow-lg hover:shadow-xl disabled:shadow-none overflow-hidden hover:scale-105 active:scale-95"
+              disabled={loading || code.length !== 6}
             >
               <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></span>
               <span className="relative flex items-center justify-center gap-2">
@@ -325,20 +443,33 @@ export default function SignUpModal({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Creating account...
+                    Verifying...
                   </>
                 ) : (
-                  <>
-                    Sign Up
-                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </>
+                  'Verify & Create Account'
                 )}
               </span>
             </button>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleBackToRegister}
+                className="flex-1 px-6 py-3 text-gray-600 hover:text-gray-800 font-semibold transition-colors"
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-6 py-3 border-2 border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </form>
+        )}
       </div>
 
       <style jsx>{`
@@ -363,6 +494,21 @@ export default function SignUpModal({
         }
         .animate-shake {
           animation: shake 0.4s ease-in-out;
+        }
+
+        /* Custom Checkbox Styles */
+        .custom-checkbox input:checked + .checkbox-box {
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+          border-color: transparent;
+          box-shadow: 0 0 0 4px rgba(34,197,94,.18);
+        }
+
+        .custom-checkbox:hover .checkbox-box {
+          box-shadow: 0 0 0 3px rgba(34,197,94,.12);
+        }
+
+        .custom-checkbox:active .checkbox-box {
+          transform: scale(.94);
         }
       `}</style>
     </div>

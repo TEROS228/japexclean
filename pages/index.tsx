@@ -9,6 +9,7 @@ import { useMarketplace } from "@/context/MarketplaceContext";
 import { allCategories as categories } from "@/data/categories";
 import PrivacyNotice from '@/components/PrivacyNotice';
 import Footer from '@/components/Footer';
+import LeadMagnetPopup from '@/components/LeadMagnetPopup';
 
 // Hook для анимации при скролле
 function useScrollAnimation() {
@@ -235,6 +236,9 @@ export default function Home() {
 
   return (
     <main className="min-h-screen text-gray-900 font-sans antialiased" style={{ backgroundColor: '#faf9f6' }}>
+      {/* Lead Magnet Popup */}
+      <LeadMagnetPopup />
+
       {/* Уведомление о приватности */}
       <PrivacyNotice />
 
@@ -345,6 +349,42 @@ export default function Home() {
               <p className={`text-base sm:text-lg lg:text-xl text-gray-700 leading-relaxed max-w-xl ${heroVisible ? 'animate-fadeInUp delay-200' : ''}`}>
                 Access authentic products from Japan's leading marketplaces. Professional service, transparent pricing, worldwide delivery.
               </p>
+
+              {/* Bonus Banner */}
+              {!user && (
+                <div className={`bonus-banner relative w-full max-w-md p-6 sm:p-7 rounded-[20px] bg-gradient-to-br from-green-500 to-green-700 text-white overflow-hidden shadow-[0_25px_60px_rgba(22,163,74,0.35)] ${heroVisible ? 'animate-fadeInUp delay-250' : ''}`}>
+                  {/* Rotating Glow */}
+                  <div className="absolute w-[180%] h-[180%] -top-[40%] -left-[40%] bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.35),transparent)] animate-spin-slow pointer-events-none"></div>
+
+                  {/* Content */}
+                  <div className="relative z-10">
+                    <div className="inline-block px-3 py-1.5 rounded-full bg-white/20 text-xs font-semibold mb-3.5">
+                      🎉 Welcome bonus
+                    </div>
+                    <h2 className="text-[26px] font-bold leading-[1.15] mb-3">
+                      Register & get <span className="text-emerald-50 font-black">¥500</span>
+                    </h2>
+                    <p className="text-sm opacity-90 mb-5">
+                      Instant bonus added to your balance after sign up
+                    </p>
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem('leadMagnetShown');
+                        window.location.reload();
+                      }}
+                      className="inline-flex items-center gap-2 px-5 py-3.5 rounded-[14px] bg-white text-green-800 font-bold text-sm transition-all hover:shadow-[0_10px_25px_rgba(0,0,0,0.2)] hover:-translate-y-0.5 active:translate-y-0"
+                    >
+                      Create account
+                      <span className="inline-block animate-bounce-subtle">→</span>
+                    </button>
+                  </div>
+
+                  {/* Yen Icon */}
+                  <div className="absolute -right-[30px] -bottom-[30px] w-[140px] h-[140px] rounded-full bg-gradient-to-t from-emerald-100 to-white text-green-800 font-black text-[42px] flex items-center justify-center opacity-25 animate-float">
+                    ¥
+                  </div>
+                </div>
+              )}
 
               <div className={`flex flex-col sm:flex-row gap-4 ${heroVisible ? 'animate-fadeInUp delay-300' : ''}`}>
                 <button

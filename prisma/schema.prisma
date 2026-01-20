@@ -17,6 +17,12 @@ model User {
   balance         Int      @default(0)
   isAdmin         Boolean  @default(false)
   adminPermissions String?  // JSON string with admin panel permissions
+
+  // Lead magnet security fields
+  registrationIp        String?  // IP address при регистрации
+  registrationFingerprint String?  // Browser fingerprint при регистрации
+  marketingConsent      Boolean  @default(false)  // Согласие на рассылку
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
