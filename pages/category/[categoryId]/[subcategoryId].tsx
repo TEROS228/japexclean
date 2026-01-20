@@ -194,6 +194,24 @@ const SubcategoryPage: NextPage<Props> = ({
 
   // Применить фильтр по цене
   const applyPriceFilter = () => {
+    // Проверяем что значения не пустые и не нули
+    const minValue = priceMinInput?.trim();
+    const maxValue = priceMaxInput?.trim();
+    const isMinValid = minValue && minValue !== '0';
+    const isMaxValid = maxValue && maxValue !== '0';
+
+    // Если оба пустые или нули - сбрасываем фильтр
+    if (!isMinValid && !isMaxValid) {
+      setPriceMin("");
+      setPriceMax("");
+      setPriceMinInput("");
+      setPriceMaxInput("");
+
+      // Загружаем без фильтров
+      fetchPage(1, sortOrder, activeSubcategoryId, "", "");
+      return;
+    }
+
     setPriceMin(priceMinInput);
     setPriceMax(priceMaxInput);
 

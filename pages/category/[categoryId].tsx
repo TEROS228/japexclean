@@ -353,6 +353,30 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
 
   // Применить фильтр по цене
   const applyPriceFilter = () => {
+    // Проверяем что значения не пустые и не нули
+    const minValue = priceMinInput?.trim();
+    const maxValue = priceMaxInput?.trim();
+    const isMinValid = minValue && minValue !== '0';
+    const isMaxValid = maxValue && maxValue !== '0';
+
+    // Если оба пустые или нули - сбрасываем фильтр
+    if (!isMinValid && !isMaxValid) {
+      setPriceMin("");
+      setPriceMax("");
+      setPriceMinInput("");
+      setPriceMaxInput("");
+
+      // Сбрасываем на первую страницу и загружаем без фильтров
+      setLoadedPages({});
+      setCurrentPage(1);
+      setMaxPageLoaded(1);
+
+      if (!isRestoring) {
+        fetchPage(1, undefined, "", "");
+      }
+      return;
+    }
+
     setPriceMin(priceMinInput);
     setPriceMax(priceMaxInput);
 
