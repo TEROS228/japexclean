@@ -104,7 +104,18 @@ export default function ProfilePage() {
 
   // Update indicator position when activeTab changes
   useEffect(() => {
-    const activeIndex = tabs.findIndex(tab => tab.id === activeTab);
+    const tabsList = [
+      { id: "orders" as TabType, label: "Orders", icon: ShoppingBag },
+      { id: "transactions" as TabType, label: "Transactions", icon: CreditCard },
+      { id: "packages" as TabType, label: "Packages", icon: Truck },
+      { id: "favourites" as TabType, label: "Favourites", icon: Heart },
+      { id: "coupons" as TabType, label: "Coupons", icon: Tag },
+      { id: "addresses" as TabType, label: "Address", icon: MapPin },
+      { id: "disputes" as TabType, label: "Disputes", icon: AlertCircle },
+      { id: "messages" as TabType, label: "Help", icon: HelpCircle },
+    ];
+
+    const activeIndex = tabsList.findIndex(tab => tab.id === activeTab);
     const activeButton = tabsRef.current[activeIndex];
 
     if (activeButton) {
