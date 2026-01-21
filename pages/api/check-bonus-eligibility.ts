@@ -1,7 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -21,40 +19,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     : req.socket.remoteAddress || 'unknown';
 
   try {
-    // Проверяем есть ли пользователь с этим IP который получил бонус
+    // Проверяем rate limiting: 1 регистрация с IP в день
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const ipAttemptsToday = await prisma.registrationAttempt.count({
+      where: {
+        ip: ip,
+        timestamp: { gte: today }
+      }
+    });
+
+    if (ipAttemptsToday >= 1) {
+      console.log(`[Bonus Check] IP ${ip} already registered today (${ipAttemptsToday} attempts)`);
+      return res.status(200).json({ eligible: false, reason: 'ip_rate_limit' });
+    }
+
+    // Проверяем использовался ли этот IP для регистрации раньше
     const existingIpUser = await prisma.user.findFirst({
       where: {
         registrationIp: ip,
-        balance: { gte: 500 }, // Проверяем что пользователь получил бонус
       },
     });
 
     if (existingIpUser) {
-      console.log(`[Bonus Check] IP ${ip} already claimed bonus`);
+      console.log(`[Bonus Check] IP ${ip} already used for registration`);
       return res.status(200).json({ eligible: false, reason: 'ip_used' });
     }
 
-    // Проверяем есть ли пользователь с этим fingerprint который получил бонус
+    // Проверяем использовался ли этот fingerprint для регистрации раньше
     const existingFingerprintUser = await prisma.user.findFirst({
       where: {
         registrationFingerprint: fingerprint,
-        balance: { gte: 500 },
       },
     });
 
     if (existingFingerprintUser) {
-      console.log(`[Bonus Check] Fingerprint ${fingerprint.substring(0, 8)}... already claimed bonus`);
+      console.log(`[Bonus Check] Fingerprint ${fingerprint.substring(0, 8)}... already used for registration`);
       return res.status(200).json({ eligible: false, reason: 'fingerprint_used' });
     }
 
-    // Браузер/IP еще не получал бонус
+    // Браузер/IP еще не использовались для регистрации
     console.log(`[Bonus Check] IP ${ip} / Fingerprint ${fingerprint.substring(0, 8)}... is eligible`);
     return res.status(200).json({ eligible: true });
 
   } catch (error) {
     console.error('[Bonus Check] Error:', error);
     return res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -22,7 +22,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: { email: session.user.email }
     });
 
+    let isNewUser = false;
+
     if (!user) {
+      isNewUser = true;
+      // Get user's IP address
+      const forwarded = req.headers['x-forwarded-for'];
+      const ip = typeof forwarded === 'string'
+        ? forwarded.split(',')[0]
+        : req.socket.remoteAddress || 'unknown';
+
       // Создаем нового пользователя для Google OAuth
       const [firstName, ...lastNameParts] = (session.user.name || "").split(" ");
       user = await prisma.user.create({
@@ -31,9 +40,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           name: firstName || "User",
           secondName: lastNameParts.join(" ") || "Google",
           password: "", // Google пользователям не нужен пароль
-          balance: 0
+          balance: 0,
+          registrationIp: ip,
+          registrationFingerprint: null // Google OAuth не имеет fingerprint
         }
       });
+
+      // Создаём welcome купон для нового Google пользователя
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30); // Купон действует 30 дней
+
+      await prisma.coupon.create({
+        data: {
+          userId: user.id,
+          code: `WELCOME500-${user.id.substring(0, 8).toUpperCase()}`,
+          discountAmount: 500,
+          minPurchase: 0,
+          description: 'Welcome bonus: ¥500 off your first order',
+          status: 'active',
+          expiresAt: expiresAt
+        }
+      });
+
+      console.log(`[Google OAuth] New user created: ${user.email} with welcome coupon ¥500 (IP: ${ip})`);
     }
 
     // Генерируем JWT токен
@@ -44,6 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.json({
       token,
+      isNewUser,
       user: {
         id: user.id,
         email: user.email,

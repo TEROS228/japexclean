@@ -1,24 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Resend } from 'resend';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+import { validateEmailForBonus } from '@/lib/email-validator';
 
-const prisma = new PrismaClient();
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Хранилище для кодов верификации (в памяти)
-// В production лучше использовать Redis
-const verificationCodes = new Map<string, { code: string; timestamp: number }>();
+// Очистка устаревших кодов (старше 10 минут) из базы данных
+async function cleanExpiredCodes() {
+  const TEN_MINUTES_AGO = new Date(Date.now() - 10 * 60 * 1000);
 
-// Очистка устаревших кодов (старше 10 минут)
-function cleanExpiredCodes() {
-  const now = Date.now();
-  const TEN_MINUTES = 10 * 60 * 1000;
-
-  for (const [email, data] of verificationCodes.entries()) {
-    if (now - data.timestamp > TEN_MINUTES) {
-      verificationCodes.delete(email);
+  await prisma.verificationCode.deleteMany({
+    where: {
+      timestamp: { lt: TEN_MINUTES_AGO }
     }
-  }
+  });
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -32,14 +27,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ error: 'Invalid email format' });
+  // Get user's IP address
+  const forwarded = req.headers['x-forwarded-for'];
+  const ip = typeof forwarded === 'string'
+    ? forwarded.split(',')[0]
+    : req.socket.remoteAddress || 'unknown';
+
+  // Validate email format and check for disposable emails
+  const emailValidation = validateEmailForBonus(email);
+  if (!emailValidation.valid) {
+    return res.status(400).json({ error: emailValidation.error });
   }
 
+  const normalizedEmail = emailValidation.normalizedEmail || email.toLowerCase();
+
   try {
-    // Check if user with this email already exists
+    // Rate Limiting: 1 регистрация с IP в день
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const ipAttemptsToday = await prisma.registrationAttempt.count({
+      where: {
+        ip: ip,
+        timestamp: { gte: today }
+      }
+    });
+
+    if (ipAttemptsToday >= 1) {
+      console.log(`[Rate Limit] IP ${ip} blocked: ${ipAttemptsToday} attempts today`);
+      return res.status(429).json({
+        error: 'You can only register one account per day from this device. Please try again tomorrow.'
+      });
+    }
+
+    // Check if user with this email already exists (проверяем по normalized)
     const existingUser = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     });
@@ -48,17 +69,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'This email has already been used for the bonus' });
     }
 
+    // Проверка на Gmail aliases (test+1@gmail.com = test@gmail.com)
+    if (normalizedEmail !== email.toLowerCase()) {
+      const emailAttemptsToday = await prisma.registrationAttempt.count({
+        where: {
+          email: normalizedEmail,
+          timestamp: { gte: today }
+        }
+      });
+
+      if (emailAttemptsToday >= 1) {
+        console.log(`[Rate Limit] Email alias detected: ${email} → ${normalizedEmail}`);
+        return res.status(429).json({
+          error: 'This email address (or its alias) has already been used for registration today.'
+        });
+      }
+    }
+
     // Generate 6-digit verification code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Store code with timestamp
-    verificationCodes.set(email.toLowerCase(), {
-      code,
-      timestamp: Date.now(),
+    // Clean expired codes first
+    await cleanExpiredCodes();
+
+    // Delete any existing code for this email
+    await prisma.verificationCode.deleteMany({
+      where: { email: email.toLowerCase() }
     });
 
-    // Clean expired codes
-    cleanExpiredCodes();
+    // Store code in database
+    await prisma.verificationCode.create({
+      data: {
+        email: email.toLowerCase(),
+        code: code
+      }
+    });
 
     // Send email with verification code
     const { data, error } = await resend.emails.send({
@@ -141,10 +186,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (error) {
       console.error('[Resend] Error sending email:', error);
+
+      // В режиме разработки показываем код в консоли
+      if (process.env.NODE_ENV === 'development') {
+        console.log('═══════════════════════════════════════');
+        console.log('📧 EMAIL FAILED - SHOWING CODE IN CONSOLE');
+        console.log('Email:', email);
+        console.log('Verification Code:', code);
+        console.log('═══════════════════════════════════════');
+
+        // Все равно возвращаем success чтобы можно было продолжить
+        return res.status(200).json({
+          success: true,
+          message: 'Verification code (check console)',
+          devMode: true,
+        });
+      }
+
       return res.status(500).json({ error: 'Failed to send verification email' });
     }
 
     console.log(`[Verification] Code sent to ${email}, Email ID: ${data?.id}`);
+
+    // Записываем успешную попытку регистрации
+    await prisma.registrationAttempt.create({
+      data: {
+        ip: ip,
+        email: normalizedEmail,
+      }
+    });
 
     return res.status(200).json({
       success: true,
@@ -153,10 +223,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error('[Verification] Error:', error);
     return res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
-// Export для использования в других API
-export { verificationCodes };
+// Функция для получения кода из базы данных (для использования в других API)
+export async function getVerificationCode(email: string): Promise<{ code: string; timestamp: Date } | null> {
+  const storedCode = await prisma.verificationCode.findFirst({
+    where: { email: email.toLowerCase() },
+    orderBy: { timestamp: 'desc' }
+  });
+
+  if (!storedCode) return null;
+
+  return {
+    code: storedCode.code,
+    timestamp: storedCode.timestamp
+  };
+}
+
+// Функция для удаления кода после использования
+export async function deleteVerificationCode(email: string): Promise<void> {
+  await prisma.verificationCode.deleteMany({
+    where: { email: email.toLowerCase() }
+  });
+}

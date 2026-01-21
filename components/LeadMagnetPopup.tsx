@@ -17,15 +17,34 @@ export default function LeadMagnetPopup() {
   const [success, setSuccess] = useState(false);
   const { user, refreshUser } = useUser();
 
+  // Слушатель для ручного открытия popup
+  useEffect(() => {
+    const handleOpenPopup = () => {
+      localStorage.removeItem('leadMagnetShown');
+      setIsVisible(true);
+    };
+
+    window.addEventListener('openLeadMagnet', handleOpenPopup);
+    return () => window.removeEventListener('openLeadMagnet', handleOpenPopup);
+  }, []);
+
   useEffect(() => {
     // Не показываем если пользователь уже залогинен
     if (user) return;
 
     // Генерируем browser fingerprint и проверяем не получал ли он бонус
     const checkEligibilityAndShow = async () => {
+      // Используем extendedResult для более строгого fingerprinting
       const fp = await FingerprintJS.load();
-      const result = await fp.get();
+      const result = await fp.get({
+        // Включаем дополнительные компоненты для более точного fingerprint
+        extendedResult: true
+      });
       const visitorId = result.visitorId;
+
+      // Логируем confidence score для мониторинга
+      console.log(`[Fingerprint] ID: ${visitorId.substring(0, 8)}..., Confidence: ${result.confidence?.score || 'N/A'}`);
+
       setFingerprint(visitorId);
 
       // Проверяем на сервере не получал ли этот браузер/IP уже бонус
@@ -40,15 +59,10 @@ export default function LeadMagnetPopup() {
 
         // Если браузер/IP уже получил бонус, не показываем popup
         if (!data.eligible) {
-          localStorage.setItem('leadMagnetShown', 'true');
           return;
         }
 
-        // Проверяем, показывали ли уже этот popup
-        const hasSeenPopup = localStorage.getItem('leadMagnetShown');
-        if (hasSeenPopup) return;
-
-        // Показываем popup через 3 секунды
+        // Показываем popup через 3 секунды каждый раз при заходе на главную
         const timer = setTimeout(() => {
           setIsVisible(true);
         }, 3000);
@@ -57,9 +71,6 @@ export default function LeadMagnetPopup() {
       } catch (error) {
         console.error('[LeadMagnet] Error checking eligibility:', error);
         // В случае ошибки показываем popup (fail-open)
-        const hasSeenPopup = localStorage.getItem('leadMagnetShown');
-        if (hasSeenPopup) return;
-
         const timer = setTimeout(() => {
           setIsVisible(true);
         }, 3000);
@@ -73,7 +84,6 @@ export default function LeadMagnetPopup() {
 
   const handleClose = () => {
     setIsVisible(false);
-    localStorage.setItem('leadMagnetShown', 'true');
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -135,12 +145,17 @@ export default function LeadMagnetPopup() {
       if (data.token) {
         localStorage.setItem('token', data.token);
         await refreshUser();
-      }
 
-      // Закрываем popup через 3 секунды после успеха
-      setTimeout(() => {
-        handleClose();
-      }, 3000);
+        // Перенаправляем в профиль на вкладку Coupons через 2 секунды
+        setTimeout(() => {
+          window.location.href = '/profile?tab=coupons';
+        }, 2000);
+      } else {
+        // Если нет токена, просто закрываем через 3 секунды
+        setTimeout(() => {
+          handleClose();
+        }, 3000);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -157,7 +172,10 @@ export default function LeadMagnetPopup() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      onClick={handleClose}
+    >
       <style jsx>{`
         @keyframes floatIn {
           from {
@@ -290,7 +308,10 @@ export default function LeadMagnetPopup() {
         }
       `}</style>
 
-      <div className="popup-card relative rounded-[26px] shadow-[0_30px_80px_rgba(34,197,94,0.25),inset_0_1px_rgba(255,255,255,0.7)] max-w-[360px] w-full">
+      <div
+        className="popup-card relative rounded-[26px] shadow-[0_30px_80px_rgba(34,197,94,0.25),inset_0_1px_rgba(255,255,255,0.7)] max-w-[360px] w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Close button */}
         <button
           onClick={handleClose}
@@ -311,12 +332,9 @@ export default function LeadMagnetPopup() {
                     🎉 Welcome Bonus
                   </div>
 
-                  <h1 className="text-[22px] font-bold text-emerald-950 mb-2.5">
-                    Get ¥500 instantly
+                  <h1 className="text-[28px] font-bold text-emerald-950 mb-4.5">
+                    Get ¥500 OFF instantly
                   </h1>
-                  <div className="gradient-text text-[26px] font-extrabold mb-4.5">
-                    Just for registering
-                  </div>
 
                   <form onSubmit={handleRegisterSubmit} className="mt-1.5 space-y-3">
                 <div className="input-wrapper">
@@ -478,16 +496,16 @@ export default function LeadMagnetPopup() {
               </div>
 
               <h1 className="text-[22px] font-bold text-emerald-950 mb-2.5">
-                Bonus Activated!
+                Welcome Coupon Received!
               </h1>
               <div className="gradient-text text-[26px] font-extrabold mb-2">
-                ¥500
+                ¥500 OFF
               </div>
               <p className="text-sm text-slate-600">
-                has been added to your account
+                on orders over ¥3,000
               </p>
               <p className="text-xs text-slate-500 mt-2">
-                Start shopping now! 🎉
+                Check your coupons and start shopping! 🎉
               </p>
             </div>
           )}

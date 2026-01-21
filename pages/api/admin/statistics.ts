@@ -83,12 +83,74 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: {
         total: true,
         createdAt: true,
+        couponDiscount: true,
+        balanceUsed: true,
+        serviceFee: true,
+        items: {
+          select: {
+            id: true,
+            price: true,
+            quantity: true,
+            package: {
+              select: {
+                reinforcement: true,
+                reinforcementPaid: true,
+                photoService: true,
+                photoServicePaid: true,
+                consolidation: true,
+              },
+            },
+          },
+        },
       },
     });
 
     // Calculate total revenue (оборот = сумма всех заказов)
     const totalRevenue = ordersInPeriod.reduce((sum, order) => {
       return sum + order.total;
+    }, 0);
+
+    // Calculate Estimated Earnings (реальная прибыль)
+    const estimatedEarnings = ordersInPeriod.reduce((sum, order) => {
+      // 1. Считаем стоимость товаров
+      const itemsTotal = order.items.reduce((itemSum, item) => {
+        return itemSum + (item.price * item.quantity);
+      }, 0);
+
+      // 2. Service Fee (¥800 за товар)
+      const commission = order.serviceFee || 0;
+
+      // 3. НДС возврат (10% от стоимости товаров)
+      const vatRefund = itemsTotal * 0.10;
+
+      // 4. Скидки (только купоны, НЕ balanceUsed!)
+      const totalDiscounts = (order.couponDiscount || 0);
+
+      // 5. Услуги (reinforcement, photoService, consolidation)
+      let servicesProfit = 0;
+      order.items.forEach(item => {
+        if (item.package) {
+          // Package Reinforcement: чистая прибыль ¥650
+          if (item.package.reinforcement && item.package.reinforcementPaid) {
+            servicesProfit += 650;
+          }
+
+          // Inside Package Photo: чистая прибыль ¥500
+          if (item.package.photoService && item.package.photoServicePaid) {
+            servicesProfit += 500;
+          }
+
+          // Package Consolidation: -¥185 (вычитается из service fee)
+          if (item.package.consolidation) {
+            servicesProfit -= 185;
+          }
+        }
+      });
+
+      // 6. Прибыль = Service Fee + НДС - Скидки + Услуги
+      const profit = commission + vatRefund - totalDiscounts + servicesProfit;
+
+      return sum + profit;
     }, 0);
 
     // Get all-time statistics
@@ -177,6 +239,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? totalRevenue / currentOrders
       : 0;
 
+    // Calculate Average Profit Per Order
+    const averageProfitPerOrder = currentOrders > 0
+      ? estimatedEarnings / currentOrders
+      : 0;
+
+    // Calculate Average Shipping Cost (FedEx + Japan Post/EMS)
+    const packagesInPeriod = await prisma.package.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+        },
+        status: {
+          in: ['shipped', 'delivered'], // Только отправленные посылки
+        },
+      },
+      select: {
+        shippingCost: true,
+      },
+    });
+
+    const totalShippingCost = packagesInPeriod.reduce((sum, pkg) => {
+      return sum + pkg.shippingCost;
+    }, 0);
+
+    const averageShippingCost = packagesInPeriod.length > 0
+      ? totalShippingCost / packagesInPeriod.length
+      : 0;
+
     // Calculate Repeat Purchase Rate
     // Получаем всех пользователей с заказами и считаем количество заказов на пользователя
     const ordersGroupedByUser = await prisma.order.groupBy({
@@ -251,6 +341,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         totalCustomers,
         ordersCount: currentOrders,
         totalRevenue: Math.round(totalRevenue),
+        estimatedEarnings: Math.round(estimatedEarnings),
         allTimeOrders: allOrders.length,
         allTimeRevenue: Math.round(allTimeRevenue),
         visitsCount: visitsInPeriod,
@@ -258,6 +349,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         uniqueBuyers: uniqueBuyers.length,
         conversionRate: Math.round(conversionRate * 10) / 10,
         averageOrderValue: Math.round(averageOrderValue),
+        averageProfitPerOrder: Math.round(averageProfitPerOrder),
+        averageShippingCost: Math.round(averageShippingCost),
         repeatPurchaseRate: Math.round(repeatPurchaseRate * 10) / 10,
         funnel: {
           visitors: visitsInPeriod,

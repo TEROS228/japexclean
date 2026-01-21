@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Invalid token' });
   }
 
-  const { cart, total, shippingCountry, preferredShippingCarrier, addressId, couponCode } = req.body;
+  const { cart, total, shippingCountry, preferredShippingCarrier, addressId, couponCode, couponDiscount, balanceUsed, serviceFee } = req.body;
 
   // Проверяем что корзина не пустая
   if (!cart || cart.length === 0) {
@@ -63,9 +63,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Создаем заказ для каждой группы товаров
     const orders = [];
 
+    // Рассчитываем общую стоимость всех товаров для пропорционального распределения скидок
+    const totalItemsPrice = cart.reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
+
     for (const [baseCode, items] of Object.entries(groupedItems)) {
       // Суммируем стоимость всех товаров в группе
       const groupTotal = items.reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
+
+      // Распределяем скидку и serviceFee пропорционально
+      const groupCouponDiscount = totalItemsPrice > 0
+        ? Math.round((couponDiscount || 0) * (groupTotal / totalItemsPrice))
+        : 0;
+      const groupBalanceUsed = totalItemsPrice > 0
+        ? Math.round((balanceUsed || 0) * (groupTotal / totalItemsPrice))
+        : 0;
+      const groupServiceFee = totalItemsPrice > 0
+        ? Math.round((serviceFee || 0) * (groupTotal / totalItemsPrice))
+        : 0;
 
       // Генерируем следующий orderNumber
       const lastOrder = await prisma.order.findFirst({
@@ -102,11 +116,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         data: {
           userId: dbUser.id,
           orderNumber: nextOrderNumber,
-          total: groupTotal,
+          total: groupTotal + groupServiceFee - groupCouponDiscount,  // Total с учетом service fee и скидок
           status: 'completed',
           shippingCountry: shippingCountry || null,
           preferredShippingCarrier: preferredShippingCarrier || null,
           addressId: addressId || null,
+          couponCode: couponCode || null,
+          couponDiscount: groupCouponDiscount,
+          balanceUsed: groupBalanceUsed,
+          serviceFee: groupServiceFee,
           items: {
             create: orderItemsToCreate
           }

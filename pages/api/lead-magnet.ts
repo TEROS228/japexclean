@@ -1,10 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { generateToken } from '@/lib/jwt';
-import { verificationCodes } from './send-verification-code';
-
-const prisma = new PrismaClient();
+import { getVerificationCode, deleteVerificationCode } from './send-verification-code';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -51,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Verify the code
-    const storedData = verificationCodes.get(email.toLowerCase());
+    const storedData = await getVerificationCode(email);
 
     if (!storedData) {
       return res.status(400).json({ error: 'Verification code expired or not found. Please request a new code.' });
@@ -64,13 +62,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Check if code expired (10 minutes)
     const TEN_MINUTES = 10 * 60 * 1000;
-    if (Date.now() - storedData.timestamp > TEN_MINUTES) {
-      verificationCodes.delete(email.toLowerCase());
+    if (Date.now() - storedData.timestamp.getTime() > TEN_MINUTES) {
+      await deleteVerificationCode(email);
       return res.status(400).json({ error: 'Verification code expired. Please request a new code.' });
     }
 
     // Delete the code after successful verification
-    verificationCodes.delete(email.toLowerCase());
+    await deleteVerificationCode(email);
 
     // Check if user with this email already exists
     const existingUser = await prisma.user.findUnique({
@@ -81,47 +79,61 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'This email has already been used for the bonus' });
     }
 
-    // Check if this IP address already received a bonus
+    // Check if this IP address was already used for registration
     const existingIpUser = await prisma.user.findFirst({
       where: {
         registrationIp: ip,
-        balance: { gte: 500 }, // Проверяем что пользователь получил бонус
       },
     });
 
     if (existingIpUser) {
-      console.log(`[Lead Magnet] Blocked: IP ${ip} already used for bonus`);
-      return res.status(400).json({ error: 'A bonus has already been claimed from this device' });
+      console.log(`[Lead Magnet] Blocked: IP ${ip} already used for registration`);
+      return res.status(400).json({ error: 'An account has already been created from this device' });
     }
 
-    // Check if this browser fingerprint already received a bonus
+    // Check if this browser fingerprint was already used for registration
     const existingFingerprintUser = await prisma.user.findFirst({
       where: {
         registrationFingerprint: fingerprint,
-        balance: { gte: 500 },
       },
     });
 
     if (existingFingerprintUser) {
-      console.log(`[Lead Magnet] Blocked: Fingerprint ${fingerprint} already used for bonus`);
-      return res.status(400).json({ error: 'A bonus has already been claimed from this browser' });
+      console.log(`[Lead Magnet] Blocked: Fingerprint ${fingerprint} already used for registration`);
+      return res.status(400).json({ error: 'An account has already been created from this browser' });
     }
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user with 500 yen bonus
+    // Create new user (without balance, will get coupon instead)
     const newUser = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
         name: name.trim(),
         secondName: secondName.trim(),
         password: hashedPassword,
-        balance: 500, // Lead magnet bonus
+        balance: 0, // No balance, will get welcome coupon instead
         registrationIp: ip,
         registrationFingerprint: fingerprint,
         marketingConsent: marketingConsent || false,
       },
+    });
+
+    // Create welcome coupon (¥500 off orders ¥3000+)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30); // Coupon valid for 30 days
+
+    await prisma.coupon.create({
+      data: {
+        userId: newUser.id,
+        code: `WELCOME500-${newUser.id.substring(0, 8).toUpperCase()}`,
+        discountAmount: 500,
+        minPurchase: 3000, // Minimum order ¥3000
+        description: 'Welcome bonus: ¥500 off on orders over ¥3000',
+        status: 'active',
+        expiresAt: expiresAt
+      }
     });
 
     // Generate JWT token
@@ -130,11 +142,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: newUser.email,
     });
 
-    console.log(`[Lead Magnet] New user created: ${email} with ¥500 bonus (IP: ${ip}, Fingerprint: ${fingerprint.substring(0, 8)}..., Marketing: ${marketingConsent})`);
+    console.log(`[Lead Magnet] New user created: ${email} with welcome coupon ¥500 off ¥3000+ (IP: ${ip}, Fingerprint: ${fingerprint.substring(0, 8)}..., Marketing: ${marketingConsent})`);
 
     return res.status(200).json({
       success: true,
-      message: '500 yen bonus added to your account',
+      message: 'Welcome coupon received: ¥500 off on orders over ¥3000!',
       token,
       user: {
         id: newUser.id,
@@ -146,7 +158,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error('[Lead Magnet] Error:', error);
     return res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    await prisma.$disconnect();
   }
 }

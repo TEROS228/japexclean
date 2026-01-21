@@ -64,11 +64,25 @@ export default function ProfilePage() {
     setMounted(true);
     // Даём время на hydration Context'ов (особенно CurrencyContext)
     setTimeout(() => setHydrated(true), 0);
+  }, []);
 
-    if (!user) {
-      router.push("/");
-      return;
-    }
+  useEffect(() => {
+    if (!mounted) return;
+
+    // Даём UserContext время загрузиться из localStorage
+    const timer = setTimeout(() => {
+      if (!user) {
+        console.log('[PROFILE] No user found after timeout, redirecting to home');
+        router.push("/");
+        return;
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [mounted, user, router]);
+
+  useEffect(() => {
+    if (!user || !mounted) return;
 
     // Initial fetch
     fetchUnreadCount();
@@ -88,7 +102,7 @@ export default function ProfilePage() {
       // Очищаем параметр из URL
       router.replace('/profile', undefined, { shallow: true });
     }
-  }, [router, user]);
+  }, [user, mounted, router]);
 
   // Handle ESC key to close photo modal
   useEffect(() => {

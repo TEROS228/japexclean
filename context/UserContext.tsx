@@ -85,6 +85,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             localStorage.setItem("registeredUsers", JSON.stringify(users));
             setRegisteredUsers(users);
             setUser(newUser);
+
+            // Если это новый пользователь - редиректим на страницу купонов
+            if (data.isNewUser && typeof window !== 'undefined') {
+              console.log('[UserContext] New Google user detected, redirecting to coupons...');
+              // Небольшая задержка чтобы state успел обновиться
+              setTimeout(() => {
+                window.location.href = '/profile?tab=coupons';
+              }, 100);
+            }
           }
         } catch (error) {
           console.error('[UserContext] Failed to sync Google user:', error);

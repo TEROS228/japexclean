@@ -82,6 +82,13 @@ model Order {
   isReplacement             Boolean  @default(false)  // Заказ на замену поврежденного товара (не попадает в warehouse)
   shippingCountry           String?  // Страна доставки клиента
   preferredShippingCarrier  String?  // Предпочтительная служба доставки (ems/fedex)
+
+  // Earnings tracking
+  couponCode                String?  // Код использованного купона
+  couponDiscount            Int      @default(0)  // Сумма скидки по купону в иенах
+  balanceUsed               Int      @default(0)  // Сумма использованного баланса в иенах
+  serviceFee                Int      @default(0)  // Service fee (¥800 за товар)
+
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 
@@ -364,4 +371,25 @@ model Coupon {
   @@index([userId])
   @@index([code])
   @@map("coupons")
+}
+
+model RegistrationAttempt {
+  id        String   @id @default(cuid())
+  ip        String
+  email     String?  // Email для отслеживания Gmail aliases
+  timestamp DateTime @default(now())
+
+  @@index([ip, timestamp])
+  @@index([email, timestamp])
+  @@map("registration_attempts")
+}
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  timestamp DateTime @default(now())
+
+  @@index([email])
+  @@map("verification_codes")
 }

@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { saveAuthData } from "@/lib/auth";
 import { signIn, useSession } from "next-auth/react";
+import FingerprintJS from '@fingerprintjs/fingerprintjs';
+import { useRouter } from "next/router";
+import useUserContext from "@/context/UserContext";
 
 export default function SignUpModal({
   isOpen,
@@ -23,8 +26,31 @@ export default function SignUpModal({
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(true);
+  const [fingerprint, setFingerprint] = useState("");
   const { data: session, status } = useSession();
   const [wasAuthenticating, setWasAuthenticating] = useState(false);
+  const router = useRouter();
+  const { refreshUser } = useUserContext();
+
+  // Генерируем fingerprint при открытии модалки
+  useEffect(() => {
+    if (isOpen && !fingerprint) {
+      const generateFingerprint = async () => {
+        // Используем extendedResult для более строгого fingerprinting
+        const fp = await FingerprintJS.load();
+        const result = await fp.get({
+          // Включаем дополнительные компоненты для более точного fingerprint
+          extendedResult: true
+        });
+
+        // Логируем confidence score для мониторинга
+        console.log(`[Fingerprint] ID: ${result.visitorId.substring(0, 8)}..., Confidence: ${result.confidence?.score || 'N/A'}`);
+
+        setFingerprint(result.visitorId);
+      };
+      generateFingerprint();
+    }
+  }, [isOpen, fingerprint]);
 
   // Сбрасываем флаг когда модальное окно закрывается
   useEffect(() => {
@@ -124,7 +150,7 @@ export default function SignUpModal({
       const res = await fetch("/api/auth/signup-with-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, secondName, email, password, code, marketingConsent }),
+        body: JSON.stringify({ name, secondName, email, password, code, marketingConsent, fingerprint }),
       });
 
       const data = await res.json();
@@ -134,9 +160,20 @@ export default function SignUpModal({
       }
 
       if (data.token && data.user) {
+        console.log('[SignUp] Signup successful, saving auth data and redirecting...');
+
+        // Сохраняем данные в localStorage
         saveAuthData(data.token, data.user);
+
+        console.log('[SignUp] Auth data saved, token:', data.token.substring(0, 20) + '...');
+        console.log('[SignUp] User data:', data.user);
+
+        // Закрываем модалку
         onClose();
-        window.location.href = window.location.href;
+
+        // Немедленно перенаправляем на профиль
+        console.log('[SignUp] Redirecting to /profile?tab=coupons');
+        window.location.href = '/profile?tab=coupons';
       } else {
         throw new Error("Invalid response from server");
       }
@@ -388,7 +425,7 @@ export default function SignUpModal({
               try {
                 setWasAuthenticating(true); // Устанавливаем флаг перед началом авторизации
                 await signIn("google", {
-                  callbackUrl: window.location.origin,
+                  callbackUrl: `${window.location.origin}/profile?tab=coupons`,
                   redirect: true
                 });
               } catch (error) {

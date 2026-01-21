@@ -9,7 +9,6 @@ import { useMarketplace } from "@/context/MarketplaceContext";
 import { allCategories as categories } from "@/data/categories";
 import PrivacyNotice from '@/components/PrivacyNotice';
 import Footer from '@/components/Footer';
-import LeadMagnetPopup from '@/components/LeadMagnetPopup';
 
 // Hook для анимации при скролле
 function useScrollAnimation() {
@@ -187,6 +186,7 @@ export default function Home() {
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [isBonusEligible, setIsBonusEligible] = useState(false); // По умолчанию НЕ показываем, ждем проверки
 
   const [signUpForm, setSignUpForm] = useState({
     name: "",
@@ -214,6 +214,37 @@ export default function Home() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [categoryDropdownOpen]);
 
+  // Проверка eligibility для бонуса
+  useEffect(() => {
+    if (user) {
+      setIsBonusEligible(false);
+      return;
+    }
+
+    const checkEligibility = async () => {
+      try {
+        // Импортируем FingerprintJS динамически
+        const FingerprintJS = (await import('@fingerprintjs/fingerprintjs')).default;
+        const fp = await FingerprintJS.load();
+        const result = await fp.get({ extendedResult: true });
+
+        const response = await fetch('/api/check-bonus-eligibility', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fingerprint: result.visitorId }),
+        });
+
+        const data = await response.json();
+        setIsBonusEligible(data.eligible);
+      } catch (error) {
+        console.error('[Bonus Check] Error:', error);
+        setIsBonusEligible(false); // В случае ошибки НЕ показываем banner (безопасный подход)
+      }
+    };
+
+    checkEligibility();
+  }, [user]);
+
   const handleSignUpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     signup(signUpForm);
@@ -236,9 +267,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen text-gray-900 font-sans antialiased" style={{ backgroundColor: '#faf9f6' }}>
-      {/* Lead Magnet Popup */}
-      <LeadMagnetPopup />
-
       {/* Уведомление о приватности */}
       <PrivacyNotice />
 
@@ -340,7 +368,7 @@ export default function Home() {
               </div>
 
               <h1 className={`text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight ${heroVisible ? 'animate-fadeInUp delay-100' : ''}`}>
-                <span className="text-gray-900">Youre gateway to</span>
+                <span className="text-gray-900">Your gateway to</span>
                 <span className="block mt-2 bg-gradient-to-r from-green-600 via-emerald-600 to-cyan-600 bg-clip-text text-transparent animate-gradient">
                   Japanese excellence
                 </span>
@@ -351,7 +379,7 @@ export default function Home() {
               </p>
 
               {/* Bonus Banner */}
-              {!user && (
+              {!user && isBonusEligible && (
                 <div className={`bonus-banner relative w-full max-w-md p-6 sm:p-7 rounded-[20px] bg-gradient-to-br from-green-500 to-green-700 text-white overflow-hidden shadow-[0_25px_60px_rgba(22,163,74,0.35)] ${heroVisible ? 'animate-fadeInUp delay-250' : ''}`}>
                   {/* Rotating Glow */}
                   <div className="absolute w-[180%] h-[180%] -top-[40%] -left-[40%] bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.35),transparent)] animate-spin-slow pointer-events-none"></div>
@@ -369,8 +397,7 @@ export default function Home() {
                     </p>
                     <button
                       onClick={() => {
-                        localStorage.removeItem('leadMagnetShown');
-                        window.location.reload();
+                        window.dispatchEvent(new Event('openLeadMagnet'));
                       }}
                       className="inline-flex items-center gap-2 px-5 py-3.5 rounded-[14px] bg-white text-green-800 font-bold text-sm transition-all hover:shadow-[0_10px_25px_rgba(0,0,0,0.2)] hover:-translate-y-0.5 active:translate-y-0"
                     >

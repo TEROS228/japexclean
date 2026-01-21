@@ -49,6 +49,29 @@ export default function AdminPage() {
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [editingAdmin, setEditingAdmin] = useState<any>(null);
 
+  // CAC Calculator
+  const [avgCostPerClick, setAvgCostPerClick] = useState<string>("");
+  const [customConversionRate, setCustomConversionRate] = useState<string>("");
+  const [useCustomConversionRate, setUseCustomConversionRate] = useState(false);
+
+  // LTV Calculation (auto-calculated from statistics)
+  const calculateLTV = () => {
+    if (!statistics) return 0;
+
+    // LTV = Average Profit per Order × Average # of Purchases per Customer
+    // Average Profit = Estimated Earnings / Orders Count
+    const avgProfitPerOrder = statistics.ordersCount > 0
+      ? (statistics.estimatedEarnings || 0) / statistics.ordersCount
+      : 0;
+
+    // Average # of Purchases = Total Orders / Unique Buyers
+    const avgPurchasesPerCustomer = statistics.uniqueBuyers > 0
+      ? statistics.ordersCount / statistics.uniqueBuyers
+      : 0;
+
+    return avgProfitPerOrder * avgPurchasesPerCustomer;
+  };
+
   const [consolidationPackages, setConsolidationPackages] = useState<any[]>([]);
   const [photoRequests, setPhotoRequests] = useState<any[]>([]);
   const [reinforcementRequests, setReinforcementRequests] = useState<any[]>([]);
@@ -1298,7 +1321,7 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                {/* Customers Card */}
+                {/* Leads Card */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex items-center gap-3">
@@ -1308,7 +1331,7 @@ export default function AdminPage() {
                         </svg>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Customers</p>
+                        <p className="text-sm font-medium text-gray-600">Leads</p>
                         <p className="text-3xl font-bold text-gray-900 mt-1">{(statistics.totalCustomers || 0).toLocaleString()}</p>
                       </div>
                     </div>
@@ -1350,6 +1373,34 @@ export default function AdminPage() {
                       <p className="text-xs text-gray-500">Total: <span className="font-semibold text-gray-700">¥{(statistics.allTimeRevenue || 0).toLocaleString()}</span> all time</p>
                     </div>
                   )}
+                </div>
+
+                {/* Estimated Earnings Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200 relative overflow-hidden">
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 opacity-60"></div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center shadow-lg">
+                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-emerald-700">Estimated Earnings</p>
+                          <p className="text-3xl font-black text-emerald-600 mt-1">¥{(statistics.estimatedEarnings || 0).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-emerald-100">
+                      <div className="text-xs text-emerald-700 space-y-1">
+                        <p className="font-semibold">💰 Service Fee (¥800/product) + VAT Refund (10%) - Discounts</p>
+                        <p className="text-emerald-600">Actual profit from orders (excluding shipping margins)</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Visits Card */}
@@ -1422,7 +1473,7 @@ export default function AdminPage() {
               </div>
 
               {/* Business Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
                 {/* Average Order Value */}
                 <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-6 text-white">
                   <div className="flex items-center justify-between mb-4">
@@ -1436,6 +1487,38 @@ export default function AdminPage() {
                   <p className="text-4xl font-black mb-2">¥{(statistics.averageOrderValue || 0).toLocaleString()}</p>
                   <p className="text-white/70 text-sm">
                     Average cart value per order
+                  </p>
+                </div>
+
+                {/* Average Profit Per Order */}
+                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <h3 className="text-white/80 text-sm font-semibold uppercase tracking-wide mb-2">Avg Profit Per Order</h3>
+                  <p className="text-4xl font-black mb-2">¥{(statistics.averageProfitPerOrder || 0).toLocaleString()}</p>
+                  <p className="text-white/70 text-sm">
+                    Commission + VAT - Discounts + Services
+                  </p>
+                </div>
+
+                {/* Average Shipping Cost */}
+                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                      </svg>
+                    </div>
+                  </div>
+                  <h3 className="text-white/80 text-sm font-semibold uppercase tracking-wide mb-2">Avg Shipping Cost</h3>
+                  <p className="text-4xl font-black mb-2">¥{(statistics.averageShippingCost || 0).toLocaleString()}</p>
+                  <p className="text-white/70 text-sm">
+                    FedEx + Japan Post/EMS
                   </p>
                 </div>
 
@@ -1453,6 +1536,223 @@ export default function AdminPage() {
                   <p className="text-white/70 text-sm">
                     Customers who made multiple purchases
                   </p>
+                </div>
+              </div>
+
+              {/* CAC Calculator */}
+              <div className="mt-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-white/80 text-sm font-semibold uppercase tracking-wide mb-1">Customer Acquisition Cost (CAC)</h3>
+                    <p className="text-white/60 text-xs">Calculate average cost to acquire one customer</p>
+                  </div>
+                  <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  {/* Input: Avg Cost Per Click */}
+                  <div>
+                    <label className="block text-white/70 text-xs font-semibold mb-2">Average Cost Per Click (¥)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={avgCostPerClick}
+                      onChange={(e) => setAvgCostPerClick(e.target.value)}
+                      placeholder="Enter ¥ per click"
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+                    />
+                  </div>
+
+                  {/* Conversion Rate (Manual/Auto) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-white/70 text-xs font-semibold">Conversion Rate (%)</label>
+                      <button
+                        onClick={() => setUseCustomConversionRate(!useCustomConversionRate)}
+                        className="text-xs text-white/60 hover:text-white/90 underline transition-colors"
+                      >
+                        {useCustomConversionRate ? 'Use Auto' : 'Manual'}
+                      </button>
+                    </div>
+                    {useCustomConversionRate ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={customConversionRate}
+                        onChange={(e) => setCustomConversionRate(e.target.value)}
+                        placeholder="Enter %"
+                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+                      />
+                    ) : (
+                      <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg">
+                        <p className="text-2xl font-bold">{(statistics.conversionRate || 0).toFixed(2)}%</p>
+                        <p className="text-white/50 text-xs mt-1">{statistics.uniqueBuyers || 0} / {statistics.visitsCount || 0} visitors</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Calculated Result: CAC */}
+                  <div>
+                    <label className="block text-white/70 text-xs font-semibold mb-2">Customer Acquisition Cost</label>
+                    <div className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg">
+                      {(() => {
+                        const conversionRate = useCustomConversionRate && customConversionRate
+                          ? parseFloat(customConversionRate)
+                          : statistics.conversionRate;
+
+                        return avgCostPerClick && parseFloat(avgCostPerClick) > 0 && conversionRate > 0 ? (
+                          <>
+                            <p className="text-3xl font-black text-yellow-300">
+                              ¥{((parseFloat(avgCostPerClick) / (conversionRate / 100))).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </p>
+                            <p className="text-white/50 text-xs mt-1">per customer</p>
+                          </>
+                        ) : (
+                          <p className="text-white/40 text-sm">Enter cost per click</p>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Formula Explanation */}
+                <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                  <p className="text-white/60 text-xs">
+                    <span className="font-semibold text-white/80">Formula:</span> CAC = Cost Per Click ÷ (Conversion Rate ÷ 100)
+                  </p>
+                  <p className="text-white/50 text-xs mt-1">
+                    Example: If you pay ¥50 per click and 2% of visitors buy, your CAC = ¥50 ÷ 0.02 = ¥2,500
+                  </p>
+                </div>
+              </div>
+
+              {/* LTV & Profitability Analysis */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                {/* LTV Calculator */}
+                <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-white/80 text-sm font-semibold uppercase tracking-wide mb-1">Customer Lifetime Value (LTV)</h3>
+                      <p className="text-white/60 text-xs">Average revenue per customer over lifetime</p>
+                    </div>
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-5xl font-black text-yellow-300 mb-2">¥{calculateLTV().toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                    <p className="text-white/70 text-sm">per customer</p>
+                  </div>
+
+                  {/* Breakdown */}
+                  <div className="space-y-2 bg-white/5 rounded-lg p-3 border border-white/10">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-white/60">Avg Profit per Order:</span>
+                      <span className="font-semibold">¥{statistics.ordersCount > 0 ? ((statistics.estimatedEarnings || 0) / statistics.ordersCount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '0'}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-white/60">Avg Purchases per Customer:</span>
+                      <span className="font-semibold">{statistics.uniqueBuyers > 0 ? (statistics.ordersCount / statistics.uniqueBuyers).toFixed(2) : '0'}</span>
+                    </div>
+                    <div className="border-t border-white/10 pt-2 mt-2">
+                      <p className="text-white/50 text-xs">
+                        <span className="font-semibold text-white/70">Formula:</span> LTV = Avg Profit × Avg Purchases
+                      </p>
+                      <p className="text-white/40 text-xs mt-1">
+                        (Service Fee + VAT - Discounts + Services) per order
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* LTV to CAC Ratio */}
+                <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-white/80 text-sm font-semibold uppercase tracking-wide mb-1">LTV : CAC Ratio</h3>
+                      <p className="text-white/60 text-xs">Profitability indicator (3:1 is healthy)</p>
+                    </div>
+                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const conversionRate = useCustomConversionRate && customConversionRate
+                      ? parseFloat(customConversionRate)
+                      : statistics.conversionRate;
+
+                    return avgCostPerClick && parseFloat(avgCostPerClick) > 0 && conversionRate > 0 ? (
+                      <>
+                        <div className="mb-4">
+                          {(() => {
+                            const cac = parseFloat(avgCostPerClick) / (conversionRate / 100);
+                            const ltv = calculateLTV();
+                            const ratio = ltv / cac;
+                            const isHealthy = ratio >= 3;
+
+                          return (
+                            <>
+                              <p className={`text-5xl font-black mb-2 ${isHealthy ? 'text-green-300' : 'text-red-300'}`}>
+                                {ratio.toFixed(1)}:1
+                              </p>
+                              <div className="flex items-center gap-2">
+                                {isHealthy ? (
+                                  <>
+                                    <svg className="w-5 h-5 text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="text-white/80 text-sm font-semibold">Healthy profitability!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-5 h-5 text-red-300" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="text-white/80 text-sm font-semibold">Need to improve!</span>
+                                  </>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+
+                      <div className="space-y-2 bg-white/5 rounded-lg p-3 border border-white/10">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-white/60">LTV:</span>
+                          <span className="font-semibold">¥{calculateLTV().toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-white/60">CAC:</span>
+                          <span className="font-semibold">¥{((parseFloat(avgCostPerClick) / (conversionRate / 100))).toLocaleString()}</span>
+                        </div>
+                        <div className="border-t border-white/10 pt-2 mt-2">
+                          <p className="text-white/50 text-xs">
+                            <span className="font-semibold text-white/70">Target:</span> 3:1 or higher (earn ¥3 for every ¥1 spent)
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-white/60 text-sm mb-2">Enter cost per click above to calculate ratio</p>
+                      <p className="text-white/40 text-xs">A healthy LTV:CAC ratio is 3:1 or higher</p>
+                    </div>
+                  );
+                  })()}
                 </div>
               </div>
 

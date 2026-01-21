@@ -58,8 +58,10 @@ export default function CartPage() {
   const uniqueProducts = new Set(cart.map(item => getProductIdentifier(item))).size;
   const serviceFee = uniqueProducts * 800;
 
-  // Применяем скидку купона
-  const couponDiscount = selectedCoupon ? selectedCoupon.discountAmount : 0;
+  // Применяем скидку купона только если выполнены условия минимальной суммы
+  const couponDiscount = selectedCoupon && total >= selectedCoupon.minPurchase
+    ? selectedCoupon.discountAmount
+    : 0;
   const grandTotal = Math.max(0, total + serviceFee - couponDiscount);
 
   // Broadcast обновления между вкладками
@@ -264,6 +266,13 @@ export default function CartPage() {
     }
   }, [shippingCountry, preferredShippingCarrier]);
 
+  // Убираем купон если корзина не соответствует минимальной сумме
+  useEffect(() => {
+    if (selectedCoupon && total < selectedCoupon.minPurchase) {
+      setSelectedCoupon(null);
+    }
+  }, [total, selectedCoupon]);
+
   // Проверка наличия адреса
   const checkAddressBeforePayment = async () => {
     if (!user) {
@@ -360,7 +369,10 @@ export default function CartPage() {
           shippingCountry: shippingCountry || 'Unknown',
           preferredShippingCarrier: preferredShippingCarrier,
           addressId: selectedAddressId,
-          couponCode: selectedCoupon?.code || null
+          couponCode: selectedCoupon?.code || null,
+          couponDiscount: couponDiscount,
+          balanceUsed: grandTotal,
+          serviceFee: serviceFee
         }),
       });
 
@@ -1343,43 +1355,62 @@ export default function CartPage() {
             </div>
 
             <div className="space-y-3 mb-6">
-              {coupons.map((coupon) => (
+              {coupons.map((coupon) => {
+                const meetsMinimum = total >= coupon.minPurchase;
+                return (
                 <button
                   key={coupon.id}
                   onClick={() => {
-                    setSelectedCoupon(coupon);
-                    setShowCouponSelector(false);
+                    if (meetsMinimum) {
+                      setSelectedCoupon(coupon);
+                      setShowCouponSelector(false);
+                    }
                   }}
-                  className="w-full text-left p-4 sm:p-5 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 hover:border-purple-400 hover:from-purple-100 hover:to-pink-100 rounded-xl transition-all transform hover:scale-102 active:scale-98"
+                  disabled={!meetsMinimum}
+                  className={`w-full text-left p-4 sm:p-5 rounded-xl transition-all ${
+                    meetsMinimum
+                      ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 hover:border-purple-400 hover:from-purple-100 hover:to-pink-100 transform hover:scale-102 active:scale-98 cursor-pointer'
+                      : 'bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-300 opacity-60 cursor-not-allowed'
+                  }`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-5 h-5 ${meetsMinimum ? 'text-purple-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                         </svg>
-                        <span className="text-xs sm:text-sm font-semibold text-purple-700 uppercase">Coupon Code</span>
+                        <span className={`text-xs sm:text-sm font-semibold uppercase ${meetsMinimum ? 'text-purple-700' : 'text-gray-500'}`}>Coupon Code</span>
                       </div>
-                      <p className="text-sm sm:text-base font-mono font-bold text-gray-900 mb-2">{coupon.code}</p>
+                      <p className={`text-sm sm:text-base font-mono font-bold mb-2 ${meetsMinimum ? 'text-gray-900' : 'text-gray-500'}`}>{coupon.code}</p>
                       {coupon.description && (
-                        <p className="text-xs sm:text-sm text-gray-600 mb-2">{coupon.description}</p>
+                        <p className={`text-xs sm:text-sm mb-2 ${meetsMinimum ? 'text-gray-600' : 'text-gray-500'}`}>{coupon.description}</p>
                       )}
-                      <p className="text-xs text-gray-500">
+                      {!meetsMinimum && (
+                        <div className="flex items-center gap-1.5 mb-2 p-2 bg-red-100 border border-red-300 rounded-lg">
+                          <svg className="w-4 h-4 text-red-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-xs text-red-700 font-medium">
+                            Minimum order {formatPrice(coupon.minPurchase)} required (current: {formatPrice(total)})
+                          </p>
+                        </div>
+                      )}
+                      <p className={`text-xs ${meetsMinimum ? 'text-gray-500' : 'text-gray-400'}`}>
                         Expires: {new Date(coupon.expiresAt).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="ml-4 text-right">
-                      <div className="inline-flex flex-col items-end bg-purple-100 rounded-lg px-3 py-2">
-                        <span className="text-xs text-purple-600 font-semibold">DISCOUNT</span>
-                        <span className="text-xl sm:text-2xl font-bold text-purple-600">
+                      <div className={`inline-flex flex-col items-end rounded-lg px-3 py-2 ${meetsMinimum ? 'bg-purple-100' : 'bg-gray-200'}`}>
+                        <span className={`text-xs font-semibold ${meetsMinimum ? 'text-purple-600' : 'text-gray-500'}`}>DISCOUNT</span>
+                        <span className={`text-xl sm:text-2xl font-bold ${meetsMinimum ? 'text-purple-600' : 'text-gray-500'}`}>
                           {formatPrice(coupon.discountAmount)}
                         </span>
-                        <span className="text-xs text-purple-600 font-semibold">OFF</span>
+                        <span className={`text-xs font-semibold ${meetsMinimum ? 'text-purple-600' : 'text-gray-500'}`}>OFF</span>
                       </div>
                     </div>
                   </div>
                 </button>
-              ))}
+              )})}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
