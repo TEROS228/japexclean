@@ -34,12 +34,8 @@ export default function LeadMagnetPopup() {
 
     // Генерируем browser fingerprint и проверяем не получал ли он бонус
     const checkEligibilityAndShow = async () => {
-      // Используем extendedResult для более строгого fingerprinting
       const fp = await FingerprintJS.load();
-      const result = await fp.get({
-        // Включаем дополнительные компоненты для более точного fingerprint
-        extendedResult: true
-      });
+      const result = await fp.get();
       const visitorId = result.visitorId;
 
       // Логируем confidence score для мониторинга

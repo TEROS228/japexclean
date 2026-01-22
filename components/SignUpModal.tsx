@@ -36,12 +36,8 @@ export default function SignUpModal({
   useEffect(() => {
     if (isOpen && !fingerprint) {
       const generateFingerprint = async () => {
-        // Используем extendedResult для более строгого fingerprinting
         const fp = await FingerprintJS.load();
-        const result = await fp.get({
-          // Включаем дополнительные компоненты для более точного fingerprint
-          extendedResult: true
-        });
+        const result = await fp.get();
 
         // Логируем confidence score для мониторинга
         console.log(`[Fingerprint] ID: ${result.visitorId.substring(0, 8)}..., Confidence: ${result.confidence?.score || 'N/A'}`);

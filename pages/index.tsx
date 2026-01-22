@@ -226,7 +226,7 @@ export default function Home() {
         // Импортируем FingerprintJS динамически
         const FingerprintJS = (await import('@fingerprintjs/fingerprintjs')).default;
         const fp = await FingerprintJS.load();
-        const result = await fp.get({ extendedResult: true });
+        const result = await fp.get();
 
         const response = await fetch('/api/check-bonus-eligibility', {
           method: 'POST',
