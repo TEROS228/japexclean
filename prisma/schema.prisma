@@ -388,6 +388,7 @@ model VerificationCode {
   id        String   @id @default(cuid())
   email     String
   code      String
+  expiresAt DateTime @map("expires_at")
   timestamp DateTime @default(now())
 
   @@index([email])
