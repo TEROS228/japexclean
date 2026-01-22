@@ -209,6 +209,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log(`[Verification] Code sent to ${email}, Email ID: ${data?.id}`);
+    console.log('═══════════════════════════════════════');
+    console.log('📧 VERIFICATION CODE');
+    console.log('Email:', email);
+    console.log('Code:', code);
+    console.log('═══════════════════════════════════════');
 
     // Записываем успешную попытку регистрации
     await prisma.registrationAttempt.create({
