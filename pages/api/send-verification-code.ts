@@ -97,11 +97,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: { email: email.toLowerCase() }
     });
 
-    // Store code in database
+    // Store code in database (expires in 10 minutes)
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await prisma.verificationCode.create({
       data: {
         email: email.toLowerCase(),
-        code: code
+        code: code,
+        expiresAt: expiresAt
       }
     });
 
