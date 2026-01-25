@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import Head from "next/head";
 import { getProductById, getProductByUrl } from "@/lib/rakuten";
 import { useCart } from "@/context/CartContext";
 import { useNotification } from "@/context/NotificationContext";
@@ -1016,9 +1017,13 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Full Width Header with Logo, Search, Cart, User */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+      </Head>
+      <div className="min-h-screen bg-gray-50">
+        {/* Full Width Header with Logo, Search, Cart, User */}
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="px-3 sm:px-4 py-2">
           {/* Top Row: Menu, Logo, Cart, User */}
           <div className="flex items-center justify-between mb-2">
@@ -1477,6 +1482,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
         )}
       </div>
     </div>
+    </>
   );
 }
 
