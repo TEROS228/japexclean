@@ -1032,13 +1032,12 @@ export default function ProductPage({ product: initialProduct }: { product: any 
           {/* Левая колонка - Фотки */}
           <div className="flex flex-col">
             <div className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-3 mb-2 sm:mb-3 shadow-sm">
-              <div className="aspect-square bg-white rounded-lg overflow-hidden relative">
+              <div className="aspect-square bg-white rounded-lg overflow-hidden flex items-center justify-center">
                 <img
                   src={mainImage}
                   alt={product.itemName || "Product image"}
-                  className="absolute inset-0 object-contain w-full h-full"
+                  className="max-w-full max-h-full object-contain"
                   onError={handleImageError}
-                  style={{ maxWidth: '100%', maxHeight: '100%' }}
                 />
               </div>
             </div>
