@@ -97,6 +97,7 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Получаем данные пользователя из UserContext
   const { user, logout: userLogout } = useUserContext();
@@ -151,9 +152,22 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
     setSelectedCategory(null);
   }, [marketplace]);
 
+  // Сбрасываем состояние загрузки при изменении роута
+  useEffect(() => {
+    // В Next.js 15 нет router.events, поэтому просто сбрасываем через таймер
+    if (isNavigating) {
+      const timer = setTimeout(() => {
+        setIsNavigating(false);
+      }, 3000); // Максимум 3 секунды показываем загрузку
+
+      return () => clearTimeout(timer);
+    }
+  }, [isNavigating, router.asPath]); // Следим за изменением пути
+
   const onSelectCategory = (cat: Category) => {
     setSelectedCategory(cat);
     setCategoryDropdownOpen(false);
+    setIsNavigating(true);
     router.push(`/category/${cat.id}`);
   };
 
@@ -224,6 +238,16 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
 
   return (
     <>
+      {/* Full-screen loading overlay */}
+      {isNavigating && (
+        <div className="fixed inset-0 bg-white/90 backdrop-blur-md z-[9999] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-20 h-20 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-xl font-bold text-gray-800">Loading...</p>
+          </div>
+        </div>
+      )}
+
       <header className="bg-white border-b border-gray-200/50 shadow-lg transition-all duration-300">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
           {/* Top Row */}

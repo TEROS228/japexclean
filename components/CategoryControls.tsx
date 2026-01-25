@@ -21,6 +21,7 @@ const CategoryControls = ({ initialProducts, categoryId }: Props) => {
   const [loadedPages, setLoadedPages] = useState<{ [key: number]: any[] }>({ 1: initialProducts });
   const [loading, setLoading] = useState(false);
   const [maxPageLoaded, setMaxPageLoaded] = useState(1);
+  const [navigating, setNavigating] = useState(false);
 
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const categoriesDropdownRef = useRef<HTMLDivElement>(null);
@@ -41,6 +42,18 @@ const CategoryControls = ({ initialProducts, categoryId }: Props) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Сбрасываем состояние загрузки при изменении роута
+  useEffect(() => {
+    // В Next.js 15 нет router.events, поэтому просто сбрасываем через таймер
+    if (navigating) {
+      const timer = setTimeout(() => {
+        setNavigating(false);
+      }, 3000); // Максимум 3 секунды показываем загрузку
+
+      return () => clearTimeout(timer);
+    }
+  }, [navigating, router.asPath]); // Следим за изменением пути
 
   const applySortToArray = (order: string, items: any[]) => {
     if (!order) return items;
@@ -89,6 +102,7 @@ const CategoryControls = ({ initialProducts, categoryId }: Props) => {
   };
 
   const handleSubcategoryClick = (subcategoryId: number) => {
+    setNavigating(true);
     router.push(`/category/${categoryId}/${subcategoryId}`);
   };
 
@@ -140,6 +154,16 @@ const CategoryControls = ({ initialProducts, categoryId }: Props) => {
 
   return (
     <>
+      {/* Full-screen loading overlay */}
+      {navigating && (
+        <div className="fixed inset-0 bg-white/90 backdrop-blur-md z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-20 h-20 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-xl font-bold text-gray-800">Loading...</p>
+          </div>
+        </div>
+      )}
+
       {/* Подкатегории */}
       <div className="relative mb-4" ref={categoriesDropdownRef}>
         <button
