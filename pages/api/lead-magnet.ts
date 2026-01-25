@@ -129,8 +129,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         userId: newUser.id,
         code: `WELCOME500-${newUser.id.substring(0, 8).toUpperCase()}`,
         discountAmount: 500,
-        minPurchase: 3000, // Minimum order ¥3000
-        description: 'Welcome bonus: ¥500 off on orders over ¥3000',
+        minPurchase: 0,
+        description: 'Welcome bonus: ¥500 off',
         status: 'active',
         expiresAt: expiresAt
       }
@@ -142,11 +142,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: newUser.email,
     });
 
-    console.log(`[Lead Magnet] New user created: ${email} with welcome coupon ¥500 off ¥3000+ (IP: ${ip}, Fingerprint: ${fingerprint.substring(0, 8)}..., Marketing: ${marketingConsent})`);
+    console.log(`[Lead Magnet] New user created: ${email} with welcome coupon ¥500 off (IP: ${ip}, Fingerprint: ${fingerprint.substring(0, 8)}..., Marketing: ${marketingConsent})`);
 
     return res.status(200).json({
       success: true,
-      message: 'Welcome coupon received: ¥500 off on orders over ¥3000!',
+      message: 'Welcome coupon received: ¥500 off!',
       token,
       user: {
         id: newUser.id,

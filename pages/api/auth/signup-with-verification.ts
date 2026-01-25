@@ -118,14 +118,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           userId: newUser.id,
           code: `WELCOME500-${newUser.id.substring(0, 8).toUpperCase()}`,
           discountAmount: 500,
-          minPurchase: 3000, // Минимальная сумма заказа ¥3000
-          description: 'Welcome bonus: ¥500 off on orders over ¥3000',
+          minPurchase: 0,
+          description: 'Welcome bonus: ¥500 off',
           status: 'active',
           expiresAt: expiresAt
         }
       });
 
-      console.log(`[SignUp] Created welcome coupon for ${email} (¥500 off orders ¥3000+)`);
+      console.log(`[SignUp] Created welcome coupon for ${email} (¥500 off)`);
     }
 
     // Создаем НАСТОЯЩИЙ JWT токен
