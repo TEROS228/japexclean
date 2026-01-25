@@ -28,7 +28,7 @@ import { allCategories } from "@/data/categories";
 function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
-  const noHeaderPaths = ["/checkout"];
+  const noHeaderPaths = ["/checkout", "/product/"];
   const showHeader = !noHeaderPaths.some((path) =>
     router.pathname.startsWith(path)
   );
