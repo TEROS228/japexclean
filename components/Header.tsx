@@ -152,11 +152,16 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
     setSelectedCategory(null);
   }, [marketplace]);
 
-  // Сбрасываем состояние загрузки при изменении роута
+  // Сбрасываем состояние загрузки после успешного монтирования нового компонента
   useEffect(() => {
-    // Сбрасываем загрузку когда pathname меняется
-    setIsNavigating(false);
-  }, [router.pathname]);
+    if (isNavigating) {
+      // Даем время на навигацию, затем сбрасываем
+      const timer = setTimeout(() => {
+        setIsNavigating(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isNavigating]);
 
   const onSelectCategory = (cat: Category) => {
     setSelectedCategory(cat);

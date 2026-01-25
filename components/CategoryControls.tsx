@@ -43,11 +43,16 @@ const CategoryControls = ({ initialProducts, categoryId }: Props) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Сбрасываем состояние загрузки при изменении роута
+  // Сбрасываем состояние загрузки после успешного монтирования нового компонента
   useEffect(() => {
-    // Сбрасываем загрузку когда pathname меняется
-    setNavigating(false);
-  }, [router.pathname]);
+    if (navigating) {
+      // Даем время на навигацию, затем сбрасываем
+      const timer = setTimeout(() => {
+        setNavigating(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [navigating]);
 
   const applySortToArray = (order: string, items: any[]) => {
     if (!order) return items;
