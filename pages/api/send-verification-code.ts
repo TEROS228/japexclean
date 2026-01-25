@@ -189,12 +189,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error) {
       console.error('[Resend] Error sending email:', error);
 
-      // Показываем код в консоли если email не отправился
-      console.log('═══════════════════════════════════════');
-      console.log('📧 EMAIL FAILED - SHOWING CODE IN CONSOLE');
-      console.log('Email:', email);
-      console.log('Verification Code:', code);
-      console.log('═══════════════════════════════════════');
+      // Показываем код в консоли если email не отправился (используем console.error для вывода в pm2)
+      console.error('═══════════════════════════════════════');
+      console.error('📧 EMAIL FAILED - SHOWING CODE IN CONSOLE');
+      console.error('Email:', email);
+      console.error('Verification Code:', code);
+      console.error('Expires at:', expiresAt.toISOString());
+      console.error('═══════════════════════════════════════');
 
       // Все равно возвращаем success чтобы можно было продолжить
       return res.status(200).json({
