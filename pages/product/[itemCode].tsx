@@ -1036,8 +1036,9 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                 <img
                   src={mainImage}
                   alt={product.itemName || "Product image"}
-                  className="object-contain w-full h-full"
+                  className="object-contain w-full h-full max-w-full max-h-full"
                   onError={handleImageError}
+                  style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
                 />
               </div>
             </div>
@@ -1283,9 +1284,16 @@ export default function ProductPage({ product: initialProduct }: { product: any 
               </h2>
             </div>
             <div className="px-4 sm:px-6 py-3 sm:py-4">
-              <p className="text-xs sm:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+              <div className="text-xs sm:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed overflow-hidden break-words">
+                <style jsx>{`
+                  div :global(img) {
+                    max-width: 100% !important;
+                    height: auto !important;
+                    display: block;
+                  }
+                `}</style>
                 {product.itemCaption}
-              </p>
+              </div>
             </div>
           </div>
         )}
