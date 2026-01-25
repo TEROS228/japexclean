@@ -1030,15 +1030,15 @@ export default function ProductPage({ product: initialProduct }: { product: any 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Левая колонка - Фотки */}
-          <div>
+          <div className="flex flex-col">
             <div className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-3 mb-2 sm:mb-3 shadow-sm">
-              <div className="aspect-square bg-white rounded-lg overflow-hidden">
+              <div className="aspect-square bg-white rounded-lg overflow-hidden relative">
                 <img
                   src={mainImage}
                   alt={product.itemName || "Product image"}
-                  className="object-contain w-full h-full max-w-full max-h-full"
+                  className="absolute inset-0 object-contain w-full h-full"
                   onError={handleImageError}
-                  style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
+                  style={{ maxWidth: '100%', maxHeight: '100%' }}
                 />
               </div>
             </div>
