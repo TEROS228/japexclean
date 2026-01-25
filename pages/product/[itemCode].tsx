@@ -32,9 +32,10 @@ const PLACEHOLDER_IMAGE = "/placeholder.png";
 
 export default function ProductPage({ product: initialProduct }: { product: any }) {
   const router = useRouter();
-  const { addToCart } = useCart();
+  const { addToCart, cart } = useCart();
   const { showNotification } = useNotification();
   const { formatPrice } = useCurrency();
+  const { user } = useUserContext();
   const { itemCode } = router.query;
 
   const [product, setProduct] = useState(initialProduct || null);
@@ -1008,12 +1009,11 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const isProductReady = product && product.itemCode && product.itemName && product.itemPrice;
   const shouldShowLoading = !isProductReady || minLoadingTime;
 
+  const cartItemCount = cart?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+
   if (shouldShowLoading) {
     return <ProductLoadingOverlay show={true} />;
   }
-
-  const { user } = useUserContext();
-  const cartItemCount = cart?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
