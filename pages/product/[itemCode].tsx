@@ -1019,12 +1019,12 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   return (
     <>
       <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="viewport" content="width=720, initial-scale=0.5, user-scalable=yes" />
       </Head>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50" style={{ minWidth: '720px' }}>
         {/* Full Width Header with Logo, Search, Cart, User */}
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-50 w-screen">
-        <div className="px-3 py-2">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-50" style={{ minWidth: '720px' }}>
+        <div className="px-4 py-2">
           {/* Top Row: Menu, Logo, Cart, User */}
           <div className="flex items-center justify-between mb-2">
             <button
@@ -1088,8 +1088,8 @@ export default function ProductPage({ product: initialProduct }: { product: any 
         </div>
       </div>
 
-      <div className="px-0 py-4">
-        <div className="grid lg:grid-cols-2 gap-0 lg:gap-6">
+      <div className="px-0 py-4" style={{ minWidth: '720px' }}>
+        <div className="grid lg:grid-cols-2 gap-0 lg:gap-6" style={{ minWidth: '720px' }}>
           {/* Левая колонка - Фотки */}
           <div className="flex flex-col">
             <div className="bg-white mb-2 sm:mb-3">
