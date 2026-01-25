@@ -154,15 +154,9 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
 
   // Сбрасываем состояние загрузки при изменении роута
   useEffect(() => {
-    // В Next.js 15 нет router.events, поэтому просто сбрасываем через таймер
-    if (isNavigating) {
-      const timer = setTimeout(() => {
-        setIsNavigating(false);
-      }, 3000); // Максимум 3 секунды показываем загрузку
-
-      return () => clearTimeout(timer);
-    }
-  }, [isNavigating, router.asPath]); // Следим за изменением пути
+    // Сбрасываем загрузку когда pathname меняется
+    setIsNavigating(false);
+  }, [router.pathname]);
 
   const onSelectCategory = (cat: Category) => {
     setSelectedCategory(cat);

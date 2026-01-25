@@ -45,15 +45,9 @@ const CategoryControls = ({ initialProducts, categoryId }: Props) => {
 
   // Сбрасываем состояние загрузки при изменении роута
   useEffect(() => {
-    // В Next.js 15 нет router.events, поэтому просто сбрасываем через таймер
-    if (navigating) {
-      const timer = setTimeout(() => {
-        setNavigating(false);
-      }, 3000); // Максимум 3 секунды показываем загрузку
-
-      return () => clearTimeout(timer);
-    }
-  }, [navigating, router.asPath]); // Следим за изменением пути
+    // Сбрасываем загрузку когда pathname меняется
+    setNavigating(false);
+  }, [router.pathname]);
 
   const applySortToArray = (order: string, items: any[]) => {
     if (!order) return items;
