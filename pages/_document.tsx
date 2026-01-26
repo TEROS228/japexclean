@@ -4,6 +4,7 @@ export default function Document() {
   return (
     <Html lang="ja">
       <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
         <meta httpEquiv="content-language" content="ja" />
 
         {/* Подавляем ВСЕ ошибки от переводчика ДО загрузки React */}
