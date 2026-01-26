@@ -59,9 +59,16 @@ export default function ProductPage({ product: initialProduct }: { product: any 
     }
 
     // Устанавливаем нужные значения
-    viewportMeta.setAttribute('content', 'width=720, initial-scale=0.5, user-scalable=yes');
+    viewportMeta.setAttribute('content', 'width=720, initial-scale=0.5, minimum-scale=0.5, maximum-scale=2, user-scalable=yes');
 
     console.log('[Product Page] Viewport set to:', viewportMeta.getAttribute('content'));
+
+    // Принудительная перезагрузка viewport
+    const tempContent = viewportMeta.getAttribute('content');
+    viewportMeta.setAttribute('content', 'width=device-width');
+    setTimeout(() => {
+      viewportMeta.setAttribute('content', tempContent || '');
+    }, 10);
   }, []);
 
   // Логируем postageFlag для отладки
@@ -1027,9 +1034,17 @@ export default function ProductPage({ product: initialProduct }: { product: any 
       <Head>
         <meta name="viewport" content="width=720, initial-scale=0.5, user-scalable=yes" />
       </Head>
-      <div className="min-h-screen bg-gray-50" style={{ minWidth: '720px' }}>
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          body {
+            width: 720px !important;
+            overflow-x: auto !important;
+          }
+        }
+      `}</style>
+      <div className="min-h-screen bg-gray-50" style={{ minWidth: '720px', width: '720px' }}>
         {/* Debug Info */}
-        <div className="fixed top-0 left-0 bg-red-600 text-white text-xs p-3 z-[99999] max-w-md font-mono">
+        <div className="fixed top-0 left-0 bg-red-600 text-white text-xs p-3 z-[99999] max-w-md font-mono" style={{ width: 'auto' }}>
           <div className="font-bold mb-2">🔍 DEBUG INFO</div>
           <div>Product: {product ? '✓' : '✗'}</div>
           <div>Loading: {loading ? '✓' : '✗'}</div>
