@@ -46,6 +46,24 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
+  // Принудительно устанавливаем viewport для мобильных устройств
+  useEffect(() => {
+    // Находим существующий viewport meta tag
+    let viewportMeta = document.querySelector('meta[name="viewport"]');
+
+    if (!viewportMeta) {
+      // Создаем новый если нет
+      viewportMeta = document.createElement('meta');
+      viewportMeta.setAttribute('name', 'viewport');
+      document.head.appendChild(viewportMeta);
+    }
+
+    // Устанавливаем нужные значения
+    viewportMeta.setAttribute('content', 'width=720, initial-scale=0.5, user-scalable=yes');
+
+    console.log('[Product Page] Viewport set to:', viewportMeta.getAttribute('content'));
+  }, []);
+
   // Логируем postageFlag для отладки
   useEffect(() => {
     if (product) {
