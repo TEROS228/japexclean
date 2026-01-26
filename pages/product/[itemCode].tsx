@@ -43,7 +43,6 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const [loading, setLoading] = useState(!initialProduct);
   const [mainImage, setMainImage] = useState(PLACEHOLDER_IMAGE);
   const [quantity, setQuantity] = useState(1);
-  const [minLoadingTime, setMinLoadingTime] = useState(true); // Минимальное время показа анимации
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
@@ -125,18 +124,6 @@ export default function ProductPage({ product: initialProduct }: { product: any 
     };
   };
 
-  // Минимальное время показа анимации
-  useEffect(() => {
-    if (!initialProduct) {
-      const timer = setTimeout(() => {
-        setMinLoadingTime(false);
-      }, 800); // 800мс минимум показа анимации
-
-      return () => clearTimeout(timer);
-    } else {
-      setMinLoadingTime(false);
-    }
-  }, [initialProduct]);
 
   // Проверяем sessionStorage и загружаем Yahoo товары через API
   useEffect(() => {
@@ -1006,15 +993,16 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const hasVariants = variants.length > 0;
   const canAddToCart = !loadingVariants;
 
-  // Показываем загрузку если товар не готов ИЛИ не прошло минимальное время
-  const isProductReady = product && product.itemCode && product.itemName && product.itemPrice;
-  const shouldShowLoading = !isProductReady || minLoadingTime;
-
   const cartItemCount = cart?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
-  if (shouldShowLoading) {
-    return <ProductLoadingOverlay show={true} />;
-  }
+  // Debug
+  console.log('[Product Page Render]', {
+    hasProduct: !!product,
+    productName: product?.itemName,
+    loading,
+    itemCode,
+    initialProduct: !!initialProduct
+  });
 
   return (
     <>
@@ -1022,6 +1010,13 @@ export default function ProductPage({ product: initialProduct }: { product: any 
         <meta name="viewport" content="width=720, initial-scale=0.5, user-scalable=yes" />
       </Head>
       <div className="min-h-screen bg-gray-50" style={{ minWidth: '720px' }}>
+        {/* Debug Info */}
+        <div className="fixed top-0 left-0 bg-black text-white text-xs p-2 z-[99999] max-w-xs">
+          <div>Product: {product ? '✓' : '✗'}</div>
+          <div>Loading: {loading ? '✓' : '✗'}</div>
+          <div>ItemCode: {itemCode}</div>
+          <div>InitialProduct: {initialProduct ? '✓' : '✗'}</div>
+        </div>
         {/* Full Width Header with Logo, Search, Cart, User */}
         <div className="bg-white border-b border-gray-200 sticky top-0 z-50" style={{ minWidth: '720px' }}>
         <div className="px-4 py-2">
@@ -1089,6 +1084,15 @@ export default function ProductPage({ product: initialProduct }: { product: any 
       </div>
 
       <div className="px-0 py-4" style={{ minWidth: '720px' }}>
+        {!product ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="h-12 w-12 border-4 border-gray-300 border-t-green-500 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading product...</p>
+            </div>
+          </div>
+        ) : (
+          <>
         <div className="grid lg:grid-cols-2 gap-0 lg:gap-6" style={{ minWidth: '720px' }}>
           {/* Левая колонка - Фотки */}
           <div className="flex flex-col">
@@ -1479,6 +1483,8 @@ export default function ProductPage({ product: initialProduct }: { product: any 
               ))}
             </div>
           </div>
+        )}
+        </>
         )}
       </div>
     </div>
