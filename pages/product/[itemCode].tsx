@@ -1036,9 +1036,13 @@ export default function ProductPage({ product: initialProduct }: { product: any 
       </Head>
       <style jsx global>{`
         @media (max-width: 768px) {
-          body {
+          html, body {
+            overflow-x: hidden !important;
+          }
+          #__next {
             width: 720px !important;
-            overflow-x: auto !important;
+            transform-origin: 0 0 !important;
+            transform: scale(0.5417) !important; /* 390/720 = 0.5417 */
           }
         }
         div :global(img) {
