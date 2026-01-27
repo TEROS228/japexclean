@@ -1041,6 +1041,11 @@ export default function ProductPage({ product: initialProduct }: { product: any 
             overflow-x: auto !important;
           }
         }
+        div :global(img) {
+          max-width: 100% !important;
+          height: auto !important;
+          display: block;
+        }
       `}</style>
       <div className="min-h-screen bg-gray-50" style={{ minWidth: '720px', width: '720px' }}>
         {/* Debug Info */}
@@ -1393,13 +1398,6 @@ export default function ProductPage({ product: initialProduct }: { product: any 
             </div>
             <div className="px-4 sm:px-6 py-3 sm:py-4">
               <div className="text-xs sm:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed overflow-hidden break-words">
-                <style jsx>{`
-                  div :global(img) {
-                    max-width: 100% !important;
-                    height: auto !important;
-                    display: block;
-                  }
-                `}</style>
                 {product.itemCaption}
               </div>
             </div>
