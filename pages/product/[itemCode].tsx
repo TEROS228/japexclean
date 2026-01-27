@@ -1020,30 +1020,21 @@ export default function ProductPage({ product: initialProduct }: { product: any 
 
   const cartItemCount = cart?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
-  // Debug
-  console.log('[Product Page Render]', {
-    hasProduct: !!product,
-    productName: product?.itemName,
-    loading,
-    itemCode,
-    initialProduct: !!initialProduct
-  });
-
   return (
     <>
       <Head>
         <meta name="viewport" content="width=720, initial-scale=0.5, user-scalable=yes" />
       </Head>
       <style jsx global>{`
-        @media (max-width: 768px) {
-          html, body {
-            overflow-x: hidden !important;
-          }
-          #__next {
-            width: 720px !important;
-            transform-origin: 0 0 !important;
-            transform: scale(0.5417) !important; /* 390/720 = 0.5417 */
-          }
+        html, body {
+          overflow-x: hidden !important;
+        }
+        body > div#__next {
+          width: 720px !important;
+          min-width: 720px !important;
+          transform-origin: top left !important;
+          transform: scale(0.5417) !important; /* 390/720 = 0.5417 */
+          position: relative !important;
         }
         div :global(img) {
           max-width: 100% !important;
@@ -1052,24 +1043,6 @@ export default function ProductPage({ product: initialProduct }: { product: any 
         }
       `}</style>
       <div className="min-h-screen bg-gray-50" style={{ minWidth: '720px', width: '720px' }}>
-        {/* Debug Info */}
-        <div className="fixed top-0 left-0 bg-red-600 text-white text-xs p-3 z-[99999] max-w-md font-mono" style={{ width: 'auto' }}>
-          <div className="font-bold mb-2">🔍 DEBUG INFO</div>
-          <div>Product: {product ? '✓' : '✗'}</div>
-          <div>Loading: {loading ? '✓' : '✗'}</div>
-          <div>ItemCode: {itemCode}</div>
-          <div>InitialProduct: {initialProduct ? '✓' : '✗'}</div>
-          <div className="mt-2 border-t border-white/30 pt-2">
-            <div>Viewport: width=720, scale=0.5</div>
-            <div>Window Width: {typeof window !== 'undefined' ? window.innerWidth : 'N/A'}px</div>
-            <div>Window Scale: {typeof window !== 'undefined' ? window.devicePixelRatio : 'N/A'}</div>
-            <div>Screen Width: {typeof window !== 'undefined' ? window.screen.width : 'N/A'}px</div>
-          </div>
-          <div className="mt-2 border-t border-white/30 pt-2">
-            <div>Product Name: {product?.itemName?.substring(0, 30)}...</div>
-            <div>Route: {router.pathname}</div>
-          </div>
-        </div>
         {/* Full Width Header with Logo, Search, Cart, User */}
         <div className="bg-white border-b border-gray-200 sticky top-0 z-50" style={{ minWidth: '720px' }}>
         <div className="px-4 py-2">
