@@ -7,23 +7,16 @@ const processedTransactions = new Set<string>();
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   
-  console.log('=== Balance Update Request ===');
-  console.log('Method:', req.method);
-  console.log('Has token:', !!token);
-  console.log('Token:', token ? token.substring(0, 20) + '...' : 'none');
-  console.log('Body:', req.body);
-
+         + '...' : 'none');
+  
   if (!token) {
-    console.log('❌ No token provided');
-    return res.status(401).json({ error: 'Token required' });
+        return res.status(401).json({ error: 'Token required' });
   }
 
   const user = await verifyServerToken(token);
-  console.log('Verified user:', user);
-  
+    
   if (!user) {
-    console.log('❌ Invalid token or user not found');
-    return res.status(401).json({ error: 'Invalid token' });
+        return res.status(401).json({ error: 'Invalid token' });
   }
 
   if (req.method === 'GET') {
@@ -33,8 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         select: { balance: true }
       });
       
-      console.log('Current balance:', userData?.balance || 0);
-      return res.json({ balance: userData?.balance || 0 });
+            return res.json({ balance: userData?.balance || 0 });
       
     } catch (error) {
       console.error('Database error:', error);
@@ -45,32 +37,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'POST') {
     const { amount, description, sessionId } = req.body;
     
-    console.log('Processing transaction:', { amount, description, sessionId });
-
+    
     // Проверяем дубликаты по sessionId
     if (sessionId) {
       const existingTransaction = await prisma.transaction.findUnique({
         where: { sessionId }
       });
       if (existingTransaction) {
-        console.log('❌ Duplicate transaction found:', sessionId);
-        return res.status(409).json({ error: 'Duplicate transaction' });
+                return res.status(409).json({ error: 'Duplicate transaction' });
       }
     }
 
     const transactionId = sessionId || `${user.id}-${amount}-${description}-${Date.now()}`;
     
     if (processedTransactions.has(transactionId)) {
-      console.log('❌ Transaction already processed:', transactionId);
-      return res.status(409).json({ error: 'Duplicate transaction' });
+            return res.status(409).json({ error: 'Duplicate transaction' });
     }
     
     processedTransactions.add(transactionId);
-    console.log('Added to processed transactions:', transactionId);
-
+    
     if (typeof amount !== 'number') {
-      console.log('❌ Invalid amount type:', typeof amount);
-      return res.status(400).json({ error: 'Amount must be a number' });
+            return res.status(400).json({ error: 'Amount must be a number' });
     }
 
     try {
@@ -115,12 +102,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return updatedUser;
       });
 
-      console.log('✅ Balance updated successfully:', result.balance);
-      
+            
       setTimeout(() => {
         processedTransactions.delete(transactionId);
-        console.log('Removed from processed transactions:', transactionId);
-      }, 60000);
+              }, 60000);
 
       return res.json({ success: true, newBalance: result.balance });
 
@@ -140,6 +125,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  console.log('❌ Method not allowed:', req.method);
-  return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
 }

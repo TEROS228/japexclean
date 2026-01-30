@@ -166,9 +166,7 @@ export function filterIrrelevantProducts(products: Product[], query: string): Pr
   const keyTerms = extractKeyTerms(query);
 
   // Debug logs отключены для производительности
-  // console.log(`[Search Intelligence] Query: "${query}"`);
-  // console.log(`[Search Intelligence] Detected category: ${category || 'none'}`);
-  // console.log(`[Search Intelligence] Key terms: ${keyTerms.join(', ')}`);
+  //   //   // }`);
 
   return products.filter((product, index) => {
     let relevant = true;
@@ -223,7 +221,7 @@ export function filterIrrelevantProducts(products: Product[], query: string): Pr
 
     // Debug logs отключены для производительности
     // if (!relevant && index < 20) {
-    //   console.log(`[Search Intelligence] Filtered out #${index + 1}: "${product.itemName.substring(0, 60)}..." - ${reasons.join(', ')}`);
+    //   }..." - ${reasons.join(', ')}`);
     // }
 
     return relevant;
@@ -285,9 +283,8 @@ export function intelligentRanking(products: Product[], query: string): Product[
   scoredProducts.sort((a, b) => b.score - a.score);
 
   // Debug logs отключены для производительности
-  // console.log('[Search Intelligence] Top 5 after intelligent ranking:');
-  // scoredProducts.slice(0, 5).forEach((item, i) => {
-  //   console.log(`  ${i + 1}. [${item.score.toFixed(0)}] ${item.product.itemName.substring(0, 60)}...`);
+  //   // scoredProducts.slice(0, 5).forEach((item, i) => {
+  //   }] ${item.product.itemName.substring(0, 60)}...`);
   // });
 
   return scoredProducts.map(item => item.product);

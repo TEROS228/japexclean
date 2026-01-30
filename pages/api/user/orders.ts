@@ -13,31 +13,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const token = req.headers.authorization?.replace('Bearer ', '');
-  console.log('Orders API - Token received:', token ? 'YES' : 'NO');
-
+  
   if (!token) {
-    console.log('Orders API - No token provided');
-    return res.status(401).json({ error: 'Token required' });
+        return res.status(401).json({ error: 'Token required' });
   }
 
   const user = verifyToken(token);
-  console.log('Orders API - User from token:', user);
-
+  
   if (!user) {
-    console.log('Orders API - Invalid token');
-    return res.status(401).json({ error: 'Invalid token' });
+        return res.status(401).json({ error: 'Invalid token' });
   }
 
   try {
-    console.log('Fetching orders for user:', user.email);
-
+    
     // Находим пользователя в БД
     const dbUser = await prisma.user.findUnique({
       where: { email: user.email }
     });
 
-    console.log('DB User found:', dbUser ? dbUser.id : 'NOT FOUND');
-
+    
     if (!dbUser) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -59,8 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
-    console.log('Orders found:', orders.length);
-    console.log('Orders data:', JSON.stringify(orders, null, 2));
+        );
 
     res.status(200).json({ orders });
 

@@ -16,8 +16,7 @@ function cleanExpiredCache() {
   for (const [key, entry] of productCache.entries()) {
     if (now - entry.timestamp > CACHE_TTL) {
       productCache.delete(key);
-      console.log('[Cache] Removed expired entry:', key);
-    }
+          }
   }
 }
 
@@ -31,13 +30,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Проверяем кеш
   const cachedEntry = productCache.get(url);
   if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL) {
-    console.log('[Yahoo Product By URL] Returning from cache:', url);
-    return res.status(200).json({ success: true, product: cachedEntry.product, cached: true });
+        return res.status(200).json({ success: true, product: cachedEntry.product, cached: true });
   }
 
   try {
-    console.log('[Yahoo Product By URL] Fetching product from:', url);
-
+    
     // Периодически очищаем устаревший кеш
     if (Math.random() < 0.1) { // 10% шанс
       cleanExpiredCache();
@@ -137,20 +134,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const images: string[] = [];
       const imageSet = new Set<string>();
 
-      console.log('[Images] Starting image collection...');
-
+      
       // 1. Meta og:image (приоритет)
       const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
-      console.log('[Images] og:image:', ogImage);
-      if (ogImage && !imageSet.has(ogImage)) {
+            if (ogImage && !imageSet.has(ogImage)) {
         imageSet.add(ogImage);
         images.push(ogImage);
       }
 
       // 2. Все изображения на странице - фильтруем по домену
       const allImages = Array.from(document.querySelectorAll('img'));
-      console.log('[Images] Total img elements on page:', allImages.length);
-
+      
       allImages.forEach((img: HTMLImageElement) => {
         const src = img.src || img.getAttribute('data-src') || img.getAttribute('data-original');
         if (!src) return;
@@ -183,17 +177,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (isProductImage && !isNotProductImage && img.naturalWidth >= 200 && !imageSet.has(fullUrl)) {
           imageSet.add(fullUrl);
           images.push(fullUrl);
-          console.log('[Images] Added:', fullUrl.substring(0, 100));
+          );
         }
       });
 
-      console.log('[Images] Total images collected:', images.length);
-
+      
       // Если не нашли изображения, добавляем хотя бы og:image
       if (images.length === 0 && ogImage) {
         images.push(ogImage);
-        console.log('[Images] Fallback to og:image only');
-      }
+              }
 
       // Бесплатная доставка
       const freeShipping = document.body.textContent?.includes('送料無料') || false;
@@ -249,13 +241,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       itemCode = `${shopCode}_${code}`;
     }
 
-    console.log('[Yahoo Product By URL] Parsed product:', {
-      itemName: productData.itemName,
-      itemPrice: productData.itemPrice,
-      itemCode,
-      imagesCount: productData.images.length,
-    });
-
+    
     // Формируем товар в формате, совместимом с Rakuten
     const product = {
       itemCode,
@@ -281,8 +267,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       product,
       timestamp: Date.now(),
     });
-    console.log('[Cache] Saved product to cache:', url);
-
+    
     return res.status(200).json({ success: true, product, cached: false });
   } catch (error) {
     console.error('[Yahoo Product By URL] Error:', error);

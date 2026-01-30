@@ -61,8 +61,7 @@ export async function getProductByUrl(rakutenUrl: string) {
     const data: any = await res.json();
     const product = data.Items?.[0]?.Item;
     if (!product) {
-      console.log("Product not found with full itemCode, trying shopCode search");
-      // Если не нашли по полному коду, пробуем искать по shopCode
+            // Если не нашли по полному коду, пробуем искать по shopCode
       return await getProductByShopCode(shopCode, itemCode);
     }
 
@@ -105,13 +104,7 @@ export async function getProductByUrl(rakutenUrl: string) {
     }
 
     // Debug logs отключены для производительности
-    // console.log('[Rakuten getProductByUrl] Product:', {
-    //   itemCode: product.itemCode,
-    //   itemName: product.itemName,
-    //   mainImageUrl,
-    //   imagesCount: images.length
-    // });
-
+    // 
     return {
       itemCode: product.itemCode,
       itemName: product.itemName,
@@ -208,13 +201,7 @@ async function getProductByShopCode(shopCode: string, itemCode: string) {
     }
 
     // Debug logs отключены для производительности
-    // console.log('[Rakuten getProductByShopCode] Product:', {
-    //   itemCode: product.itemCode,
-    //   itemName: product.itemName,
-    //   mainImageUrl,
-    //   imagesCount: images.length
-    // });
-
+    // 
     return {
       itemCode: product.itemCode,
       itemName: product.itemName,
@@ -701,12 +688,10 @@ export async function getProductsByGenreId(
   // Проверяем кэш
   const cachedValue = await cacheGet(cacheKey);
   if (cachedValue !== null) {
-    console.log(`[Rakuten] 🔵 CACHE HIT for ${cacheKey}, returning ${cachedValue.length} products`);
-    return cachedValue;
+        return cachedValue;
   }
 
-  console.log(`[Rakuten] 🔴 CACHE MISS for ${cacheKey}, fetching from API...`);
-
+  
   // Выполняем запрос
   const fetchProducts = async () => {
     if (!RAKUTEN_APP_ID) return [];
@@ -716,24 +701,19 @@ export async function getProductsByGenreId(
       // Улучшенная сортировка
       let sortParam = "";
       // Debug logs отключены для производительности
-      // console.log('[Rakuten getProductsByGenreId] Sort parameter received:', sort);
-
+      // 
       if (sort === "lowest") {
         sortParam = "&sort=%2BitemPrice";
-        // console.log('[Rakuten] Using lowest price sort');
-      } else if (sort === "highest") {
+        //       } else if (sort === "highest") {
         sortParam = "&sort=-itemPrice";
-        // console.log('[Rakuten] Using highest price sort');
-      } else if (sort === "popular") {
+        //       } else if (sort === "popular") {
         sortParam = "&sort=-reviewCount"; // По количеству отзывов
-        // console.log('[Rakuten] Using popular sort');
-      } else if (sort === "rating") {
+        //       } else if (sort === "rating") {
         sortParam = "&sort=-reviewAverage"; // По рейтингу
-        // console.log('[Rakuten] Using rating sort');
-      } else {
+        //       } else {
         // По умолчанию сортируем по популярности (количеству отзывов)
         sortParam = "&sort=-reviewCount";
-        // console.log('[Rakuten] Using default sort (popular)');
+        // ');
       }
 
       // Фильтруем только доступные товары
@@ -761,13 +741,10 @@ export async function getProductsByGenreId(
         RAKUTEN_APP_ID
       )}&genreId=${encodeURIComponent(String(genreId))}&hits=${hits}&page=${page}&format=json${sortParam}${availabilityParam}${priceFilterParam}${keywordParam}${orFlagParam}`;
 
-      console.log(`[Rakuten API] 📡 Fetching genreId:${genreId}, page:${page}, sort:${sort}, minPrice:${minPrice}, maxPrice:${maxPrice}`);
-      console.log(`[Rakuten API] 🔗 URL:`, url);
-
+            
       try {
         const res = await fetch(url);
-        console.log(`[Rakuten API] ✅ Response status: ${res.status}`);
-
+        
         if (!res.ok) {
           console.error(`[Rakuten API] ❌ Error: ${res.statusText}`);
           return [];
@@ -775,15 +752,7 @@ export async function getProductsByGenreId(
 
         const data: any = await res.json();
 
-        console.log(`[Rakuten API] 📦 Raw API response:`, {
-          hasItems: !!data.Items,
-          itemsCount: data.Items?.length || 0,
-          totalCount: data.count || 0,
-          pageCount: data.pageCount || 0,
-          first: data.first || 0,
-          last: data.last || 0
-        });
-
+        
         let products =
           data.Items?.map((it: any) => {
             const product = it.Item;
@@ -791,25 +760,18 @@ export async function getProductsByGenreId(
             return { ...product, imageUrl };
           }) || [];
 
-        console.log(`[Rakuten API] 🎯 Mapped ${products.length} products for category ${genreId} with sort=${sort}`);
-
+        
         // Если API вернул пустой результат при сортировке по цене, попробуем без сортировки
         if (products.length === 0 && (sort === 'lowest' || sort === 'highest')) {
-          console.log(`[Rakuten API] 🔄 Empty result with price sort, retrying without sort parameter`);
-          const urlWithoutSort = `${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(
+                    const urlWithoutSort = `${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(
             RAKUTEN_APP_ID
           )}&genreId=${encodeURIComponent(String(genreId))}&hits=${hits}&page=${page}&format=json${availabilityParam}`;
 
-          console.log(`[Rakuten API] 🔄 Retry URL:`, urlWithoutSort);
-
+          
           const res2 = await fetch(urlWithoutSort);
           if (res2.ok) {
             const data2: any = await res2.json();
-            console.log(`[Rakuten API] 🔄 Retry response:`, {
-              hasItems: !!data2.Items,
-              itemsCount: data2.Items?.length || 0
-            });
-
+            
             products =
               data2.Items?.map((it: any) => {
                 const product = it.Item;
@@ -819,8 +781,7 @@ export async function getProductsByGenreId(
 
             // Сортируем на клиенте
             if (products.length > 0) {
-              console.log(`[Rakuten API] 🔄 Got ${products.length} items, sorting on client side`);
-              products.sort((a: any, b: any) => {
+                            products.sort((a: any, b: any) => {
                 if (sort === 'lowest') return a.itemPrice - b.itemPrice;
                 if (sort === 'highest') return b.itemPrice - a.itemPrice;
                 return 0;
@@ -829,8 +790,7 @@ export async function getProductsByGenreId(
           }
         }
 
-        console.log(`[Rakuten API] 🏁 Final result: ${products.length} products`);
-        return products;
+                return products;
       } catch (error) {
         console.error('Rakuten API fetch error:', error);
         return [];
@@ -842,14 +802,11 @@ export async function getProductsByGenreId(
 
   // Кэшируем только если есть товары (не кэшируем пустые результаты)
   if (products.length > 0) {
-    console.log(`[Rakuten] 💾 Caching ${products.length} products for key: ${cacheKey}`);
-    await cacheSet(cacheKey, products, { ttl: 1800 }); // 30 minutes
+        await cacheSet(cacheKey, products, { ttl: 1800 }); // 30 minutes
   } else {
-    console.log(`[Rakuten] ⚠️ NOT caching empty result for key: ${cacheKey}`);
-  }
+      }
 
-  console.log(`[Rakuten] ✅ Returning ${products.length} products for genreId:${genreId}, page:${page}`);
-  return products;
+    return products;
 }
 
 // Нормализация поискового запроса для лучшей релевантности
@@ -896,21 +853,13 @@ export async function searchRakutenProducts(
 
   const url = `${RAKUTEN_API_URL}?${params.toString()}`;
 
-  // Debug logs отключены для производительности
-  // console.log(`[Rakuten API] Search URL: ${url}`);
-  // console.log(`[Rakuten API] Keyword: "${normalizedKeyword}"`);
-
   try {
     const res = await fetch(url);
-    // console.log(`[Rakuten API] Response status: ${res.status}`);
     if (!res.ok) {
-      // console.log(`[Rakuten API] Error: ${res.statusText}`);
       return [];
     }
 
     const data: any = await res.json();
-
-    // console.log(`[Rakuten API] Raw response - Items count: ${data.Items?.length || 0}, Total: ${data.count || 0}`);
 
     let products =
       data.Items?.map((it: any) => {
@@ -918,8 +867,6 @@ export async function searchRakutenProducts(
         const imageUrl = getBestImageUrl(product);
         return { ...product, imageUrl };
       }) || [];
-
-    // console.log(`[Rakuten API] Mapped products: ${products.length}`);
 
     // Фильтруем товары для улучшения качества результатов
     products = products.filter((p: any) => {
@@ -941,7 +888,7 @@ export async function searchRakutenProducts(
     });
 
     return products;
-  } catch {
+  } catch (error) {
     return [];
   }
 }

@@ -11,8 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { genreId, page, sort, minPrice, maxPrice } = req.query;
 
-  console.log("API /api/products called with", { genreId, page, sort, minPrice, maxPrice });
-
+  
   try {
     if (!genreId) return res.status(400).json({ error: "Missing genreId parameter" });
 
@@ -28,8 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const minPriceNum = minPrice && !isNaN(Number(minPrice)) ? Number(minPrice) : undefined;
     const maxPriceNum = maxPrice && !isNaN(Number(maxPrice)) ? Number(maxPrice) : undefined;
 
-    console.log(`Fetching products for genreId ${genreIdNum}, page ${pageNum}, sort=${sortParam}, minPrice=${minPriceNum}, maxPrice=${maxPriceNum}`);
-
+    
     const products = await getProductsByGenreId(genreIdNum, pageNum, sortParam, minPriceNum, maxPriceNum);
 
     if (!Array.isArray(products)) {
@@ -37,8 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: "Invalid products format" });
     }
 
-    console.log(`Products fetched: ${products.length} items`);
-    res.status(200).json(products);
+        res.status(200).json(products);
   } catch (error) {
     console.error("API error:", error);
     res.status(500).json({ error: "Internal Server Error" });

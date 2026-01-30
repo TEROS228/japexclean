@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Логируем полученную корзину для отладки
-  console.log('Cart received:', JSON.stringify(cart, null, 2));
+  );
 
   try {
     // Находим пользователя в БД
@@ -58,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       groupedItems[baseCode].push(item);
     }
 
-    console.log('Grouped items:', Object.keys(groupedItems).length, 'groups');
+    .length, 'groups');
 
     // Создаем заказ для каждой группы товаров
     const orders = [];
@@ -135,7 +135,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       orders.push(order);
-      console.log(`Order #${nextOrderNumber} created with ${orderItemsToCreate.length} order items from ${items.length} cart items (group: ${baseCode})`);
+      `);
     }
 
     // Формируем и отправляем уведомление в Telegram для всех заказов
@@ -143,17 +143,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const telegramSent = await sendTelegramNotification(telegramMessage);
 
     if (telegramSent) {
-      console.log('Telegram notification sent successfully');
-    } else {
-      console.warn('Telegram notification failed, but order was created');
-    }
+          } else {
+          }
 
     // Помечаем купон как использованный, если он был применён
     if (couponCode) {
       try {
         await markCouponAsUsed(couponCode);
-        console.log(`✅ Coupon ${couponCode} marked as used`);
-      } catch (error) {
+              } catch (error) {
         console.error('Error marking coupon as used:', error);
         // Не падаем, если не удалось пометить купон
       }

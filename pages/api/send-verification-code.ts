@@ -54,8 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (ipAttemptsToday >= 1) {
-      console.log(`[Rate Limit] IP ${ip} blocked: ${ipAttemptsToday} attempts today`);
-      return res.status(429).json({
+            return res.status(429).json({
         error: 'You can only register one account per day from this device. Please try again tomorrow.'
       });
     }
@@ -79,8 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       if (emailAttemptsToday >= 1) {
-        console.log(`[Rate Limit] Email alias detected: ${email} → ${normalizedEmail}`);
-        return res.status(429).json({
+                return res.status(429).json({
           error: 'This email address (or its alias) has already been used for registration today.'
         });
       }
@@ -205,13 +203,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    console.log(`[Verification] Code sent to ${email}, Email ID: ${data?.id}`);
-    console.log('═══════════════════════════════════════');
-    console.log('📧 VERIFICATION CODE');
-    console.log('Email:', email);
-    console.log('Code:', code);
-    console.log('═══════════════════════════════════════');
-
+                        
     // Записываем успешную попытку регистрации
     await prisma.registrationAttempt.create({
       data: {

@@ -105,8 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
-    console.log(`[Storage] User ${dbUser.email} paid ¥${storageInfo.currentFee} for package ${id}`);
-
+    
     return res.status(200).json({
       success: true,
       package: updatedPackage,

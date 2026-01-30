@@ -31,15 +31,13 @@ export default async function handler(
     const products = await searchRakutenProducts(normalizedQuery, pageNum, 30, min, max);
 
     // Debug logs отключены для производительности
-    // console.log(`[Search API] Query: "${query}" -> "${normalizedQuery}", found ${products.length} products from Rakuten API`);
-
+    // 
     // Применяем только умное ранжирование для первой страницы, БЕЗ фильтрации
     const rankedProducts = pageNum === 1
       ? intelligentRanking(products, normalizedQuery)
       : products;
 
-    // console.log(`[Search API] Returning ${rankedProducts.length} products`);
-
+    // 
     return res.status(200).json({
       success: true,
       products: rankedProducts,

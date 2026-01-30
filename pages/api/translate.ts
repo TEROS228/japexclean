@@ -99,8 +99,7 @@ export default async function handler(
 
     // Переводим только тексты, которых нет в кэше
     if (textsToTranslate.length > 0) {
-      console.log(`🔄 Translating ${textsToTranslate.length} texts from ${fromLang} to ${toLang} using DeepL`);
-
+      
       // DeepL - переводим батчами по 50 текстов (DeepL поддерживает до 50 текстов за раз)
       const BATCH_SIZE = 50;
       const BATCH_DELAY = 100; // 100ms между батчами
@@ -182,8 +181,7 @@ export default async function handler(
               }).catch(() => {}); // Игнорируем ошибки кэша
             });
 
-            console.log(`✅ DeepL translated ${data.translations.length} texts`);
-          }
+                      }
         } catch (error) {
           console.error(`[DeepL API] Error:`, error);
           // Возвращаем оригинальные тексты при ошибке
@@ -198,8 +196,7 @@ export default async function handler(
         }
       }
 
-      console.log(`✅ Translation complete!`);
-    }
+          }
 
     return res.json({ translations });
   } catch (error) {

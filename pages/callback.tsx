@@ -10,8 +10,7 @@ export default function Callback() {
 
     const { code } = router.query;
     if (code) {
-      console.log("Authorization code:", code);
-      // Здесь позже поменяем на обмен кода на access_token
+            // Здесь позже поменяем на обмен кода на access_token
     }
   }, [router.isReady, router.query]);
 

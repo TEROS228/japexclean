@@ -35,8 +35,7 @@ export default function ProfilePage() {
   // Force re-render all sections when currency changes
   useEffect(() => {
     const handleCurrencyChange = (e: any) => {
-      console.log('💱 [ProfilePage] Currency changed to:', e.detail, '- forcing all sections to re-render');
-      setCurrencyKey(prev => prev + 1);
+            setCurrencyKey(prev => prev + 1);
     };
 
     window.addEventListener('currencyChanged', handleCurrencyChange);
@@ -72,8 +71,7 @@ export default function ProfilePage() {
     // Даём UserContext время загрузиться из localStorage
     const timer = setTimeout(() => {
       if (!user) {
-        console.log('[PROFILE] No user found after timeout, redirecting to home');
-        router.push("/");
+                router.push("/");
         return;
       }
     }, 100);
@@ -97,8 +95,7 @@ export default function ProfilePage() {
     // Если пришли с новым заказом, принудительно переключаемся на вкладку orders
     const newOrder = params.get('newOrder');
     if (newOrder === 'true') {
-      console.log('[PROFILE] 🆕 New order detected, switching to orders tab');
-      setActiveTab('orders');
+            setActiveTab('orders');
       // Очищаем параметр из URL
       router.replace('/profile', undefined, { shallow: true });
     }
@@ -347,20 +344,17 @@ function OrdersSection() {
 
   // Force re-render when currency changes
   useEffect(() => {
-    console.log('💱 [OrdersSection] Currency changed to:', currency, '- forcing re-render');
-    forceUpdate();
+        forceUpdate();
   }, [currency]);
 
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem('auth_token');
       if (!token) {
-        console.log('No token found');
-        return;
+                return;
       }
 
-      console.log('[ORDERS] 🔄 Fetching orders...');
-      const response = await fetch(`/api/user/orders?_t=${Date.now()}`, {
+            const response = await fetch(`/api/user/orders?_t=${Date.now()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -369,11 +363,9 @@ function OrdersSection() {
         cache: 'no-store'
       });
 
-      console.log('[ORDERS] Response status:', response.status);
-      if (response.ok) {
+            if (response.ok) {
         const data = await response.json();
-        console.log('[ORDERS] ✅ Orders fetched:', data.orders.length, 'orders');
-        setOrders(data.orders);
+                setOrders(data.orders);
       } else {
         const errorData = await response.json();
         console.error('[ORDERS] Error response:', errorData);
@@ -396,10 +388,8 @@ function OrdersSection() {
       const channel = new BroadcastChannel('japrix-sync');
 
       channel.onmessage = (event) => {
-        console.log('[ORDERS] 📡 Broadcast received:', event.data.type);
-        if (event.data.type === 'orders' || event.data.type === 'admin-data') {
-          console.log('[ORDERS] 🔄 Refreshing orders...');
-          fetchOrders();
+                if (event.data.type === 'orders' || event.data.type === 'admin-data') {
+                    fetchOrders();
         }
       };
 
@@ -819,8 +809,7 @@ function TransactionsSection() {
 function PackagesSection({ setSelectedPhoto }: any) {
   const { formatPrice, currency } = useCurrency();
   const { user } = useUserContext();
-  console.log('🎨 [PackagesSection] Rendering with currency:', currency);
-
+  
   const [packages, setPackages] = useState<any[]>([]);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [damagedRequests, setDamagedRequests] = useState<any[]>([]);
@@ -853,12 +842,10 @@ function PackagesSection({ setSelectedPhoto }: any) {
     cancelReturn: false
   });
 
-
   // ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ при любых изменениях
   useEffect(() => {
     const forceUpdate = (e?: any) => {
-      console.log('🔄 [PackagesSection] Force update triggered:', e?.type || 'unknown');
-      forceRerender();
+            forceRerender();
       // Перезагружаем данные при любом обновлении
       if (e?.type === 'packagesUpdated' || e?.type === 'dataUpdated') {
         fetchPackages();
@@ -879,8 +866,7 @@ function PackagesSection({ setSelectedPhoto }: any) {
 
   const fetchPackages = async () => {
     try {
-      console.log('[PROFILE] 🔄 Fetching packages...');
-      const token = localStorage.getItem('auth_token');
+            const token = localStorage.getItem('auth_token');
       if (!token) return;
 
       // Загружаем пакеты (с timestamp чтобы обойти кэш)
@@ -895,13 +881,12 @@ function PackagesSection({ setSelectedPhoto }: any) {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('[PROFILE] ✅ Packages fetched:', data.packages.length, 'packages');
-        console.log('[PROFILE] 📊 Package statuses:', data.packages.map((p: any) => ({ id: p.id.slice(0, 8), status: p.status })));
+                 => ({ id: p.id.slice(0, 8), status: p.status })));
 
         // DEBUG: Логируем consolidateWith для автоконсолидированных пакетов
         const autoConsolidatedPackages = data.packages.filter((p: any) => p.autoConsolidated);
         if (autoConsolidatedPackages.length > 0) {
-          console.log('[PROFILE] 🎁 Auto-consolidated packages:', autoConsolidatedPackages.map((p: any) => ({
+           => ({
             id: p.id.slice(0, 8),
             consolidation: p.consolidation,
             consolidateWith: p.consolidateWith,
@@ -944,8 +929,7 @@ function PackagesSection({ setSelectedPhoto }: any) {
 
   // Fetch packages on mount
   useEffect(() => {
-    console.log('📦 [PackagesSection] Mounted - fetching packages...');
-    fetchPackages();
+        fetchPackages();
   }, []);
 
   // Cross-tab sync only (no polling to save resources)
@@ -1000,8 +984,7 @@ function PackagesSection({ setSelectedPhoto }: any) {
         // Success screen is now handled inside PaymentConfirmModal
 
         // Уведомляем другие вкладки об обновлении
-        console.log('[PROFILE] 📡 Broadcasting cancel purchase payment...');
-        broadcastUpdate('packages');
+                broadcastUpdate('packages');
         broadcastUpdate('admin-data');
       } else {
         const data = await response.json();
@@ -1054,8 +1037,7 @@ function PackagesSection({ setSelectedPhoto }: any) {
         window.dispatchEvent(new CustomEvent('dataUpdated'));
 
         // Уведомляем другие вкладки об обновлении
-        console.log('[PROFILE] 📡 Broadcasting additional shipping payment...');
-        broadcastUpdate('packages');
+                broadcastUpdate('packages');
         broadcastUpdate('admin-data');
 
         alert('Additional shipping cost paid successfully!');
@@ -1078,14 +1060,12 @@ function PackagesSection({ setSelectedPhoto }: any) {
     if (selectedPackage && packages.length > 0) {
       const updatedPackage = packages.find(p => p.id === selectedPackage.id);
       if (updatedPackage) {
-        console.log('[PROFILE] 🔄 Updating selectedPackage with fresh data');
-        setSelectedPackage(updatedPackage);
+                setSelectedPackage(updatedPackage);
       }
     }
   }, [packages]);
 
-  console.log('🎨 [RENDER] PackagesSection rendering, packages count:', packages.length, 'renderKey:', renderKey, 'loading:', loading);
-
+  
   return (
     <>
       {/* Japan Post Tracker Widget - всегда показываем */}
@@ -1125,7 +1105,7 @@ function PackagesSection({ setSelectedPhoto }: any) {
 
           return true;
         }).map((pkg) => {
-          console.log('🎨 [RENDER] Package:', pkg.id.substring(0, 8), 'reinforcement:', pkg.reinforcement, 'paid:', pkg.reinforcementPaid, 'status:', pkg.status, 'reinforcementStatus:', pkg.reinforcementStatus);
+          , 'reinforcement:', pkg.reinforcement, 'paid:', pkg.reinforcementPaid, 'status:', pkg.status, 'reinforcementStatus:', pkg.reinforcementStatus);
           // Проверяем, не является ли этот пакет частью чужой консолидации
           const isPartOfConsolidation = packages.some(p => {
             if (!p.consolidateWith || p.id === pkg.id) return false;
@@ -1145,8 +1125,7 @@ function PackagesSection({ setSelectedPhoto }: any) {
 
           // DEBUG: Выводим информацию о консолидации
           if (pkg.autoConsolidated) {
-            console.log('🔍 [DEBUG] Auto-consolidated package:', {
-              id: pkg.id.substring(0, 8),
+            ,
               consolidation: pkg.consolidation,
               consolidateWith: pkg.consolidateWith,
               consolidated: pkg.consolidated,
@@ -1683,7 +1662,7 @@ function PackagesSection({ setSelectedPhoto }: any) {
               {/* Reinforcement Service Status */}
               {(() => {
                 const shouldShow = pkg.reinforcement && pkg.reinforcementPaid;
-                console.log('🎨 [CONDITION] Package', pkg.id.substring(0, 8), 'shouldShow reinforcement block:', shouldShow, 'reinforcement:', pkg.reinforcement, 'paid:', pkg.reinforcementPaid);
+                , 'shouldShow reinforcement block:', shouldShow, 'reinforcement:', pkg.reinforcement, 'paid:', pkg.reinforcementPaid);
                 return shouldShow;
               })() && (
                 <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -2508,8 +2487,7 @@ function ShippingConfirmationModal({ package: pkg, addresses, packages, onClose,
       }
 
       if (result.needsFedExSelection && result.fedexOptions) {
-        console.log('📦 Received FedEx options from API:', result.fedexOptions);
-        setFedexOptions(result.fedexOptions);
+                setFedexOptions(result.fedexOptions);
       }
     } catch (error) {
       console.error('Error fetching FedEx rates:', error);
@@ -2554,8 +2532,7 @@ function ShippingConfirmationModal({ package: pkg, addresses, packages, onClose,
 
       // Если API вернул опции FedEx - показываем их для выбора
       if (result.needsFedExSelection && result.fedexOptions) {
-        console.log('📦 Received FedEx options from API:', result.fedexOptions);
-        setFedexOptions(result.fedexOptions);
+                setFedexOptions(result.fedexOptions);
         setProcessing(false);
         return; // Останавливаемся здесь, ждем выбора пользователя
       }
@@ -3685,8 +3662,7 @@ function DeliveryOptionsModal({ package: pkg, options, addresses, lastUpdateTime
           // Исключаем: pending, awaiting_payment, paid, approved
           // Разрешаем: rejected (отклонен продавцом - можно консолидировать)
 
-          console.log('=== CONSOLIDATION DEBUG ===');
-          console.log('All packages:', data.packages.map((p: any) => ({
+                     => ({
             id: p.id,
             title: p.orderItem?.title?.substring(0, 50),
             status: p.status,
@@ -3699,8 +3675,7 @@ function DeliveryOptionsModal({ package: pkg, options, addresses, lastUpdateTime
             disposalRequested: p.disposalRequested,
             disposed: p.disposed
           })));
-          console.log('Current package ID:', pkg.id);
-
+          
           const available = data.packages.filter((p: any) => {
             // Проверяем cancelPurchase - блокируем если запрос активен (не rejected)
             const hasCancelPurchase = p.cancelPurchase &&
@@ -3748,18 +3723,16 @@ function DeliveryOptionsModal({ package: pkg, options, addresses, lastUpdateTime
             const passesAll = Object.values(checks).every(v => v);
 
             if (!passesAll) {
-              console.log(`Package ${p.id.substring(0, 8)} filtered out:`, checks);
-              console.log('  → Failed checks:', Object.entries(checks).filter(([k, v]) => !v).map(([k]) => k));
+              } filtered out:`, checks);
+              .filter(([k, v]) => !v).map(([k]) => k));
             } else {
-              console.log(`✓ Package ${p.id.substring(0, 8)} PASSED all checks`);
+              } PASSED all checks`);
             }
 
             return passesAll;
           });
 
-          console.log('Available for consolidation:', available.length, 'packages');
-          console.log('=== END DEBUG ===');
-          setAvailablePackages(available);
+                              setAvailablePackages(available);
 
           // Восстанавливаем ранее выбранные посылки, исключая отмененные
           if (pkg.consolidateWith) {
@@ -4162,7 +4135,6 @@ function DeliveryOptionsModal({ package: pkg, options, addresses, lastUpdateTime
                 </label>
               )}
 
-
               {/* Disposal Service - скрыть для консолидированных пакетов (кроме автоконсолидированных) */}
               {(!pkg.consolidated || pkg.autoConsolidated) && (
               <div className={`p-4 border-2 rounded-xl ${localOptions.consolidation ? 'border-gray-200 bg-gray-50 opacity-60' : 'border-gray-200'}`}>
@@ -4286,10 +4258,7 @@ function DeliveryOptionsModal({ package: pkg, options, addresses, lastUpdateTime
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Save button clicked');
-                console.log('Local options:', localOptions);
-                console.log('Selected packages:', selectedPackages);
-
+                                                
                 // Валидация: если выбрана консолидация, но не выбраны пакеты
                 if (localOptions.consolidation && selectedPackages.length === 0) {
                   alert('⚠️ Please select at least one package to consolidate with, or disable consolidation.');
@@ -4301,8 +4270,7 @@ function DeliveryOptionsModal({ package: pkg, options, addresses, lastUpdateTime
                   consolidateWith: localOptions.consolidation ? JSON.stringify(selectedPackages) : null,
                   additionalInsurance: insuranceAmount
                 };
-                console.log('Options to save:', optionsToSave);
-
+                
                 // Проверяем какие платные сервисы выбраны
                 const needsPhotoPayment = localOptions.photoService && !pkg.photoServicePaid;
                 const needsReinforcementPayment = localOptions.reinforcement && !pkg.reinforcementPaid;
@@ -5328,7 +5296,7 @@ function AddressesSection() {
   const confirmSaveAddress = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      console.log('Token length:', token?.length, 'First 20 chars:', token?.substring(0, 20));
+      );
 
       if (!token) {
         alert('Authentication token missing. Please login again.');
@@ -5388,7 +5356,6 @@ function AddressesSection() {
     }
   };
 
-
   // Загружаем адреса из API при монтировании
   useEffect(() => {
     const fetchData = async () => {
@@ -5446,8 +5413,7 @@ function AddressesSection() {
         if (packagesResponse.ok) {
           const packagesData = await packagesResponse.json();
           setPackages(packagesData.packages);
-          console.log('[AddressesSection] 🔄 Packages updated after event');
-        }
+                  }
       } catch (error) {
         console.error('[AddressesSection] Error updating packages:', error);
       }
@@ -6109,14 +6075,7 @@ function AddressesSection() {
             const cannotEdit = loadingData || hasRequestedShipping;
             const cannotDelete = loadingData || hasRequestedShipping || hasWarehousePackage || hasOrderWithoutPackage;
 
-            console.log('Address blocking check for', addr.id, addr.name, ':', {
-              hasRequestedShipping,
-              hasWarehousePackage,
-              hasOrderWithoutPackage,
-              cannotEdit,
-              cannotDelete
-            });
-
+            
             return (
             <div key={addr.id} className={`group relative overflow-hidden rounded-2xl p-5 sm:p-6 transition-all duration-300 ${
               hasRequestedShipping
@@ -6988,8 +6947,7 @@ function MessagesSection({ onMessagesRead }: { onMessagesRead: () => void }) {
 
 // Compensation Modal Component
 function CompensationModal({ onClose }: { onClose: () => void }) {
-  console.log('CompensationModal rendered');
-  const [packages, setPackages] = useState<any[]>([]);
+    const [packages, setPackages] = useState<any[]>([]);
   const [selectedPackage, setSelectedPackage] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]); // For consolidated packages
   const [carrier, setCarrier] = useState<'ems' | 'fedex'>('ems');
@@ -7004,8 +6962,7 @@ function CompensationModal({ onClose }: { onClose: () => void }) {
   const certificateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    console.log('CompensationModal mounted, fetching packages');
-    fetchShippedPackages();
+        fetchShippedPackages();
   }, []);
 
   // Clear selected items when package changes and set carrier from package shipping method
@@ -7049,9 +7006,7 @@ function CompensationModal({ onClose }: { onClose: () => void }) {
         const packagesData = await packagesResponse.json();
         const compensationData = await compensationResponse.json();
 
-        console.log('[Compensation] All packages:', packagesData.packages);
-        console.log('[Compensation] Active requests:', compensationData.requests);
-
+                
         // Получаем ID посылок, которые уже имеют compensation request
         const packageIdsWithClaims = new Set(
           compensationData.requests.map((req: any) => req.packageId)
@@ -7068,7 +7023,7 @@ function CompensationModal({ onClose }: { onClose: () => void }) {
           return isShipped && isNotConsolidatedIntoAnother && hasNoClaim;
         });
 
-        console.log('[Compensation] Available packages (no claims):', shippedPackages);
+        :', shippedPackages);
         setPackages(shippedPackages);
       }
     } catch (error) {
@@ -7337,7 +7292,6 @@ function CompensationModal({ onClose }: { onClose: () => void }) {
               </div>
             )}
           </div>
-
 
           {/* Select Damaged Items - For Consolidated Packages */}
           {selectedPackage && (() => {
@@ -7621,27 +7575,21 @@ function CouponsSection() {
     const fetchCoupons = async () => {
       try {
         const token = localStorage.getItem('auth_token');
-        console.log('[Coupons] Token exists:', !!token);
-        if (!token) {
-          console.log('[Coupons] No token found');
-          setLoading(false);
+                if (!token) {
+                    setLoading(false);
           return;
         }
 
-        console.log('[Coupons] Fetching from /api/user/coupons...');
-        const response = await fetch('/api/user/coupons', {
+                const response = await fetch('/api/user/coupons', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
 
-        console.log('[Coupons] Response status:', response.status);
-
+        
         if (response.ok) {
           const data = await response.json();
-          console.log('[Coupons] Data received:', data);
-          console.log('[Coupons] Number of coupons:', data.coupons?.length || 0);
-          setCoupons(data.coupons || []);
+                              setCoupons(data.coupons || []);
         } else {
           const errorData = await response.json();
           console.error('[Coupons] Error response:', errorData);
@@ -7798,8 +7746,7 @@ function DisputesSection() {
   }, [showSuccessModal]);
 
   useEffect(() => {
-    console.log('DisputesSection: showCompensationModal state changed to:', showCompensationModal);
-  }, [showCompensationModal]);
+      }, [showCompensationModal]);
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -7970,10 +7917,8 @@ function DisputesSection() {
         <div className="flex justify-end mb-4">
           <button
             onClick={() => {
-              console.log('New Claim button clicked, current state:', showCompensationModal);
-              setShowCompensationModal(true);
-              console.log('After setState called');
-            }}
+                            setShowCompensationModal(true);
+                          }}
             className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-700 active:from-red-600 active:to-red-700 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 touch-manipulation text-sm sm:text-base"
           >
             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -8023,8 +7968,7 @@ function DisputesSection() {
         {showCompensationModal && (
           <CompensationModal
             onClose={() => {
-              console.log('Closing CompensationModal');
-              setShowCompensationModal(false);
+                            setShowCompensationModal(false);
               fetchRequests(); // Refresh list after submission
             }}
           />
@@ -8042,9 +7986,9 @@ function DisputesSection() {
         </div>
         <button
           onClick={() => {
-            console.log('New Claim button clicked (with requests), current state:', showCompensationModal);
+            , current state:', showCompensationModal);
             setShowCompensationModal(true);
-            console.log('After setState called (with requests)');
+            ');
           }}
           className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-700 active:from-red-600 active:to-red-700 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 touch-manipulation text-sm sm:text-base"
         >
@@ -8596,12 +8540,10 @@ function DisputesSection() {
 
       {/* Compensation Modal */}
       {(() => {
-        console.log('DisputesSection: showCompensationModal =', showCompensationModal);
-        return showCompensationModal && (
+                return showCompensationModal && (
           <CompensationModal
             onClose={() => {
-              console.log('Closing CompensationModal');
-              setShowCompensationModal(false);
+                            setShowCompensationModal(false);
               fetchRequests(); // Refresh list after submission
             }}
           />

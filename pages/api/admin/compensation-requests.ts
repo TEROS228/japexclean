@@ -102,8 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       );
 
-      console.log('Compensation requests found:', enrichedRequests.length);
-      console.log('Requests data:', JSON.stringify(enrichedRequests, null, 2));
+            );
 
       return res.status(200).json({ requests: enrichedRequests });
     }

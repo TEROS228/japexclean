@@ -4,16 +4,14 @@ import { generateToken } from '@/lib/jwt';
 import bcrypt from 'bcrypt';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log('Signup API called');
-  
+    
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
     const { name, secondName, email, password, marketingConsent } = req.body;
-    console.log('Signup attempt:', { email, name, secondName, marketingConsent });
-
+    
     if (!name || !secondName || !email || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
@@ -61,8 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: newUser.email
     });
 
-    console.log('User created successfully:', newUser.id);
-
+    
     // Возвращаем успешный ответ
     res.status(201).json({
       token,

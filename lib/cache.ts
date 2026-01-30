@@ -19,8 +19,7 @@ function getRedisClient(): RedisType | null {
       maxRetriesPerRequest: 3,
       retryStrategy: (times) => {
         if (times > 3) {
-          console.warn('Redis unavailable, using memory cache');
-          redisAvailable = false;
+                    redisAvailable = false;
           return null;
         }
         return Math.min(times * 200, 1000);
@@ -29,25 +28,21 @@ function getRedisClient(): RedisType | null {
     });
 
     redisClient.on('connect', () => {
-      console.log('✅ Redis connected');
-      redisAvailable = true;
+            redisAvailable = true;
     });
 
     redisClient.on('error', (err) => {
-      console.warn('⚠️ Redis error:', err.message);
-      redisAvailable = false;
+            redisAvailable = false;
     });
 
     // Try to connect
     redisClient.connect().catch(() => {
-      console.warn('⚠️ Redis not available, using memory cache');
-      redisAvailable = false;
+            redisAvailable = false;
     });
 
     return redisClient;
   } catch (error) {
-    console.warn('⚠️ Redis initialization failed:', error);
-    redisAvailable = false;
+        redisAvailable = false;
     return null;
   }
 }
@@ -83,8 +78,7 @@ export async function cacheGet<T = any>(key: string): Promise<T | null> {
           return JSON.parse(value) as T;
         }
       } catch (error) {
-        console.warn('Redis get error:', error);
-        redisAvailable = false;
+                redisAvailable = false;
       }
     }
   }
@@ -121,8 +115,7 @@ export async function cacheSet(
         await client.setex(key, ttl, serialized);
         return;
       } catch (error) {
-        console.warn('Redis set error:', error);
-        redisAvailable = false;
+                redisAvailable = false;
       }
     }
   }
@@ -145,8 +138,7 @@ export async function cacheDel(key: string): Promise<void> {
       try {
         await client.del(key);
       } catch (error) {
-        console.warn('Redis del error:', error);
-      }
+              }
     }
   }
 
@@ -168,8 +160,7 @@ export async function cacheClear(pattern: string = '*'): Promise<void> {
           await client.del(...keys);
         }
       } catch (error) {
-        console.warn('Redis clear error:', error);
-      }
+              }
     }
   }
 

@@ -87,8 +87,7 @@ const SubcategoryPage: NextPage<Props> = ({
 
     // Для Yahoo товаров сохраняем данные товара
     if (product._source === 'yahoo') {
-      console.log('[Subcategory] Saving Yahoo product to sessionStorage:', product.itemCode);
-      sessionStorage.setItem(`yahoo-product-${product.itemCode}`, JSON.stringify(product));
+            sessionStorage.setItem(`yahoo-product-${product.itemCode}`, JSON.stringify(product));
     }
 
     router.push(`/product/${product.itemCode}?fromCategory=${categoryId}&fromSubcategory=${activeSubcategoryId}&fromPage=${currentPage}&sortOrder=${sortOrder}`);

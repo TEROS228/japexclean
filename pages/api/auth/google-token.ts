@@ -62,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       });
 
-      console.log(`[Google OAuth] New user created: ${user.email} with welcome coupon ¥500 (IP: ${ip})`);
+      `);
     }
 
     // Генерируем JWT токен

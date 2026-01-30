@@ -46,8 +46,7 @@ function getInitialCurrency(): Currency {
     'BRL', 'ARS', 'CLP', 'ZAR', 'SEK', 'NOK', 'DKK', 'PLN', 'RSD', 'TRY', 'RON'];
 
   if (savedCurrency && validCurrencies.includes(savedCurrency)) {
-    console.log('Loading saved currency:', savedCurrency);
-    return savedCurrency;
+        return savedCurrency;
   }
 
   return 'JPY';
@@ -66,8 +65,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   // Обертка для setCurrency с логированием
   const setCurrency = (newCurrency: Currency) => {
-    console.log('🔄 setCurrency called:', newCurrency, 'current:', currency);
-    setCurrencyState(newCurrency);
+        setCurrencyState(newCurrency);
   };
 
   // Получаем актуальные курсы валют при монтировании
@@ -87,13 +85,11 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
             newRates[curr] = rates[curr] || defaultRates[curr] || 1;
           });
 
-          console.log('Exchange rates loaded:', newRates);
-          setExchangeRates(newRates);
+                    setExchangeRates(newRates);
         }
       } catch (error) {
         console.error('Failed to fetch exchange rates:', error);
-        console.log('Using default rates:', defaultRates);
-        // Используем дефолтные курсы если API недоступен - уже установлены в useState
+                // Используем дефолтные курсы если API недоступен - уже установлены в useState
       } finally {
         setIsLoaded(true);
       }
@@ -104,8 +100,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   // Сохраняем выбранную валюту в localStorage при изменении
   useEffect(() => {
-    console.log('💾 Saving currency to localStorage:', currency);
-    localStorage.setItem('preferred_currency', currency);
+        localStorage.setItem('preferred_currency', currency);
 
     // Создаем кастомное событие для уведомления всех компонентов
     window.dispatchEvent(new CustomEvent('currencyChanged', { detail: currency }));

@@ -31,7 +31,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (ipAttemptsToday >= 1) {
-      console.log(`[Bonus Check] IP ${ip} already registered today (${ipAttemptsToday} attempts)`);
       return res.status(200).json({ eligible: false, reason: 'ip_rate_limit' });
     }
 
@@ -43,7 +42,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (existingIpUser) {
-      console.log(`[Bonus Check] IP ${ip} already used for registration`);
       return res.status(200).json({ eligible: false, reason: 'ip_used' });
     }
 
@@ -55,12 +53,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (existingFingerprintUser) {
-      console.log(`[Bonus Check] Fingerprint ${fingerprint.substring(0, 8)}... already used for registration`);
       return res.status(200).json({ eligible: false, reason: 'fingerprint_used' });
     }
 
     // Браузер/IP еще не использовались для регистрации
-    console.log(`[Bonus Check] IP ${ip} / Fingerprint ${fingerprint.substring(0, 8)}... is eligible`);
     return res.status(200).json({ eligible: true });
 
   } catch (error) {

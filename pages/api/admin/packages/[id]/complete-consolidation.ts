@@ -72,8 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
-    console.log('Found packages to consolidate:', packagesToConsolidate.length);
-
+    
     // Используем вес из запроса, если указан, иначе суммируем вес всех пакетов
     const calculatedWeight = (mainPackage.weight || 0) +
       packagesToConsolidate.reduce((sum, pkg) => sum + (pkg.weight || 0), 0);
@@ -93,8 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Используем предсгенерированный ID если есть, иначе создаем новый
     const consolidatedPackageId = mainPackage.futureConsolidatedId || undefined;
-    console.log('Using consolidated package ID:', consolidatedPackageId);
-
+    
     // Создаем dummy OrderItem для консолидированного пакета
     // Собираем названия всех товаров
     const allItems = [mainPackage.orderItem, ...packagesToConsolidate.map(p => p.orderItem)];
@@ -135,22 +133,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       pkg.photoServicePaid && pkg.photoServiceStatus === 'completed'
     );
 
-    console.log('Collected photos from consolidated packages:', allPhotos.length);
-    console.log('Has completed photos:', hasCompletedPhotos);
-
+        
     // Находим максимальную дополнительную страховку среди всех пакетов
     const maxAdditionalInsurance = Math.max(
       mainPackage.additionalInsurance || 0,
       ...packagesToConsolidate.map(pkg => pkg.additionalInsurance || 0)
     );
-    console.log('Maximum additional insurance:', maxAdditionalInsurance);
-
+    
     // Проверяем оплачен ли domestic shipping на всех пакетах
     const allDomesticShippingPaid = allPackages.every(pkg =>
       pkg.domesticShippingCost === 0 || pkg.domesticShippingPaid
     );
-    console.log('All domestic shipping paid:', allDomesticShippingPaid);
-
+    
     // Создаем НОВЫЙ консолидированный пакет вместо обновления существующего
     const newConsolidatedPackage = await prisma.package.create({
       data: {

@@ -64,11 +64,10 @@ async function getExchangeRate(): Promise<number> {
     // Сохраняем в кеш
     exchangeRateCache = { rate, timestamp: Date.now() };
 
-    console.log(`💱 Exchange rate: 1 USD = ${rate} JPY (cached for 1 hour)`);
+    `);
     return rate;
   } catch (error) {
-    console.warn('Failed to fetch exchange rate, using fallback rate 150');
-    return 150; // Fallback курс
+        return 150; // Fallback курс
   }
 }
 
@@ -91,10 +90,7 @@ async function getFedExAccessToken(): Promise<string | null> {
   const apiKey = process.env.FEDEX_API_KEY;
   const secretKey = process.env.FEDEX_SECRET_KEY;
 
-  console.log('🔑 Attempting FedEx authentication...');
-  console.log('   API Key present:', !!apiKey);
-  console.log('   Secret Key present:', !!secretKey);
-
+      
   if (!apiKey || !secretKey) {
     console.error('❌ FedEx API credentials not configured in environment variables');
     console.error('   Please add FEDEX_API_KEY and FEDEX_SECRET_KEY to your .env file');
@@ -122,8 +118,7 @@ async function getFedExAccessToken(): Promise<string | null> {
     }
 
     const data = await response.json();
-    console.log('✅ FedEx authentication successful');
-    return data.access_token;
+        return data.access_token;
   } catch (error) {
     console.error('❌ Error getting FedEx token:', error);
     return null;
@@ -192,7 +187,7 @@ export async function calculateFedExRate(request: FedExRateRequest): Promise<Fed
       }
     };
 
-    console.log('📦 FedEx Rate Request:', JSON.stringify(rateRequest, null, 2));
+    );
 
     const response = await fetch('https://apis.fedex.com/rate/v1/rates/quotes', {
       method: 'POST',
@@ -205,8 +200,7 @@ export async function calculateFedExRate(request: FedExRateRequest): Promise<Fed
     });
 
     const responseText = await response.text();
-    console.log('📬 FedEx API Response Status:', response.status);
-
+    
     if (!response.ok) {
       console.error('FedEx rate request failed:', responseText);
 
@@ -227,7 +221,7 @@ export async function calculateFedExRate(request: FedExRateRequest): Promise<Fed
     }
 
     const data = JSON.parse(responseText);
-    console.log('✅ FedEx Rate Response:', JSON.stringify(data, null, 2));
+    );
 
     // Извлекаем самый дешевый вариант доставки
     if (!data.output?.rateReplyDetails || data.output.rateReplyDetails.length === 0) {
@@ -273,8 +267,7 @@ export async function calculateFedExRate(request: FedExRateRequest): Promise<Fed
     // Конвертируем USD в JPY
     const rateInJpy = await convertUsdToJpy(cheapestRate);
 
-    console.log(`💰 Calculated rate: $${cheapestRate} USD = ¥${rateInJpy} JPY`);
-
+    
     return {
       success: true,
       rate: rateInJpy,
@@ -412,8 +405,7 @@ export async function getExactFedExRates(request: FedExRateRequest): Promise<Fed
         });
 
         if (!response.ok) {
-          console.log(`⚠️ ${serviceType}: Not available`);
-          continue;
+                    continue;
         }
 
         const data = await response.json();
@@ -446,12 +438,11 @@ export async function getExactFedExRates(request: FedExRateRequest): Promise<Fed
               deliveryDays: undefined
             });
 
-            console.log(`✅ ${serviceType}: ¥${rateJPY} JPY (exact from Ship API)`);
+            `);
           }
         }
       } catch (error) {
-        console.log(`⚠️ ${serviceType}: Error - ${error}`);
-        continue;
+                continue;
       }
     }
 
@@ -464,7 +455,7 @@ export async function getExactFedExRates(request: FedExRateRequest): Promise<Fed
 
     options.sort((a, b) => a.rateJPY - b.rateJPY);
 
-    console.log(`💰 Found ${options.length} exact shipping options:`, options.map(o => `${o.serviceName}: ¥${o.rateJPY}`));
+    );
 
     return {
       success: true,
@@ -513,12 +504,10 @@ export async function getAllFedExRates(request: FedExRateRequest): Promise<FedEx
     const options: FedExServiceOption[] = [];
     const errors: string[] = []; // Собираем ошибки для анализа
 
-    console.log(`🚚 Requesting rates for ${serviceTypes.length} FedEx services...`);
-
+    
     // Запрашиваем расценки для каждого сервиса
     for (const serviceType of serviceTypes) {
-      console.log(`   Trying service: ${serviceType}...`);
-
+      
       const packageLineItem = {
         weight: {
           units: 'LB',
@@ -679,14 +668,12 @@ export async function getAllFedExRates(request: FedExRateRequest): Promise<FedEx
                   // Иначе это уже formatted date
                   estimatedDeliveryDate = dayFormat;
                 }
-                console.log(`  ✅ Date found: ${estimatedDeliveryDate}`);
-              }
+                              }
 
               // timeFormat может быть "09:30:00" или "9:30 AM"
               if (rateDetail.commit.timeDetail?.timeFormat) {
                 deliveryTime = rateDetail.commit.timeDetail.timeFormat;
-                console.log(`  ✅ Time found: ${deliveryTime}`);
-              }
+                              }
             }
 
             // Fallback: пробуем посчитать дни доставки из operationalDetail
@@ -745,14 +732,12 @@ export async function getAllFedExRates(request: FedExRateRequest): Promise<FedEx
               priceNote: 'Official FedEx rate (includes all fees)'
             };
 
-            console.log(`   ✅ ${serviceType}: ¥${rateJPY} (${deliveryDays || '?'} days)`);
+            `);
             options.push(option);
           } else {
-            console.log(`   ⚠️ ${serviceType}: No rate found in response`);
-          }
+                      }
         } else {
-          console.log(`   ⚠️ ${serviceType}: No rateReplyDetails in response`);
-        }
+                  }
       } catch (error) {
         console.error(`   ❌ ${serviceType} exception:`, error instanceof Error ? error.message : error);
         continue;
@@ -786,9 +771,8 @@ export async function getAllFedExRates(request: FedExRateRequest): Promise<FedEx
 
     options.sort((a, b) => a.rateJPY - b.rateJPY);
 
-    console.log(`✅ Successfully found ${options.length} FedEx rate(s)`);
-    console.log(`   Cheapest: ${options[0].serviceName} - ¥${options[0].rateJPY}`);
-
+    `);
+    
     return {
       success: true,
       options

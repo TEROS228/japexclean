@@ -15,8 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const session = await stripe.checkout.sessions.retrieve(session_id as string);
     
-    console.log('Stripe session metadata:', session.metadata);
-    
+        
     if (session.payment_status === 'paid') {
       // Get amount from metadata
       const originalAmount = session.metadata?.originalAmount

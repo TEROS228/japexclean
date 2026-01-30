@@ -19,8 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'State/Province is required for this country' });
     }
 
-    console.log('📦 FedEx Rate Request:', {
-      weight: parseFloat(weight),
+    ,
       toCountry,
       toCity,
       toState: toState || 'N/A',
@@ -39,8 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       itemDescription: 'General Merchandise'
     });
 
-    console.log('✅ FedEx Rate Response:', result);
-
+    
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error calculating FedEx rates:', error);

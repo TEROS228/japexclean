@@ -234,8 +234,7 @@ export default function SearchPage() {
     if (product && product._source === 'yahoo') {
       const yahooProductKey = `yahoo-product-${product.itemCode}`;
       sessionStorage.setItem(yahooProductKey, JSON.stringify(product));
-      console.log('[Search] Saved Yahoo product to sessionStorage:', product.itemCode);
-    }
+          }
 
     const url = product.itemUrl
       ? `/product/${product.itemCode}?url=${encodeURIComponent(product.itemUrl)}`
@@ -298,29 +297,23 @@ export default function SearchPage() {
     setAppliedMinPrice("");
     setAppliedMaxPrice("");
 
-    console.log('[Search] Query received:', searchQuery);
-
+    
     // Проверяем, является ли это URL от Rakuten
     const rakutenUrlMatch = searchQuery.match(/item\.rakuten\.co\.jp\/[^\/]+\/([^\/\?]+)/);
 
     // Проверяем, является ли это URL от Yahoo Shopping (все варианты)
     const yahooUrlMatch = searchQuery.match(/shopping\.yahoo\.co\.jp|paypaymall\.yahoo\.co\.jp/);
 
-    console.log('[Search] Rakuten URL match:', rakutenUrlMatch ? 'YES' : 'NO');
-    console.log('[Search] Yahoo URL match:', yahooUrlMatch ? 'YES' : 'NO');
-
+        
     if (rakutenUrlMatch) {
       // Это URL Rakuten - загружаем товар по URL
-      console.log('[Search] Loading Rakuten product by URL');
-      handleProductByUrl(searchQuery);
+            handleProductByUrl(searchQuery);
     } else if (yahooUrlMatch) {
       // Это URL Yahoo Shopping - загружаем товар по URL
-      console.log('[Search] Loading Yahoo product by URL');
-      handleProductByYahooUrl(searchQuery);
+            handleProductByYahooUrl(searchQuery);
     } else {
       // Это обычный текстовый поиск
-      console.log('[Search] Performing text search');
-      handleSearch(searchQuery);
+            handleSearch(searchQuery);
     }
   }, [query, isRestoring, marketplace]);
 
@@ -385,8 +378,7 @@ export default function SearchPage() {
       const data = await res.json();
 
       if (data.success && data.product) {
-        console.log("✅ Product found");
-        // Показываем товар как карточку в результатах поиска
+                // Показываем товар как карточку в результатах поиска
         setProducts([data.product]);
         setLoadedPages({ 1: [data.product] });
         setCurrentPage(1);
@@ -407,8 +399,7 @@ export default function SearchPage() {
     setError("");
 
     try {
-      console.log("🔍 Fetching Yahoo product from URL:", url);
-
+      
       // Используем новый endpoint для парсинга Yahoo страницы напрямую
       const res = await fetch(`/api/yahoo/product-by-url?url=${encodeURIComponent(url)}`);
 
@@ -420,8 +411,7 @@ export default function SearchPage() {
       const data = await res.json();
 
       if (data.success && data.product && data.product.itemCode) {
-        console.log("✅ Yahoo product found:", data.product.itemName);
-
+        
         // Показываем товар как карточку в результатах поиска
         setProducts([data.product]);
         setLoadedPages({ 1: [data.product] });

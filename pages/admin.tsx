@@ -559,17 +559,13 @@ export default function AdminPage() {
   };
 
   const fetchCompensationRequests = async () => {
-    console.log('🔴 fetchCompensationRequests CALLED');
-    try {
+        try {
       const token = localStorage.getItem('auth_token');
-      console.log('🔴 Token:', token ? 'exists' : 'missing');
-      if (!token) {
-        console.log('🔴 No token, returning early');
-        return;
+            if (!token) {
+                return;
       }
 
-      console.log('🔴 Fetching compensation requests...');
-      const response = await fetch(`/api/admin/compensation-requests?_t=${Date.now()}`, {
+            const response = await fetch(`/api/admin/compensation-requests?_t=${Date.now()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -578,13 +574,10 @@ export default function AdminPage() {
         cache: 'no-store'
       });
 
-      console.log('Compensation requests response status:', response.status);
-
+      
       if (response.ok) {
         const data = await response.json();
-        console.log('Compensation requests data:', data);
-        console.log('Number of requests:', data.requests?.length || 0);
-        setCompensationRequests(data.requests);
+                        setCompensationRequests(data.requests);
       } else {
         console.error('Failed to fetch compensation requests:', response.status);
       }
@@ -594,16 +587,13 @@ export default function AdminPage() {
   };
 
   const fetchDamagedItemRequests = async () => {
-    console.log('🔴 fetchDamagedItemRequests CALLED');
-    try {
+        try {
       const token = localStorage.getItem('auth_token');
       if (!token) {
-        console.log('🔴 No token for damaged items');
-        return;
+                return;
       }
 
-      console.log('🔴 Fetching damaged item requests...');
-      const response = await fetch(`/api/admin/damaged-item-requests?_t=${Date.now()}`, {
+            const response = await fetch(`/api/admin/damaged-item-requests?_t=${Date.now()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -612,13 +602,10 @@ export default function AdminPage() {
         cache: 'no-store'
       });
 
-      console.log('Damaged item requests response status:', response.status);
-
+      
       if (response.ok) {
         const data = await response.json();
-        console.log('Damaged item requests data:', data);
-        console.log('Number of damaged requests:', data.requests?.length || 0);
-        setDamagedItemRequests(data.requests);
+                        setDamagedItemRequests(data.requests);
       } else {
         console.error('Failed to fetch damaged item requests:', response.status);
       }
@@ -714,8 +701,7 @@ export default function AdminPage() {
 
   // Функция для загрузки всех данных админки
   const loadAllAdminData = async () => {
-    console.log('🟢 loadAllAdminData CALLED - starting Promise.all');
-    try {
+        try {
       await Promise.all([
         fetchOrders(),
         fetchWarehouseItems(),
@@ -730,8 +716,7 @@ export default function AdminPage() {
         fetchShippingRequests(),
         fetchUnreadCount()
       ]);
-      console.log('🟢 loadAllAdminData COMPLETED');
-    } catch (error) {
+          } catch (error) {
       console.error('🔴 loadAllAdminData ERROR:', error);
     }
   };
@@ -790,8 +775,7 @@ export default function AdminPage() {
       ));
 
       // Проверяем результаты
-      console.log(`Updated domestic shipping cost for ${itemIds.length} items to ¥${cost}`);
-
+      
       // Обновляем данные в зависимости от активной вкладки
       if (activeTab === 'warehouse') {
         fetchWarehouseItems();
@@ -2652,10 +2636,7 @@ export default function AdminPage() {
                     <div className="mt-4 pt-4 border-t border-gray-200 flex gap-3">
                       <button
                         onClick={() => {
-                          console.log('Selected package for consolidation:', pkg);
-                          console.log('consolidateWith:', pkg.consolidateWith);
-                          console.log('consolidateWithPackages:', pkg.consolidateWithPackages);
-                          setSelectedConsolidationPackage(pkg);
+                                                                                                        setSelectedConsolidationPackage(pkg);
                           // Вычисляем начальную стоимость доставки (сумма всех пакетов включая domestic shipping)
                           const consolidateWithIds = pkg.consolidateWith ? JSON.parse(pkg.consolidateWith) : [];
                           const totalCost = (pkg.shippingCost + (pkg.domesticShippingCost || 0)) +
@@ -2852,8 +2833,7 @@ export default function AdminPage() {
                             setDisposalRequests(prev => prev.filter(p => p.id !== pkg.id));
 
                             // Уведомляем другие вкладки об обновлении
-                            console.log('[ADMIN] 📡 Broadcasting disposal complete...');
-                            broadcastUpdate('admin-data');
+                                                        broadcastUpdate('admin-data');
                             broadcastUpdate('packages'); // Также отправляем broadcast для профиля
 
                             // Показываем alert после обновления UI
@@ -2899,8 +2879,7 @@ export default function AdminPage() {
                               setDisposalRequests(prev => prev.filter(p => p.id !== pkg.id));
 
                               // Уведомляем другие вкладки об обновлении
-                              console.log('[ADMIN] 📡 Broadcasting disposal declined...');
-                              broadcastUpdate('admin-data');
+                                                            broadcastUpdate('admin-data');
                               broadcastUpdate('packages'); // Также отправляем broadcast для профиля
 
                               // Показываем alert после обновления UI
@@ -3019,8 +2998,7 @@ export default function AdminPage() {
                                 );
 
                                 // Уведомляем другие вкладки об обновлении
-                                console.log('[ADMIN] 📡 Broadcasting cancel purchase payment request...');
-                                broadcastUpdate('admin-data');
+                                                                broadcastUpdate('admin-data');
                                 broadcastUpdate('packages');
 
                                 // Показываем alert после обновления UI
@@ -3064,8 +3042,7 @@ export default function AdminPage() {
                                 setCancelPurchaseRequests(prev => prev.filter(p => p.id !== pkg.id));
 
                                 // Уведомляем другие вкладки об обновлении
-                                console.log('[ADMIN] 📡 Broadcasting cancel purchase rejected...');
-                                broadcastUpdate('admin-data');
+                                                                broadcastUpdate('admin-data');
                                 broadcastUpdate('packages');
 
                                 // Показываем alert после обновления UI
@@ -4173,9 +4150,7 @@ export default function AdminPage() {
 
                   try {
                     const token = localStorage.getItem('auth_token');
-                    console.log('Sending consolidation request for package:', selectedConsolidationPackage.id);
-                    console.log('Package consolidateWith:', selectedConsolidationPackage.consolidateWith);
-
+                                        
                     // Конвертируем вес в килограммы если введён в граммах
                     let weightInKg = consolidationWeight ? parseFloat(consolidationWeight) : undefined;
                     if (weightInKg && consolidationWeightUnit === 'g') {
@@ -4208,8 +4183,7 @@ export default function AdminPage() {
                       setConsolidationShippingCost("");
 
                       // Уведомляем другие вкладки об обновлении
-                      console.log('[ADMIN] 📡 Broadcasting consolidation complete...');
-                      broadcastUpdate('admin-data');
+                                            broadcastUpdate('admin-data');
                       broadcastUpdate('packages'); // Также отправляем broadcast для профиля
 
                       // Показываем alert с новым ID
@@ -4370,8 +4344,7 @@ export default function AdminPage() {
                       setCancelPurchaseRequests(prev => prev.filter(p => p.id !== selectedCancelPackage.id));
 
                       // Уведомляем другие вкладки об обновлении
-                      console.log('[ADMIN] 📡 Broadcasting cancellation completed...');
-                      broadcastUpdate('admin-data');
+                                            broadcastUpdate('admin-data');
                       broadcastUpdate('packages');
 
                       setShowRefundModal(false);
@@ -5180,8 +5153,7 @@ function ReinforcementRequestCard({ pkg, lastUpdateTimeRef, onCompleted }: any) 
         }
 
         // Уведомляем другие вкладки об обновлении
-        console.log('[ADMIN] 📡 Broadcasting reinforcement complete...');
-        broadcastUpdate('admin-data');
+                broadcastUpdate('admin-data');
         broadcastUpdate('packages'); // Также отправляем broadcast для профиля
 
         // Показываем alert после обновления UI
@@ -5328,12 +5300,10 @@ function PhotoRequestCard({ pkg, lastUpdateTimeRef, onPhotoUploaded }: any) {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('📸 Upload successful, URL:', data.url);
-
+        
         // Добавляем timestamp для обхода кэша
         const imageUrl = data.url + '?t=' + Date.now();
-        console.log('🔗 Full image URL:', imageUrl);
-
+        
         setPhotoUrls([...photoUrls, imageUrl]);
         // Очищаем input
         e.target.value = '';
@@ -5390,8 +5360,7 @@ function PhotoRequestCard({ pkg, lastUpdateTimeRef, onPhotoUploaded }: any) {
         setPhotoUrls([]);
 
         // Уведомляем другие вкладки об обновлении
-        console.log('[ADMIN] 📡 Broadcasting photos uploaded...');
-        broadcastUpdate('admin-data');
+                broadcastUpdate('admin-data');
         broadcastUpdate('packages'); // Также отправляем broadcast для профиля
 
         // Показываем alert после обновления UI
@@ -5486,8 +5455,7 @@ function PhotoRequestCard({ pkg, lastUpdateTimeRef, onPhotoUploaded }: any) {
                   alt={`Photo ${index + 1}`}
                   className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
                   onLoad={(e) => {
-                    console.log('✅ Image loaded successfully:', url);
-                  }}
+                                      }}
                   onError={(e) => {
                     console.error('❌ Image failed to load:', url);
                     e.currentTarget.src = '/placeholder.png';

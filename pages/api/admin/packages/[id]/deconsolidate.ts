@@ -68,8 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Original order items not found' });
     }
 
-    console.log(`Deconsolidating package ${id} into ${originalItems.length} separate packages`);
-
+    
     // Создаем отдельный package для каждого оригинального item
     const newPackages = [];
     for (const item of originalItems) {

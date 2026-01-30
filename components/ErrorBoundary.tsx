@@ -18,8 +18,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   static getDerivedStateFromError(error: Error): State {
     // Игнорируем NotFoundError от Google Translate
     if (error.name === 'NotFoundError' || error.message?.includes('can not be found here')) {
-      console.debug('[ErrorBoundary] Ignoring NotFoundError from Google Translate');
-      return { hasError: false }; // НЕ считаем это ошибкой
+            return { hasError: false }; // НЕ считаем это ошибкой
     }
     return { hasError: true };
   }
@@ -27,8 +26,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: any) {
     // Игнорируем NotFoundError
     if (error.name === 'NotFoundError' || error.message?.includes('can not be found here')) {
-      console.debug('[ErrorBoundary] Caught and ignored NotFoundError');
-      return; // Ничего не делаем
+            return; // Ничего не делаем
     }
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
   }

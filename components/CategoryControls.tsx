@@ -12,6 +12,7 @@ interface Props {
 
 const CategoryControls = ({ initialProducts, categoryId }: Props) => {
   const router = useRouter();
+  const { subcategoryId } = router.query;
 
   const [sortOrder, setSortOrder] = useState<string>("");
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
@@ -28,6 +29,7 @@ const CategoryControls = ({ initialProducts, categoryId }: Props) => {
 
   const category = allCategories.find(c => c.id.toString() === categoryId);
   const subcategories = category?.subcategories || [];
+  const subcategory = subcategories.find(s => s.id.toString() === subcategoryId);
 
   // Закрытие dropdown при клике вне
   useEffect(() => {
@@ -207,8 +209,21 @@ const CategoryControls = ({ initialProducts, categoryId }: Props) => {
       <p className="text-gray-600 text-sm mb-4">{loadedPages[currentPage]?.length || 0} items</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {loading && <p className="col-span-full text-center text-gray-500">Loading...</p>}
-        {loadedPages[currentPage]?.map(product => (
-          <Link key={product.itemCode} href={`/product/${product.itemCode}`} className="border rounded-lg p-3 hover:shadow-lg hover:border-orange-500 transition duration-300 ease-in-out flex flex-col h-full">
+        {loadedPages[currentPage]?.map(product => {
+          // Всегда используем category из найденной категории по categoryId
+          const categoryName = category?.name || '';
+          const subcategoryName = subcategory?.name || '';
+
+          let productUrl = `/product/${product.itemCode}`;
+          if (categoryName) {
+            productUrl += `?category=${encodeURIComponent(categoryName)}`;
+            if (subcategoryName) {
+              productUrl += `&subcategory=${encodeURIComponent(subcategoryName)}`;
+            }
+          }
+
+          return (
+          <Link key={product.itemCode} href={productUrl} className="border rounded-lg p-3 hover:shadow-lg hover:border-orange-500 transition duration-300 ease-in-out flex flex-col h-full">
             <img
               src={product.mediumImageUrls?.[0]?.imageUrl || ""}
               alt={product.itemName}
@@ -220,7 +235,8 @@ const CategoryControls = ({ initialProducts, categoryId }: Props) => {
               <span className="font-bold text-orange-700 text-lg">¥{String(product.itemPrice).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</span>
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
 
       {renderPagination()}

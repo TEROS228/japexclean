@@ -88,8 +88,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
             // Если это новый пользователь - редиректим на страницу купонов
             if (data.isNewUser && typeof window !== 'undefined') {
-              console.log('[UserContext] New Google user detected, redirecting to coupons...');
-              // Небольшая задержка чтобы state успел обновиться
+                            // Небольшая задержка чтобы state успел обновиться
               setTimeout(() => {
                 window.location.href = '/profile?tab=coupons';
               }, 100);

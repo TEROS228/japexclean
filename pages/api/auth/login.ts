@@ -4,16 +4,14 @@ import { generateToken } from '@/lib/jwt';
 import bcrypt from 'bcrypt';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log('Login API called');
-  
+    
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
     const { email, password } = req.body;
-    console.log('Login attempt:', { email });
-
+    
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
@@ -40,8 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       isAdmin: user.isAdmin
     });
 
-    console.log('Login successful for user:', user.id);
-
+    
     // Возвращаем успешный ответ
     res.status(200).json({
       token,

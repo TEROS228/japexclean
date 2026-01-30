@@ -37,7 +37,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const { showNotification } = useNotification();
   const { formatPrice } = useCurrency();
   const { user } = useUserContext();
-  const { itemCode } = router.query;
+  const { itemCode, category, subcategory } = router.query;
 
   const [product, setProduct] = useState(initialProduct || null);
   const [loading, setLoading] = useState(!initialProduct);
@@ -48,6 +48,14 @@ export default function ProductPage({ product: initialProduct }: { product: any 
 
   // Принудительно устанавливаем viewport для мобильных устройств
   useEffect(() => {
+    // Проверяем ширину экрана
+    const isMobile = window.innerWidth <= 768;
+
+    if (!isMobile) {
+      // На десктопе не меняем viewport
+      return;
+    }
+
     // Находим существующий viewport meta tag
     let viewportMeta = document.querySelector('meta[name="viewport"]');
 
@@ -58,10 +66,8 @@ export default function ProductPage({ product: initialProduct }: { product: any 
       document.head.appendChild(viewportMeta);
     }
 
-    // Устанавливаем нужные значения
+    // Устанавливаем нужные значения только для мобильных
     viewportMeta.setAttribute('content', 'width=720, initial-scale=0.5, minimum-scale=0.5, maximum-scale=2, user-scalable=yes');
-
-    console.log('[Product Page] Viewport set to:', viewportMeta.getAttribute('content'));
 
     // Принудительная перезагрузка viewport
     const tempContent = viewportMeta.getAttribute('content');
@@ -74,13 +80,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   // Логируем postageFlag для отладки
   useEffect(() => {
     if (product) {
-      console.log('[Product Page] postageFlag:', product.postageFlag, 'type:', typeof product.postageFlag);
-      console.log('[Product Page] Full product data:', {
-        itemCode: product.itemCode,
-        itemName: product.itemName,
-        itemPrice: product.itemPrice,
-      });
-    }
+                }
   }, [product]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
@@ -140,15 +140,13 @@ export default function ProductPage({ product: initialProduct }: { product: any 
 
     const enhancedMediumUrls = [{ imageUrl: enhancedImageUrl }];
 
-    console.log('[Product Page] Enhanced Yahoo image in high quality');
-
+    
     return {
       ...product,
       imageUrl: enhancedImageUrl,
       mediumImageUrls: enhancedMediumUrls,
     };
   };
-
 
   // Проверяем sessionStorage и загружаем Yahoo товары через API
   useEffect(() => {
@@ -161,16 +159,14 @@ export default function ProductPage({ product: initialProduct }: { product: any 
 
       // Если есть initialProduct, используем его
       if (initialProduct) {
-        console.log('[Product Page] Using initialProduct:', initialProduct.itemName);
-        if (mounted) {
+                if (mounted) {
           setProduct(initialProduct);
           setLoading(false);
         }
         return;
       }
 
-      console.log('[Product Page] No initialProduct, loading from client...');
-      if (mounted) setLoading(true);
+            if (mounted) setLoading(true);
 
       // Проверяем sessionStorage для Yahoo товаров
       const yahooProductKey = `yahoo-product-${itemCode}`;
@@ -180,9 +176,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
         try {
           let yahooProduct = JSON.parse(savedYahooProduct);
 
-          console.log('[Product Page] Loading Yahoo product from sessionStorage:', yahooProduct.itemName, 'price:', yahooProduct.itemPrice);
-          console.log('[Product Page] Image URL from sessionStorage:', yahooProduct.imageUrl);
-
+                    
           // Устанавливаем товар сразу
           if (mounted) {
             setProduct(yahooProduct);
@@ -194,15 +188,13 @@ export default function ProductPage({ product: initialProduct }: { product: any 
 
           if (!hasHighQualityImage && yahooProduct.itemUrl && mounted) {
             // Загружаем изображение высокого качества со страницы в фоне
-            console.log('[Product Page] Loading high quality image from Yahoo page...');
-
+            
             fetch(`/api/yahoo/images?url=${encodeURIComponent(yahooProduct.itemUrl)}`)
               .then(res => res.json())
               .then(data => {
                 if (data.images && data.images.length > 0 && mounted) {
                   const highQualityImage = data.images[0];
-                  console.log('[Product Page] Loaded high quality image:', highQualityImage);
-
+                  
                   // Обновляем только изображение, сохраняя остальные данные
                   setProduct((prevProduct: any) => {
                     if (!prevProduct) return prevProduct;
@@ -225,32 +217,27 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                 console.error('[Product Page] Error loading high quality image:', e);
               });
           } else if (hasHighQualityImage) {
-            console.log('[Product Page] High quality image already loaded from cache');
-          }
+                      }
 
           return;
         } catch (e) {
           console.error('[Product Page] Failed to parse from sessionStorage:', e);
         }
       } else {
-        console.log('[Product Page] No Yahoo product in sessionStorage for key:', yahooProductKey);
-      }
+              }
 
       // Если товара нет в sessionStorage, пробуем загрузить через Yahoo API
-      console.log('[Product Page] Trying to load via Yahoo API...');
-
+      
       try {
         const productCode = typeof itemCode === 'string' ? itemCode.split('_').pop() : itemCode;
 
-        console.log('[Product Page] Fetching Yahoo product via API, code:', productCode);
-        const res = await fetch(`/api/yahoo/product?code=${encodeURIComponent(productCode as string)}`);
+                const res = await fetch(`/api/yahoo/product?code=${encodeURIComponent(productCode as string)}`);
 
         if (res.ok) {
           const yahooProduct = await res.json();
 
           if (yahooProduct && yahooProduct.itemCode && mounted) {
-            console.log('[Product Page] Yahoo product loaded via API:', yahooProduct.itemName);
-            setProduct(yahooProduct);
+                        setProduct(yahooProduct);
             setLoading(false);
             return;
           }
@@ -259,8 +246,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
         console.error('[Product Page] Failed to load Yahoo product via API:', e);
       }
 
-      console.log('[Product Page] Product not found');
-      if (mounted) setLoading(false);
+            if (mounted) setLoading(false);
     };
 
     loadYahooProduct();
@@ -278,323 +264,347 @@ export default function ProductPage({ product: initialProduct }: { product: any 
     }
   }, [product]);
 
-  // Загружаем отзывы
+  // Параллельная загрузка отзывов, вариантов и рекомендаций
   useEffect(() => {
-    if (!product?.itemCode) return;
+    if (!product?.itemCode || !product?.itemUrl) return;
 
-    const fetchReviews = async () => {
-      // Определяем source: если есть _source, используем его, иначе считаем что это rakuten
-      const source = product._source || 'rakuten';
-
-      console.log('[Reviews] Fetching reviews for:', product.itemCode, 'source:', source, 'itemUrl:', product.itemUrl);
-
-      // Для Yahoo используем данные из самого товара, так как API недоступен
-      if (source === 'yahoo') {
-        console.log('[Reviews] Using Yahoo product data - reviewCount:', product.reviewCount, 'reviewAverage:', product.reviewAverage);
-        setReviews([]);
-        setAverageRating(product.reviewAverage || 0);
-        setTotalReviews(product.reviewCount || 0);
-        setReviewsUnavailable(true); // API недоступен, показываем только рейтинг
-        setReviewsLoading(false);
-        return;
-      }
-
-      // Для Rakuten загружаем отзывы через API
-      setReviewsLoading(true);
-      try {
-        const url = new URL('/api/product/reviews', window.location.origin);
-        url.searchParams.set('itemCode', product.itemCode);
-        url.searchParams.set('source', source);
-        if (product.itemUrl) {
-          url.searchParams.set('itemUrl', product.itemUrl);
-        }
-
-        const response = await fetch(url.toString());
-
-        console.log('[Reviews] Response status:', response.status);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('[Reviews] Received data:', data);
-          setReviews(data.reviews || []);
-          setAverageRating(data.averageRating || 0);
-          setTotalReviews(data.totalCount || 0);
-          setReviewsUnavailable(data.reviewsUnavailable || false);
-        }
-      } catch (error) {
-        console.error('Failed to load reviews:', error);
-      } finally {
-        setReviewsLoading(false);
-      }
-    };
-
-    fetchReviews();
-  }, [product?.itemCode, product?._source, product?.reviewCount, product?.reviewAverage]);
-
-  // Загружаем варианты через API (для Rakuten и Yahoo)
-  useEffect(() => {
-    if (!product?.itemUrl) return;
-
-    // Сохраняем значения в локальные переменные чтобы избежать проблем с замыканием
-    const productItemCode = product.itemCode;
-    const productItemUrl = product.itemUrl;
-    const productSource = product._source;
-
-    // Используем ref чтобы избежать повторных запросов
     let didCancel = false;
 
-    async function loadVariants() {
-      try {
-        setLoadingVariants(true);
-        setVariantError(null);
+    const fetchAllData = async () => {
+      // Определяем общие переменные для всех функций
+      const productSource = product._source || 'rakuten';
+      const productItemUrl = product.itemUrl;
+      const productItemCode = product.itemCode;
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 секунд для Puppeteer с кликами
+      // Функция загрузки отзывов
+      const fetchReviews = async () => {
+        // Определяем source: если есть _source, используем его, иначе считаем что это rakuten
+        const source = product._source || 'rakuten';
 
-        // Используем разные API endpoints для Yahoo и Rakuten
-        const apiEndpoint = productSource === 'yahoo'
-          ? `/api/yahoo/variants?url=${encodeURIComponent(productItemUrl)}`
-          : `/api/parse-variants?url=${encodeURIComponent(productItemUrl)}`;
-
-        const res = await fetch(apiEndpoint, {
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
+        
+        // Для Yahoo используем данные из самого товара, так как API недоступен
+        if (source === 'yahoo') {
+                    if (!didCancel) {
+            setReviews([]);
+            setAverageRating(product.reviewAverage || 0);
+            setTotalReviews(product.reviewCount || 0);
+            setReviewsUnavailable(true);
+            setReviewsLoading(false);
+          }
+          return;
         }
 
-        const data = await res.json();
-        console.log('API Response:', data); // Для дебага
-
-        if (didCancel) return; // Прекращаем если компонент размонтирован
-
-        if (data.success && data.variants) {
-          const variantsArray = data.variants as RakutenVariant[];
-          console.log('Variants array:', variantsArray); // Для дебага
-
-          // Обновляем postageFlag если есть в ответе
-          if (data.postageFlag !== undefined && data.postageFlag !== null && !didCancel) {
-            console.log('[Variants API] Updating postageFlag from variants API:', data.postageFlag);
-            setProduct((prev: any) => {
-              // Используем значение из API напрямую, так как оно более надежное
-              if (prev.postageFlag === data.postageFlag) return prev;
-              return {
-                ...prev,
-                postageFlag: data.postageFlag
-              };
-            });
+        // Для Rakuten загружаем отзывы через API
+        setReviewsLoading(true);
+        try {
+          const url = new URL('/api/product/reviews', window.location.origin);
+          url.searchParams.set('itemCode', product.itemCode);
+          url.searchParams.set('source', source);
+          if (product.itemUrl) {
+            url.searchParams.set('itemUrl', product.itemUrl);
           }
 
-          // Сохраняем colorSizeMapping если есть
-          if (data.colorSizeMapping) {
-            setColorSizeMapping(data.colorSizeMapping);
-            console.log('Color-Size Mapping:', data.colorSizeMapping); // Для дебага
+          const response = await fetch(url.toString());
+          
+          if (response.ok) {
+            const data = await response.json();
+                        if (!didCancel) {
+              setReviews(data.reviews || []);
+              setAverageRating(data.averageRating || 0);
+              setTotalReviews(data.totalCount || 0);
+              setReviewsUnavailable(data.reviewsUnavailable || false);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load reviews:', error);
+        } finally {
+          if (!didCancel) {
+            setReviewsLoading(false);
+          }
+        }
+      };
+
+      // Функция загрузки вариантов
+      const fetchVariants = async () => {
+        try {
+          setLoadingVariants(true);
+          setVariantError(null);
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 секунд для Puppeteer с кликами
+
+          // Используем разные API endpoints для Yahoo и Rakuten
+          const apiEndpoint = productSource === 'yahoo'
+            ? `/api/yahoo/variants?url=${encodeURIComponent(productItemUrl)}`
+            : `/api/parse-variants?url=${encodeURIComponent(productItemUrl)}`;
+
+          const res = await fetch(apiEndpoint, {
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
           }
 
-          const convertedVariants: Variant[] = [];
+          const data = await res.json();
+          
+          if (didCancel) return;
 
-          // Проверяем есть ли groups (структурированные данные)
-          if (data.groups && data.groups.length > 0) {
-            // Используем структурированные группы
-            data.groups.forEach((group: any) => {
-              const values = group.options.map((opt: any) => ({
-                value: opt.value,
-                itemCode: `${productItemCode}_${group.name}_${opt.value}`,
-                isAvailable: opt.available !== false,
-                price: opt.price // Добавляем цену из парсера
-              }));
+          if (data.success && data.variants) {
+            const variantsArray = data.variants as RakutenVariant[];
+            
+            // Обновляем postageFlag если есть в ответе
+            if (data.postageFlag !== undefined && data.postageFlag !== null && !didCancel) {
+                            setProduct((prev: any) => {
+                // Используем значение из API напрямую, так как оно более надежное
+                if (prev.postageFlag === data.postageFlag) return prev;
+                return {
+                  ...prev,
+                  postageFlag: data.postageFlag
+                };
+              });
+            }
 
-              if (values.length > 0) {
+            // Сохраняем colorSizeMapping если есть
+            if (data.colorSizeMapping) {
+              setColorSizeMapping(data.colorSizeMapping);
+                          }
+
+            const convertedVariants: Variant[] = [];
+
+            // Проверяем есть ли groups (структурированные данные)
+            if (data.groups && data.groups.length > 0) {
+              // Используем структурированные группы
+              data.groups.forEach((group: any) => {
+                const values = group.options.map((opt: any) => ({
+                  value: opt.value,
+                  itemCode: `${productItemCode}_${group.name}_${opt.value}`,
+                  isAvailable: opt.available !== false,
+                  price: opt.price
+                }));
+
+                if (values.length > 0) {
+                  convertedVariants.push({
+                    optionName: group.name,
+                    values: values
+                  });
+                }
+              });
+              // Fallback: разделяем варианты на цвета и размеры
+              const colorVariants = variantsArray.filter(v =>
+                v.name.includes('ブラック') || v.name.includes('ブルー') ||
+                v.name.includes('Black') || v.name.includes('Blue') ||
+                v.name.toLowerCase().includes('color') || v.name.includes('カラー') ||
+                v.name.includes('レッド') || v.name.includes('グリーン') ||
+                v.name.includes('ホワイト') || v.name.includes('イエロー') ||
+                v.name.includes('ピンク') || v.name.includes('パープル')
+              );
+
+              const sizeVariants = variantsArray.filter(v =>
+                ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL', '8XL']
+                  .some(size => v.name.includes(size)) ||
+                v.name.includes('サイズ') || v.name.toLowerCase().includes('size') ||
+                /\d+cm/i.test(v.name) || /\d+\s*（\s*cm\s*）/.test(v.name)
+              );
+
+              // Добавляем группу цветов
+              if (colorVariants.length > 0) {
                 convertedVariants.push({
-                  optionName: group.name,
-                  values: values
+                  optionName: "Color",
+                  values: colorVariants.map(v => ({
+                    value: v.name,
+                    itemCode: `${productItemCode}_color_${v.value}`,
+                    isAvailable: v.isAvailable
+                  }))
                 });
               }
-            });
-          } else {
-            // Fallback: разделяем варианты на цвета и размеры
-            const colorVariants = variantsArray.filter(v =>
-              v.name.includes('ブラック') || v.name.includes('ブルー') ||
-              v.name.includes('Black') || v.name.includes('Blue') ||
-              v.name.toLowerCase().includes('color') || v.name.includes('カラー') ||
-              v.name.includes('レッド') || v.name.includes('グリーン') || // Red, Green
-              v.name.includes('ホワイト') || v.name.includes('イエロー') || // White, Yellow
-              v.name.includes('ピンク') || v.name.includes('パープル') // Pink, Purple
-            );
 
-            const sizeVariants = variantsArray.filter(v =>
-              ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL', '8XL']
-                .some(size => v.name.includes(size)) ||
-              v.name.includes('サイズ') || v.name.toLowerCase().includes('size') ||
-              /\d+cm/i.test(v.name) || /\d+\s*（\s*cm\s*）/.test(v.name)
-            );
+              // Добавляем группу размеров
+              if (sizeVariants.length > 0) {
+                convertedVariants.push({
+                  optionName: "Size",
+                  values: sizeVariants.map(v => ({
+                    value: v.name,
+                    itemCode: `${productItemCode}_size_${v.value}`,
+                    isAvailable: v.isAvailable
+                  }))
+                });
+              }
 
-            // Добавляем группу цветов
-            if (colorVariants.length > 0) {
-              convertedVariants.push({
-                optionName: "Color",
-                values: colorVariants.map(v => ({
-                  value: v.name,
-                  itemCode: `${productItemCode}_color_${v.value}`,
-                  isAvailable: v.isAvailable
-                }))
+              // Если не удалось разделить, используем общую группу
+              if (convertedVariants.length === 0 && variantsArray.length > 0) {
+                convertedVariants.push({
+                  optionName: "Options",
+                  values: variantsArray.map(v => ({
+                    value: v.name,
+                    itemCode: `${productItemCode}_option_${v.value}`,
+                    isAvailable: v.isAvailable
+                  }))
+                });
+              }
+            }
+
+            if (!didCancel) {
+              setVariants(convertedVariants);
+
+              // Проверяем, есть ли цены в вариантах
+              convertedVariants.forEach(variant => {
               });
-            }
 
-            // Добавляем группу размеров
-            if (sizeVariants.length > 0) {
-              convertedVariants.push({
-                optionName: "Size",
-                values: sizeVariants.map(v => ({
-                  value: v.name,
-                  itemCode: `${productItemCode}_size_${v.value}`,
-                  isAvailable: v.isAvailable
-                }))
-              });
-            }
-
-            // Если не удалось разделить, используем общую группу
-            if (convertedVariants.length === 0 && variantsArray.length > 0) {
-              convertedVariants.push({
-                optionName: "Options",
-                values: variantsArray.map(v => ({
-                  value: v.name,
-                  itemCode: `${productItemCode}_option_${v.value}`,
-                  isAvailable: v.isAvailable
-                }))
-              });
-            }
-          }
-
-          setVariants(convertedVariants);
-          console.log('Converted variants:', JSON.stringify(convertedVariants, null, 2)); // Для дебага
-
-          // Проверяем, есть ли цены в вариантах
-          convertedVariants.forEach(variant => {
-            console.log(`[Variants] ${variant.optionName}:`, variant.values.map(v => ({
-              value: v.value,
-              price: v.price,
-              available: v.isAvailable
-            })));
-          });
-
-          // Устанавливаем значения по умолчанию (первый доступный вариант)
-          const initial: { [key: string]: string } = {};
-          convertedVariants.forEach(v => {
-            if (v.values.length > 0) {
-              const firstAvailable = v.values.find(val => val.isAvailable !== false);
-              initial[v.optionName] = (firstAvailable || v.values[0]).value;
-            }
-          });
-
-          // Если есть опции из URL, используем их вместо дефолтных
-          if (optionsFromUrl) {
-            Object.keys(optionsFromUrl).forEach(key => {
-              // Проверяем что такая опция существует в вариантах
-              const variant = convertedVariants.find(v => v.optionName === key);
-              if (variant) {
-                const valueExists = variant.values.find(val => val.value === optionsFromUrl[key]);
-                if (valueExists) {
-                  initial[key] = optionsFromUrl[key];
+              // Устанавливаем значения по умолчанию (первый доступный вариант)
+              const initial: { [key: string]: string } = {};
+              convertedVariants.forEach(v => {
+                if (v.values.length > 0) {
+                  const firstAvailable = v.values.find(val => val.isAvailable !== false);
+                  initial[v.optionName] = (firstAvailable || v.values[0]).value;
                 }
+              });
+
+              // Если есть опции из URL, используем их вместо дефолтных
+              if (optionsFromUrl) {
+                Object.keys(optionsFromUrl).forEach(key => {
+                  const variant = convertedVariants.find(v => v.optionName === key);
+                  if (variant) {
+                    const valueExists = variant.values.find(val => val.value === optionsFromUrl[key]);
+                    if (valueExists) {
+                      initial[key] = optionsFromUrl[key];
+                    }
+                  }
+                });
               }
+
+              setSelectedOptions(initial);
+            }
+          } else {
+            // Если вариантов нет, но товар имеет варианты в названии
+            if (!didCancel) {
+              detectVariantsFromProduct();
+            }
+          }
+        } catch (e: any) {
+          if (!didCancel) {
+            if (e.name === 'AbortError') {
+              setVariantError("Request timeout. Please try again.");
+            } else {
+              setVariantError("Failed to load product variants");
+            }
+            console.error("Failed to load variants:", e);
+            detectVariantsFromProduct();
+          }
+        } finally {
+          if (!didCancel) {
+            setLoadingVariants(false);
+          }
+        }
+      };
+
+      // Функция для определения вариантов из данных товара
+      const detectVariantsFromProduct = () => {
+        const productName = product?.itemName || '';
+        const commonSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '2XL', '3XL'];
+        const commonColors = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Purple'];
+
+        const foundSizes = commonSizes.filter(size =>
+          productName.toUpperCase().includes(size.toUpperCase())
+        );
+
+        const foundColors = commonColors.filter(color =>
+          productName.toLowerCase().includes(color.toLowerCase())
+        );
+
+        if (foundSizes.length > 0 || foundColors.length > 0) {
+          const detectedVariants: Variant[] = [];
+
+          if (foundSizes.length > 0) {
+            detectedVariants.push({
+              optionName: "Size",
+              values: foundSizes.map(size => ({
+                value: size,
+                itemCode: `${productItemCode}_size_${size}`,
+                isAvailable: true
+              }))
             });
           }
 
-          setSelectedOptions(initial);
-        } else {
-          // Если вариантов нет, но товар имеет варианты в названии
-          detectVariantsFromProduct();
-        }
-      } catch (e: any) {
-        if (e.name === 'AbortError') {
-          setVariantError("Request timeout. Please try again.");
-        } else {
-          setVariantError("Failed to load product variants");
-        }
-        console.error("Failed to load variants:", e);
-        detectVariantsFromProduct();
-      } finally {
-        setLoadingVariants(false);
-      }
-    }
-
-    // Функция для определения вариантов из данных товара
-    const detectVariantsFromProduct = () => {
-      const productName = product?.itemName || '';
-      const commonSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '2XL', '3XL'];
-      const commonColors = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Purple'];
-
-      const foundSizes = commonSizes.filter(size =>
-        productName.toUpperCase().includes(size.toUpperCase())
-      );
-
-      const foundColors = commonColors.filter(color =>
-        productName.toLowerCase().includes(color.toLowerCase())
-      );
-
-      if (foundSizes.length > 0 || foundColors.length > 0) {
-        const detectedVariants: Variant[] = [];
-
-        if (foundSizes.length > 0) {
-          detectedVariants.push({
-            optionName: "Size",
-            values: foundSizes.map(size => ({
-              value: size,
-              itemCode: `${productItemCode}_size_${size}`,
-              isAvailable: true
-            }))
-          });
-        }
-
-        if (foundColors.length > 0) {
-          detectedVariants.push({
-            optionName: "Color",
-            values: foundColors.map(color => ({
-              value: color,
-              itemCode: `${productItemCode}_color_${color}`,
-              isAvailable: true
-            }))
-          });
-        }
-
-        setVariants(detectedVariants);
-
-        const initial: { [key: string]: string } = {};
-        detectedVariants.forEach(v => {
-          if (v.values.length > 0) {
-            initial[v.optionName] = v.values[0].value;
+          if (foundColors.length > 0) {
+            detectedVariants.push({
+              optionName: "Color",
+              values: foundColors.map(color => ({
+                value: color,
+                itemCode: `${productItemCode}_color_${color}`,
+                isAvailable: true
+              }))
+            });
           }
-        });
 
-        // Если есть опции из URL, используем их вместо дефолтных
-        if (optionsFromUrl) {
-          Object.keys(optionsFromUrl).forEach(key => {
-            // Проверяем что такая опция существует в вариантах
-            const variant = detectedVariants.find(v => v.optionName === key);
-            if (variant) {
-              const valueExists = variant.values.find(val => val.value === optionsFromUrl[key]);
-              if (valueExists) {
-                initial[key] = optionsFromUrl[key];
+          if (!didCancel) {
+            setVariants(detectedVariants);
+
+            const initial: { [key: string]: string } = {};
+            detectedVariants.forEach(v => {
+              if (v.values.length > 0) {
+                initial[v.optionName] = v.values[0].value;
               }
-            }
-          });
-        }
+            });
 
-        setSelectedOptions(initial);
-      }
+            // Если есть опции из URL, используем их вместо дефолтных
+            if (optionsFromUrl) {
+              Object.keys(optionsFromUrl).forEach(key => {
+                const variant = detectedVariants.find(v => v.optionName === key);
+                if (variant) {
+                  const valueExists = variant.values.find(val => val.value === optionsFromUrl[key]);
+                  if (valueExists) {
+                    initial[key] = optionsFromUrl[key];
+                  }
+                }
+              });
+            }
+
+            setSelectedOptions(initial);
+          }
+        }
+      };
+
+      // Функция загрузки рекомендаций
+      const fetchRecommendations = async () => {
+        if (!product?.itemName) return;
+
+        setLoadingRecommendations(true);
+        try {
+          const res = await fetch(`/api/recommendations?itemName=${encodeURIComponent(product.itemName)}&limit=8`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.products && !didCancel) {
+              const filtered = data.products.filter((p: any) => p.itemCode !== product.itemCode);
+              setRecommendations(filtered);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load recommendations:', error);
+        } finally {
+          if (!didCancel) {
+            setLoadingRecommendations(false);
+          }
+        }
+      };
+
+      // Запускаем все три функции параллельно
+      await Promise.all([
+        fetchReviews(),
+        fetchVariants(),
+        fetchRecommendations()
+      ]);
     };
 
-    loadVariants();
+    fetchAllData();
 
     // Cleanup функция
     return () => {
       didCancel = true;
     };
-  }, [product?.itemUrl, product?._source, optionsFromUrl]);
+  }, [product?.itemCode, product?.itemUrl, product?._source, product?.itemName, optionsFromUrl]);
 
   const increase = () => setQuantity(q => q + 1);
   const decrease = () => setQuantity(q => (q > 1 ? q - 1 : 1));
@@ -667,43 +677,34 @@ export default function ProductPage({ product: initialProduct }: { product: any 
       const selectedValue = selectedOptions[variant.optionName];
       if (selectedValue) {
         const option = variant.values.find(v => v.value === selectedValue);
-        console.log('[Price Update] Checking variant:', variant.optionName, 'selected:', selectedValue, 'option:', option);
-        if (option && option.price && option.price > 0) {
+                if (option && option.price && option.price > 0) {
           variantPrice = option.price;
-          console.log('[Price Update] Using variant price:', variantPrice);
-          break; // Используем первую найденную цену варианта
+                    break; // Используем первую найденную цену варианта
         }
       }
     }
 
     // Если есть цена варианта, используем её вместо базовой
     if (variantPrice > 0) {
-      console.log('[Price Update] Final price from variant:', variantPrice);
-      return variantPrice;
+            return variantPrice;
     }
 
     // Если additionalPrice > 0 и есть абсолютные цены, используем additionalPrice как итоговую цену
     if (hasAbsolutePrices && additionalPrice > 0) {
-      console.log('[Price Update] Final price from additional:', additionalPrice);
-      return additionalPrice;
+            return additionalPrice;
     }
 
     // Иначе складываем базовую цену + дополнительную
-    console.log('[Price Update] Final price base + additional:', base + additionalPrice);
-    return base + additionalPrice;
+        return base + additionalPrice;
   }, [product?.itemPrice, additionalPrice, hasAbsolutePrices, selectedOptions, variants]);
 
   const handleOptionChange = (optionName: string, value: string) => {
-    console.log(`\n[handleOptionChange] Called with optionName="${optionName}", value="${value}"`);
-    console.log('[handleOptionChange] colorSizeMapping:', colorSizeMapping);
-
+        
     setSelectedOptions(prev => {
-      console.log('[handleOptionChange] Previous options:', prev);
-      const newOptions = { ...prev, [optionName]: value };
+            const newOptions = { ...prev, [optionName]: value };
 
       if (Object.keys(colorSizeMapping).length === 0) {
-        console.log('[handleOptionChange] No colorSizeMapping, returning simple update');
-        return newOptions;
+                return newOptions;
       }
 
       // Определяем структуру mapping
@@ -713,42 +714,34 @@ export default function ProductPage({ product: initialProduct }: { product: any 
         v.values.some(val => val.value === firstKey)
       );
 
-      console.log('[handleOptionChange] firstKey:', firstKey, 'isSizeFirst:', isSizeFirst);
-
+      
       if (isSizeFirst) {
         // Структура: colorSizeMapping[size] -> colors[]
 
         // Если изменился размер, выбираем первый доступный цвет для этого размера
         if (optionName.includes('Size') || optionName.includes('サイズ')) {
-          console.log('[handleOptionChange] Size changed to:', value);
-          const colorsForSize = colorSizeMapping[value];
-          console.log('[handleOptionChange] Colors for size:', colorsForSize);
-
+                    const colorsForSize = colorSizeMapping[value];
+          
           if (colorsForSize && colorsForSize.length > 0) {
             // Находим название опции цвета
             const colorOptionName = Object.keys(newOptions).find(key => key.includes('Color') || key.includes('カラー'));
             const currentColor = colorOptionName ? newOptions[colorOptionName] : undefined;
-            console.log('[handleOptionChange] Current color:', currentColor);
-
+            
             const isCurrentColorAvailable = colorsForSize.find(c => c.value === currentColor && c.available);
-            console.log('[handleOptionChange] Is current color available?', isCurrentColorAvailable);
-
+            
             if (!isCurrentColorAvailable) {
               // Текущий цвет недоступен для выбранного размера, выбираем первый доступный
               const firstAvailable = colorsForSize.find(c => c.available);
-              console.log('[handleOptionChange] First available color:', firstAvailable);
-
+              
               if (firstAvailable) {
                 if (colorOptionName) {
                   newOptions[colorOptionName] = firstAvailable.value;
                 }
-                console.log('[handleOptionChange] Changed color to:', firstAvailable.value);
-              } else {
+                              } else {
                 if (colorOptionName) {
                   newOptions[colorOptionName] = '';
                 }
-                console.log('[handleOptionChange] No available colors, clearing selection');
-              }
+                              }
             }
           }
         }
@@ -780,35 +773,28 @@ export default function ProductPage({ product: initialProduct }: { product: any 
 
         // Если изменился цвет, автоматически выбираем первый доступный размер
         if (optionName.includes('Color') || optionName.includes('カラー')) {
-          console.log('[handleOptionChange] Color changed to:', value);
-          const sizesForColor = colorSizeMapping[value];
-          console.log('[handleOptionChange] Sizes for color:', sizesForColor);
-
+                    const sizesForColor = colorSizeMapping[value];
+          
           if (sizesForColor && sizesForColor.length > 0) {
             // Находим название опции размера
             const sizeOptionName = Object.keys(newOptions).find(key => key.includes('Size') || key.includes('サイズ'));
             const currentSize = sizeOptionName ? newOptions[sizeOptionName] : undefined;
-            console.log('[handleOptionChange] Current size:', currentSize);
-
+            
             const isCurrentSizeAvailable = sizesForColor.find(s => s.value === currentSize && s.available);
-            console.log('[handleOptionChange] Is current size available?', isCurrentSizeAvailable);
-
+            
             if (!isCurrentSizeAvailable) {
               // Текущий размер недоступен для выбранного цвета, выбираем первый доступный
               const firstAvailable = sizesForColor.find(s => s.available);
-              console.log('[handleOptionChange] First available size:', firstAvailable);
-
+              
               if (firstAvailable) {
                 if (sizeOptionName) {
                   newOptions[sizeOptionName] = firstAvailable.value;
                 }
-                console.log('[handleOptionChange] Changed size to:', firstAvailable.value);
-              } else {
+                              } else {
                 if (sizeOptionName) {
                   newOptions[sizeOptionName] = '';
                 }
-                console.log('[handleOptionChange] No available sizes, clearing selection');
-              }
+                              }
             }
           }
         }
@@ -837,8 +823,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
         }
       }
 
-      console.log('[handleOptionChange] Final options:', newOptions);
-      return newOptions;
+            return newOptions;
     });
   };
 
@@ -989,52 +974,129 @@ export default function ProductPage({ product: initialProduct }: { product: any 
     showNotification("Added to cart successfully!");
   };
 
-  // Загрузка рекомендаций
-  useEffect(() => {
-    if (!product?.itemName) return;
-
-    const loadRecommendations = async () => {
-      setLoadingRecommendations(true);
-      try {
-        const res = await fetch(`/api/recommendations?itemName=${encodeURIComponent(product.itemName)}&limit=8`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.products) {
-            // Фильтруем текущий товар из рекомендаций
-            const filtered = data.products.filter((p: any) => p.itemCode !== product.itemCode);
-            setRecommendations(filtered);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load recommendations:', error);
-      } finally {
-        setLoadingRecommendations(false);
-      }
-    };
-
-    loadRecommendations();
-  }, [product?.itemName, product?.itemCode]);
-
   const hasVariants = variants.length > 0;
   const canAddToCart = !loadingVariants;
 
   const cartItemCount = cart?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
+  // Применяем масштабирование для мобильных устройств
+  useEffect(() => {
+    // Добавляем класс к body для идентификации страницы товара
+    document.body.classList.add('product-page');
+
+    return () => {
+      document.body.classList.remove('product-page');
+    };
+  }, []);
+
   return (
     <>
-      <Head>
-        <meta name="viewport" content="width=720, initial-scale=0.5, user-scalable=yes" />
-      </Head>
+      <Head></Head>
       <style jsx global>{`
-        html, body {
-          overflow-x: hidden !important;
+        /* Desktop версия - ограничиваем размер логотипа */
+        @media (min-width: 769px) {
+          body.product-page header img[alt="Japrix"] {
+            height: 60px !important;
+            max-height: 60px !important;
+          }
         }
-        body > div#__next {
-          width: 720px !important;
-          min-width: 720px !important;
-          transform-origin: top left !important;
-          transform: scale(0.5417) !important; /* 390/720 = 0.5417 */
-          position: relative !important;
+
+        /* Мобильная версия - только для устройств с шириной <= 768px */
+        @media (max-width: 768px) {
+          html, body {
+            overflow-x: hidden !important;
+          }
+          body.product-page > div#__next {
+            width: 720px !important;
+            min-width: 720px !important;
+            transform-origin: top left !important;
+            transform: scale(0.5417) !important; /* 390/720 = 0.5417 */
+            position: relative !important;
+          }
+          /* Компактный header для мобильной версии - убираем md:hidden для показа на mobile */
+          body.product-page header {
+            padding: 12px 0 !important;
+          }
+          body.product-page header > div {
+            max-width: 100% !important;
+            width: 720px !important;
+            margin: 0 auto !important;
+            padding: 0 20px !important;
+          }
+          /* Прячем мобильное меню, показываем desktop элементы */
+          body.product-page header .md\\:hidden {
+            display: none !important;
+          }
+          body.product-page header .hidden.md\\:flex {
+            display: flex !important;
+          }
+          body.product-page header img[alt="Japrix"] {
+            height: 60px !important;
+            max-height: 60px !important;
+          }
+          body.product-page header .mb-3,
+          body.product-page header .mb-4,
+          body.product-page header .sm\\:mb-4 {
+            margin-bottom: 12px !important;
+          }
+          /* Search input */
+          body.product-page header input[type="text"],
+          body.product-page header input[placeholder*="Search"] {
+            padding: 14px 18px 14px 52px !important;
+            font-size: 15px !important;
+            height: 52px !important;
+          }
+          /* Search icon inside input */
+          body.product-page header input ~ svg,
+          body.product-page header .relative > svg {
+            width: 24px !important;
+            height: 24px !important;
+            left: 16px !important;
+          }
+          /* Buttons */
+          body.product-page header button {
+            padding: 14px 20px !important;
+            font-size: 15px !important;
+            min-width: 52px !important;
+            min-height: 52px !important;
+          }
+          /* Увеличиваем размер иконок */
+          body.product-page header svg {
+            width: 24px !important;
+            height: 24px !important;
+          }
+          /* Корректировка для marketplace buttons */
+          body.product-page header .rounded-full.border-2 {
+            min-width: 52px !important;
+            min-height: 52px !important;
+          }
+          /* User menu и cart кнопки */
+          body.product-page header a[href="/cart"] > div,
+          body.product-page header button.w-9,
+          body.product-page header button.sm\\:w-11,
+          body.product-page header a > div.w-9,
+          body.product-page header a > div.sm\\:w-11 {
+            width: 52px !important;
+            height: 52px !important;
+            min-width: 52px !important;
+            min-height: 52px !important;
+          }
+          /* User menu и cart иконки - МАКСИМАЛЬНО специфичный селектор */
+          body.product-page header a[href="/cart"] > div > svg,
+          body.product-page header button.rounded-full > svg,
+          body.product-page header div.rounded-full > svg,
+          body.product-page header a > div.rounded-full svg,
+          body.product-page header button > svg {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            min-height: 28px !important;
+          }
+          /* Меню гамбургер (3 полоски) */
+          body.product-page header button svg {
+            width: 28px !important;
+            height: 28px !important;
+          }
         }
         div :global(img) {
           max-width: 100% !important;
@@ -1042,74 +1104,77 @@ export default function ProductPage({ product: initialProduct }: { product: any 
           display: block;
         }
       `}</style>
-      <div className="min-h-screen bg-gray-50" style={{ minWidth: '720px', width: '720px' }}>
-        {/* Full Width Header with Logo, Search, Cart, User */}
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-50" style={{ minWidth: '720px' }}>
-        <div className="px-4 py-2">
-          {/* Top Row: Menu, Logo, Cart, User */}
-          <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={() => router.back()}
-              className="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-lg"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-
-            <Link href="/" className="flex items-center">
-              <div className="relative w-10 h-10 rounded-full overflow-hidden bg-red-600 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-                  <circle cx="12" cy="12" r="3"/>
+      <div className="min-h-screen bg-gray-50">
+      {/* Breadcrumbs */}
+      {product && (
+        <div className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <nav className="flex items-center space-x-1.5 text-sm overflow-x-auto">
+              <Link
+                href="/"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-gray-600 hover:text-green-600 hover:bg-green-50 transition-all duration-200 whitespace-nowrap group"
+              >
+                <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
-              </div>
-              <span className="ml-2 text-lg font-bold text-gray-900">JAPRIX</span>
-            </Link>
-
-            <div className="flex items-center gap-2">
-              <Link href="/cart" className="relative w-10 h-10 flex items-center justify-center text-gray-700 hover:bg-gray-100 rounded-full">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                {cartItemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold">
-                    {cartItemCount}
-                  </span>
-                )}
+                <span className="font-medium">Home</span>
               </Link>
-
-              <Link href={user ? "/account" : "/login"} className="w-10 h-10 flex items-center justify-center text-gray-700 hover:bg-gray-100 rounded-full">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              {category && (
+                <>
+                  <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <Link
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      router.back();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-gray-600 hover:text-green-600 hover:bg-green-50 transition-all duration-200 whitespace-nowrap group"
+                  >
+                    <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    <span className="font-medium">{String(category)}</span>
+                  </Link>
+                  {subcategory && (
+                    <>
+                      <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <Link
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          router.back();
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-gray-600 hover:text-green-600 hover:bg-green-50 transition-all duration-200 whitespace-nowrap group"
+                      >
+                        <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        <span className="font-medium">{String(subcategory)}</span>
+                      </Link>
+                    </>
+                  )}
+                  <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </>
+              )}
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 font-semibold truncate max-w-[200px] sm:max-w-sm md:max-w-md lg:max-w-lg">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
-              </Link>
-            </div>
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search or paste link"
-              className="w-full px-4 py-2.5 pr-12 border-2 border-gray-200 rounded-full focus:border-green-500 focus:outline-none text-sm"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const value = e.currentTarget.value.trim();
-                  if (value) router.push(`/?search=${encodeURIComponent(value)}`);
-                }
-              }}
-            />
-            <button className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-green-600 hover:bg-green-700 text-white w-9 h-9 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
+                <span className="truncate" title={product.itemName}>
+                  {product.itemName?.substring(0, 50)}{product.itemName?.length > 50 ? '...' : ''}
+                </span>
+              </span>
+            </nav>
           </div>
         </div>
-      </div>
-
-      <div className="px-0 py-4" style={{ minWidth: '720px' }}>
+      )}
+      <div className="px-0 py-4">
         {!product ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
@@ -1521,25 +1586,21 @@ export async function getServerSideProps(context: any) {
 
     if (isYahooUrl) {
       // Для Yahoo товаров возвращаем null - данные будут загружены из sessionStorage на клиенте
-      console.log("Yahoo product URL detected, will load from sessionStorage");
-      return {
+            return {
         props: { product: null }
       };
     }
 
     // Если есть URL параметр, пробуем получить товар по URL через Rakuten API
     if (urlParam && typeof urlParam === 'string') {
-      console.log("Fetching product by URL via Rakuten API:", urlParam);
-      const product = await getProductByUrl(urlParam);
+            const product = await getProductByUrl(urlParam);
 
       if (product) {
-        console.log("Successfully fetched product via API:", product.itemName);
-        return {
+                return {
           props: { product }
         };
       }
-      console.log("Product not found via API URL method, trying itemCode");
-    }
+          }
 
     // Пробуем получить через обычный itemCode
     const product = await getProductById(itemCode);
@@ -1550,16 +1611,14 @@ export async function getServerSideProps(context: any) {
       };
     }
 
-    console.log("Product not found in API");
-  } catch (e) {
+      } catch (e) {
     console.error("Failed to load product from API:", e);
   }
 
   // В крайнем случае пробуем через Puppeteer (только если есть URL)
   if (urlParam && typeof urlParam === 'string') {
     try {
-      console.log("Fetching product from URL:", urlParam);
-      // Импортируем puppeteer для серверного рендеринга
+            // Импортируем puppeteer для серверного рендеринга
       const puppeteer = require('puppeteer');
 
       const browser = await puppeteer.launch({
@@ -1745,13 +1804,7 @@ export async function getServerSideProps(context: any) {
 
       await browser.close();
 
-      console.log("Parsed product data:", {
-        itemName: product.itemName,
-        itemPrice: product.itemPrice,
-        imagesCount: product.images.length,
-        postageFlag: product.postageFlag
-      });
-
+      
       const formattedProduct = {
         itemCode,
         itemName: product.itemName,
@@ -1766,8 +1819,7 @@ export async function getServerSideProps(context: any) {
         postageFlag: product.postageFlag,
       };
 
-      console.log("Successfully fetched product:", formattedProduct.itemName);
-
+      
       return {
         props: { product: formattedProduct }
       };

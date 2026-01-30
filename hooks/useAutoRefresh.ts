@@ -32,8 +32,7 @@ export function useAutoRefresh({
 
     const unsubscribe = onBroadcastUpdate((event) => {
       if (event.type === broadcastType) {
-        console.log(`[SYNC] Received ${broadcastType} update from another tab`);
-        refresh();
+                refresh();
       }
     });
 

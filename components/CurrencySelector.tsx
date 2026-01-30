@@ -64,11 +64,9 @@ export default function CurrencySelector() {
   }, [isOpen]);
 
   const handleCurrencyChange = (currencyCode: string) => {
-    console.log('💱 [CurrencySelector] Changing currency from', currency, 'to', currencyCode);
-    setCurrency(currencyCode as any);
+        setCurrency(currencyCode as any);
     setIsOpen(false);
-    console.log('💱 [CurrencySelector] Currency change complete');
-  };
+      };
 
   return (
     <div className="relative" ref={dropdownRef}>

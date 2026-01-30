@@ -33,8 +33,7 @@ export default function TranslateWidget() {
 
     // For now, just show a message that translation is selected
     // Full translation implementation would require more complex setup
-    console.log(`Translation to ${targetLang} selected`);
-  };
+      };
 
   const handleLanguageChange = (langCode: string) => {
     setCurrentLang(langCode);

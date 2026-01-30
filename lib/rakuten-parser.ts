@@ -66,47 +66,41 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
       }
     });
 
-    console.log('[Rakuten Parser] Browser configured');
-    console.log('[Rakuten Parser] Navigating to:', url);
-
+        
     // Логируем все запросы
     page.on('response', async (response) => {
       const url = response.url();
       const status = response.status();
       if (url.includes('rakuten.co.jp') && !url.includes('.jpg') && !url.includes('.png')) {
-        console.log('[Rakuten Parser] Response:', status, url.substring(0, 100));
+        );
       }
     });
 
     // Переходим на страницу - пробуем domcontentloaded вместо networkidle
     let navigationSuccess = false;
     try {
-      console.log('[Rakuten Parser] Starting navigation...');
-      await page.goto(url, {
+            await page.goto(url, {
         waitUntil: 'domcontentloaded',
         timeout: 20000
       });
       navigationSuccess = true;
-      console.log('[Rakuten Parser] ✓ Navigation completed (domcontentloaded)');
+      ');
     } catch (navigationError: any) {
       console.error('[Rakuten Parser] ✗ Navigation failed:', navigationError.message);
     }
 
     // Ждем пока body появится
-    console.log('[Rakuten Parser] Waiting for body element...');
-    try {
+        try {
       await page.waitForSelector('body', { timeout: 10000 });
-      console.log('[Rakuten Parser] ✓ Body element found');
-    } catch (err) {
+          } catch (err) {
       console.error('[Rakuten Parser] ✗ Body element not found!');
     }
 
     // Ждем пока document станет interactive или complete
-    console.log('[Rakuten Parser] Waiting for document ready...');
-    await page.waitForFunction(
+        await page.waitForFunction(
       () => document.readyState === 'interactive' || document.readyState === 'complete',
       { timeout: 10000 }
-    ).catch(() => console.log('[Rakuten Parser] Document ready timeout'));
+    ).catch(() => );
 
     // Дополнительная задержка для загрузки скриптов
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -121,20 +115,16 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
         url: window.location.href
       };
     });
-    console.log('[Rakuten Parser] Page state after wait:', pageState);
-
+    
     // Ждём появления контента с вариантами
     try {
-      console.log('[Rakuten Parser] Waiting for content area...');
-      await Promise.race([
+            await Promise.race([
         page.waitForSelector('[irc="SkuSelectionArea"]', { timeout: 5000 }),
         page.waitForSelector('[irc="OptionArea"]', { timeout: 5000 }),
         new Promise(resolve => setTimeout(resolve, 5000))
       ]);
-      console.log('[Rakuten Parser] Content area wait completed');
-    } catch {
-      console.log('[Rakuten Parser] Content area wait timeout');
-    }
+          } catch {
+          }
 
     // Еще одна задержка для React рендеринга
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -277,21 +267,18 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
 
     // Логируем результаты JS парсинга
     if (!variantsFromJS.success) {
-      console.log('[Rakuten Parser] JS parsing failed - variantSelectors:', variantsFromJS.foundVariantSelectors, 'sku:', variantsFromJS.foundSku);
-    }
+          }
 
     // Если нашли данные в JS, используем их
     if (variantsFromJS.success && variantsFromJS.groups) {
-      console.log('[Rakuten Parser] ✅ JS parsing succeeded -', variantsFromJS.groups.length, 'groups');
-      return {
+            return {
         groups: variantsFromJS.groups,
         colorSizeMapping: variantsFromJS.mapping
       };
     }
 
     // Иначе парсим DOM как раньше
-    console.log('[Rakuten Parser] Trying DOM parsing...');
-
+    
     // Добавляем детальную диагностику
     const pageInfo = await page.evaluate(() => {
       const body = document.body;
@@ -368,41 +355,18 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
       };
     });
 
-    console.log('[Rakuten Parser] ========== DETAILED PAGE INFO ==========');
-    console.log('[Rakuten Parser] Body length:', pageInfo.bodyLength);
-    console.log('[Rakuten Parser] Buttons:', pageInfo.buttonsCount);
-    console.log('[Rakuten Parser] Buttons with aria-label:', pageInfo.buttonsWithAriaLabelCount);
-    console.log('[Rakuten Parser] Spacer blocks:', pageInfo.spacerBlocksCount);
-    console.log('[Rakuten Parser] Text displays:', pageInfo.textDisplaysCount);
-    console.log('[Rakuten Parser] SKU Areas:', {
-      type1: pageInfo.hasSkuArea1,
-      type2: pageInfo.hasSkuArea2,
-      type3: pageInfo.hasSkuArea3
-    });
-    console.log('[Rakuten Parser] Option Areas:', {
-      type1: pageInfo.hasOptionArea1,
-      type2: pageInfo.hasOptionArea2
-    });
-    console.log('[Rakuten Parser] Scripts:', {
-      total: pageInfo.scriptsCount,
-      hasVariantSelectors: pageInfo.hasVariantSelectorsInScripts,
-      hasSku: pageInfo.hasSkuInScripts
-    });
-
+                                    
     if (pageInfo.spacerBlocksCount > 0) {
-      console.log('[Rakuten Parser] Spacer texts (first 20):', pageInfo.spacerTexts);
+      :', pageInfo.spacerTexts);
     }
 
     if (pageInfo.buttonsWithAriaLabelCount > 0) {
-      console.log('[Rakuten Parser] First 10 buttons:', pageInfo.firstButtonsText);
-    }
+          }
 
     if (pageInfo.bodyLength < 1000) {
-      console.log('[Rakuten Parser] ⚠️ PAGE LOOKS EMPTY! HTML:', pageInfo.htmlPreview);
-    }
+          }
 
-    console.log('[Rakuten Parser] ========================================');
-
+    
     const variantsStructure = await page.evaluate(() => {
       const result: VariantGroup[] = [];
       const debug = {
@@ -420,48 +384,38 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
       const skuArea = document.querySelector('[irc="SkuSelectionArea"], .display-sku-area');
       debug.hasSkuArea = !!skuArea;
 
-      console.log('[DOM Parser] SKU Area found:', !!skuArea);
-
+      
       if (skuArea) {
-        console.log('[DOM Parser] SKU Area HTML length:', skuArea.innerHTML.length);
-
+        
         // Находим все группы вариантов (Цвет, Размер и т.д.)
         const groups = skuArea.querySelectorAll('.spacer--3J57F.block--_IJiJ.padding-bottom-small--UuLKJ');
         debug.skuGroupsCount = groups.length;
 
-        console.log('[DOM Parser] Found variant groups:', groups.length);
-        console.log('[DOM Parser] Group selector used: .spacer--3J57F.block--_IJiJ.padding-bottom-small--UuLKJ');
-
+                
       groups.forEach((group, groupIndex) => {
-        console.log('[DOM Parser] Processing group', groupIndex);
-
+        
         // Находим название группы (любое)
         const labelElements = group.querySelectorAll('.text-display--2xC98');
         let groupName = '';
 
-        console.log('[DOM Parser] Label elements in group:', labelElements.length);
-
+        
         for (const el of Array.from(labelElements)) {
           const text = el.textContent?.trim() || '';
-          console.log('[DOM Parser] Label text:', text);
-          // Берём первый непустой текст, который не "未選択" (не выбрано)
+                    // Берём первый непустой текст, который не "未選択" (не выбрано)
           if (text && text.length > 0 && text.length < 50 && !text.includes('未選択')) {
             // Убираем двоеточие и берём только первую часть
             groupName = text.replace('：', '').replace(':', '').trim();
-            console.log('[DOM Parser] ✓ Group name found:', groupName);
-            break;
+                        break;
           }
         }
 
         if (!groupName) {
-          console.log('[DOM Parser] ✗ No group name found, skipping');
-          return;
+                    return;
         }
 
         // Находим все кнопки вариантов в этой группе
         const buttons = group.querySelectorAll('button[class*="sku-button"]');
-        console.log('[DOM Parser] Buttons in group:', buttons.length);
-        const options: { value: string; label: string; available: boolean; element: Element; price?: number }[] = [];
+                const options: { value: string; label: string; available: boolean; element: Element; price?: number }[] = [];
 
         buttons.forEach((button) => {
           const ariaLabel = button.getAttribute('aria-label');
@@ -522,8 +476,7 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
         });
 
         if (options.length > 0) {
-          console.log('[DOM Parser] ✓ Found', options.length, 'options for group:', groupName);
-
+          
           const variantGroup = {
             name: groupName,
             key: groupName,
@@ -544,19 +497,15 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
 
           if (isColorGroup) {
             colorGroup = variantGroup;
-            console.log('[DOM Parser] This is a COLOR group');
-          } else if (isSizeGroup) {
+                      } else if (isSizeGroup) {
             sizeGroup = variantGroup;
-            console.log('[DOM Parser] This is a SIZE group');
-          }
+                      }
         } else {
-          console.log('[DOM Parser] ✗ No options found for group:', groupName);
-        }
+                  }
       });
       }
 
-      console.log('[DOM Parser] Total variant groups found:', result.length);
-
+      
       // Стратегия 2: Select элементы в OptionArea (для товаров с выпадающими списками)
       const optionArea = document.querySelector('[irc="OptionArea"]');
       debug.hasOptionArea = !!optionArea;
@@ -632,14 +581,7 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
     } = variantsStructure;
 
     // Логируем результаты DOM парсинга
-    console.log('[Rakuten Parser] DOM parsing result:', {
-      foundGroups: groups.length,
-      hasSkuArea: debug.hasSkuArea,
-      skuGroupsCount: debug.skuGroupsCount,
-      hasOptionArea: debug.hasOptionArea,
-      optionContainersCount: debug.optionContainersCount
-    });
-
+    
     let colorSizeMapping: Record<string, Array<{ value: string; available: boolean }>> = {};
 
     // Если есть и цвета, и размеры - пропускаем проверку через клики

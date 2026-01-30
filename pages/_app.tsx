@@ -28,15 +28,14 @@ import { allCategories } from "@/data/categories";
 function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
-  const noHeaderPaths = ["/checkout", "/product/"];
+  const noHeaderPaths = ["/checkout"];
   const showHeader = !noHeaderPaths.some((path) =>
     router.pathname.startsWith(path)
   );
 
   // Патчим React для игнорирования NotFoundError
   React.useEffect(() => {
-    console.log('[_app] Component mounted, pathname:', router.pathname);
-
+    
     // Track visit (analytics)
     import('@/lib/analytics').then(({ trackVisit }) => {
       trackVisit();
@@ -46,8 +45,7 @@ function MyApp({ Component, pageProps }: AppProps) {
     const originalWindowError = window.onerror;
     window.onerror = function(message, source, lineno, colno, error) {
       if (error && (error.name === 'NotFoundError' || error.message?.includes('can not be found here'))) {
-        console.debug('[window.onerror] Blocked NotFoundError');
-        return true; // Блокируем ошибку
+                return true; // Блокируем ошибку
       }
       if (originalWindowError) {
         return originalWindowError(message, source, lineno, colno, error);
@@ -56,12 +54,10 @@ function MyApp({ Component, pageProps }: AppProps) {
     };
 
     const handleRouteChange = (url: string) => {
-      console.log('[_app] Route changing to:', url);
-    };
+          };
 
     const handleRouteComplete = (url: string) => {
-      console.log('[_app] Route changed to:', url);
-      // Обновляем страницу после перехода чтобы получить свежие данные
+            // Обновляем страницу после перехода чтобы получить свежие данные
       if (typeof window !== 'undefined') {
         window.scrollTo(0, 0);
       }
@@ -76,7 +72,6 @@ function MyApp({ Component, pageProps }: AppProps) {
       window.onerror = originalWindowError;
     };
   }, [router.pathname]);
-
 
   return (
     <>

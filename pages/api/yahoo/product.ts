@@ -30,13 +30,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Проверяем кеш
   const cachedEntry = productCache.get(code);
   if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL) {
-    console.log('[Yahoo Product API] Returning from cache:', code);
-    return res.status(200).json(cachedEntry.product);
+        return res.status(200).json(cachedEntry.product);
   }
 
   try {
-    console.log('[Yahoo Product API] Searching for product with code:', code);
-
+    
     // Периодически очищаем устаревший кеш
     if (Math.random() < 0.1) {
       cleanExpiredCache();
@@ -50,8 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (exactMatch) {
       const product = convertYahooToRakutenFormat(exactMatch);
-      console.log('[Yahoo Product API] Found exact match:', product.itemName);
-
+      
       // Сохраняем в кеш
       productCache.set(code, {
         product,
@@ -64,8 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Если точного совпадения нет, возвращаем первый результат
     if (yahooProducts.length > 0) {
       const product = convertYahooToRakutenFormat(yahooProducts[0]);
-      console.log('[Yahoo Product API] Returning first result:', product.itemName);
-
+      
       // Сохраняем в кеш
       productCache.set(code, {
         product,
@@ -75,8 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(product);
     }
 
-    console.log('[Yahoo Product API] No products found');
-    return res.status(404).json({ error: 'Product not found' });
+        return res.status(404).json({ error: 'Product not found' });
   } catch (error) {
     console.error('[Yahoo Product API] Error:', error);
     return res.status(500).json({ error: 'Internal Server Error' });

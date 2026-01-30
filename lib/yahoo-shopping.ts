@@ -138,15 +138,12 @@ export async function searchYahooProducts(
     }
 
     const url = `${YAHOO_API_URL}?${params.toString()}`;
-    console.log('[Yahoo Shopping] Request:', { keyword, page, hits, sort });
-    console.log('[Yahoo Shopping] Full URL:', url);
-
+        
     let response = await fetch(url);
 
     // Если ошибка 400 и используется сортировка, пробуем без сортировки
     if (!response.ok && response.status === 400 && sort) {
-      console.log('[Yahoo Shopping] Retrying without sort for keyword:', keyword);
-      const paramsWithoutSort = new URLSearchParams({
+            const paramsWithoutSort = new URLSearchParams({
         appid: YAHOO_APP_ID,
         query: normalizedKeyword,
         results: String(hits),
@@ -163,8 +160,7 @@ export async function searchYahooProducts(
     }
 
     const data = await response.json() as YahooSearchResponse;
-    console.log('[Yahoo Shopping] Found:', data.totalResultsAvailable, 'items');
-
+    
     // Улучшаем качество изображений и фильтруем результаты
     let products = (data.hits || []).map(product => ({
       ...product,
@@ -195,8 +191,7 @@ export async function searchYahooProducts(
 
     // Если получили пустой результат при сортировке по цене, пробуем без сортировки
     if (products.length === 0 && sort && (sort === '+price' || sort === '-price')) {
-      console.log('[Yahoo Shopping] Empty result with price sort, retrying without sort');
-      const paramsRetry = new URLSearchParams({
+            const paramsRetry = new URLSearchParams({
         appid: YAHOO_APP_ID,
         query: normalizedKeyword,
         results: String(hits),
@@ -225,8 +220,7 @@ export async function searchYahooProducts(
 
         // Сортируем на клиенте
         if (retryProducts.length > 0) {
-          console.log(`[Yahoo Shopping] Got ${retryProducts.length} items, sorting on client side`);
-          retryProducts.sort((a, b) => {
+                    retryProducts.sort((a, b) => {
             if (sort === '+price') return a.price - b.price;
             if (sort === '-price') return b.price - a.price;
             return 0;
@@ -278,15 +272,12 @@ export async function getYahooProductsByCategory(
     }
 
     const url = `${YAHOO_API_URL}?${params.toString()}`;
-    console.log('[Yahoo Shopping] Category request:', { categoryId, page, hits, sort });
-    console.log('[Yahoo Shopping] Full URL:', url);
-
+        
     let response = await fetch(url);
 
     // Если ошибка 400 и используется сортировка, пробуем без сортировки
     if (!response.ok && response.status === 400 && sort) {
-      console.log('[Yahoo Shopping] Retrying without sort for category:', categoryId);
-      const paramsWithoutSort = new URLSearchParams({
+            const paramsWithoutSort = new URLSearchParams({
         appid: YAHOO_APP_ID,
         genre_category_id: String(categoryId),
         results: String(hits),
@@ -303,8 +294,7 @@ export async function getYahooProductsByCategory(
     }
 
     const data = await response.json() as YahooSearchResponse;
-    console.log('[Yahoo Shopping] Found:', data.totalResultsAvailable, 'total items available');
-
+    
     // Улучшаем качество изображений
     let productsWithUpgradedImages = (data.hits || []).map(product => ({
       ...product,
@@ -316,8 +306,7 @@ export async function getYahooProductsByCategory(
 
     // Если получили пустой результат при сортировке по цене, пробуем без сортировки
     if (productsWithUpgradedImages.length === 0 && sort && (sort === '+price' || sort === '-price')) {
-      console.log('[Yahoo Shopping] Empty result with price sort, retrying without sort for category');
-      const paramsRetry = new URLSearchParams({
+            const paramsRetry = new URLSearchParams({
         appid: YAHOO_APP_ID,
         genre_category_id: String(categoryId),
         results: String(hits),
@@ -336,8 +325,7 @@ export async function getYahooProductsByCategory(
 
         // Сортируем на клиенте
         if (retryProducts.length > 0) {
-          console.log(`[Yahoo Shopping] Got ${retryProducts.length} items, sorting on client side`);
-          retryProducts.sort((a, b) => {
+                    retryProducts.sort((a, b) => {
             if (sort === '+price') return a.price - b.price;
             if (sort === '-price') return b.price - a.price;
             return 0;
@@ -347,8 +335,7 @@ export async function getYahooProductsByCategory(
       }
     }
 
-    console.log(`[Yahoo Shopping] Returning ${productsWithUpgradedImages.length} items from category ${categoryId}`);
-    return productsWithUpgradedImages;
+        return productsWithUpgradedImages;
   } catch (error) {
     console.error('[Yahoo Shopping] Error:', error);
     return [];

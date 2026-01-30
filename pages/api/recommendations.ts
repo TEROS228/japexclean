@@ -24,9 +24,7 @@ export default async function handler(
     const keywords = extractKeywords(itemName);
     const searchQuery = keywords.slice(0, 3).join(" "); // Берем топ-3 ключевых слова
 
-    // console.log(`[Recommendations API] Item: "${itemName}"`);
-    // console.log(`[Recommendations API] Search query: "${searchQuery}"`);
-
+    //     // 
     // Ищем похожие товары
     const products = await searchRakutenProducts(searchQuery, 1, 30);
 
@@ -37,8 +35,7 @@ export default async function handler(
     const limitNum = parseInt(limit as string, 10);
     const recommendations = rankedProducts.slice(0, limitNum);
 
-    // console.log(`[Recommendations API] Found ${recommendations.length} recommendations`);
-
+    // 
     return res.status(200).json({
       success: true,
       products: recommendations,

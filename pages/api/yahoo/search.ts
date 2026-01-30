@@ -24,8 +24,7 @@ function cleanExpiredCache() {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { keyword, page, sort } = req.query;
 
-  console.log('[Yahoo Shopping API] Request:', { keyword, page, sort });
-
+  
   try {
     if (!keyword || typeof keyword !== 'string') {
       return res.status(400).json({ error: 'Keyword is required' });
@@ -44,8 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Проверяем кеш
     const cachedEntry = searchCache.get(cacheKey);
     if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL) {
-      console.log('[Yahoo Shopping API] Returning from cache:', cacheKey);
-      return res.status(200).json(cachedEntry.products);
+            return res.status(200).json(cachedEntry.products);
     }
 
     // Периодически очищаем устаревший кеш
@@ -61,8 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Применяем умное ранжирование для всех страниц (усиленное для Yahoo)
     products = rankSearchResults(products, normalizedKeyword) as any;
 
-    console.log(`[Yahoo Shopping API] Query: "${keyword}" -> "${normalizedKeyword}", found ${products.length} products`);
-
+    
     // Сохраняем в кеш
     searchCache.set(cacheKey, {
       products,

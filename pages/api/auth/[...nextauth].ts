@@ -55,8 +55,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       // Разрешаем вход для всех провайдеров
-      console.log('[NextAuth] Sign in:', { user, account: account?.provider });
-      return true;
+            return true;
     },
     async jwt({ token, user, account }) {
       if (user) {
@@ -74,8 +73,7 @@ export const authOptions: NextAuthOptions = {
     },
     async redirect({ url, baseUrl }) {
       // Всегда редиректим на главную страницу после успешного входа
-      console.log('[NextAuth] Redirect:', { url, baseUrl });
-      if (url.startsWith(baseUrl)) return url;
+            if (url.startsWith(baseUrl)) return url;
       if (url.startsWith('/')) return `${baseUrl}${url}`;
       return baseUrl;
     }

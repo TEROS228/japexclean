@@ -10,8 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Очищаем весь кэш
     await cacheClear('rakuten:*');
 
-    console.log('✅ Cache cleared successfully');
-
+    
     return res.status(200).json({
       success: true,
       message: 'Cache cleared successfully'

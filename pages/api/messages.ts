@@ -75,40 +75,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'POST') {
       const { userId: targetUserId, message: messageText } = req.body;
 
-      console.log('=== POST /api/messages ===');
-      console.log('Body:', req.body);
-      console.log('targetUserId:', targetUserId);
-      console.log('messageText:', messageText);
-      console.log('dbUser.isAdmin:', dbUser.isAdmin);
-      console.log('dbUser.id:', dbUser.id);
-
+                                    
       if (!messageText) {
-        console.log('ERROR: Message is required');
-        return res.status(400).json({ error: 'Message is required' });
+                return res.status(400).json({ error: 'Message is required' });
       }
 
       let messageData: any;
 
       if (dbUser.isAdmin && targetUserId) {
         // Админ отправляет сообщение конкретному пользователю (из админ-панели)
-        console.log('Admin sending message to user:', targetUserId);
-        messageData = {
+                messageData = {
           userId: targetUserId,
           senderType: 'admin',
           message: messageText
         };
       } else {
         // Обычный пользователь (или админ из своего профиля) отправляет сообщение
-        console.log('User sending message, userId:', dbUser.id);
-        messageData = {
+                messageData = {
           userId: dbUser.id,
           senderType: 'user',
           message: messageText
         };
       }
 
-      console.log('messageData:', messageData);
-
+      
       try {
         const newMessage = await prisma.message.create({
           data: messageData,
@@ -123,8 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         });
 
-        console.log('Message created successfully:', newMessage.id);
-
+        
         // Отправляем Telegram уведомление
         if (messageData.senderType === 'user') {
           // Пользователь отправил сообщение - уведомляем админа
@@ -144,8 +133,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // const io = getIO(res);
         // if (io) {
         //   io.emit('messages-updated');
-        //   console.log('📨 Emitted messages-updated event');
-        // }
+        //           // }
 
         return res.status(201).json({ message: newMessage });
       } catch (createError) {

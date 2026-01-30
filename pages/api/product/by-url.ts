@@ -23,18 +23,15 @@ export default async function handler(
   // Проверяем кэш
   const cached = cache.get(url);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    console.log("🚀 Returning cached result for", url);
-    return res.status(200).json(cached.data);
+        return res.status(200).json(cached.data);
   }
 
   try {
     // Сначала пробуем получить через Rakuten API (быстрее и надежнее)
-    console.log("🔍 Trying Rakuten API first for:", url);
-    const rakutenProduct = await getProductByUrl(url);
+        const rakutenProduct = await getProductByUrl(url);
 
     if (rakutenProduct && rakutenProduct.itemCode) {
-      console.log("✅ Product found via Rakuten API");
-      const response = {
+            const response = {
         success: true,
         product: rakutenProduct,
       };
@@ -46,8 +43,7 @@ export default async function handler(
     }
 
     // Если Rakuten API не вернул товар, используем Puppeteer
-    console.log("⚠️ Rakuten API failed, falling back to Puppeteer");
-
+    
     let browser;
     try {
       browser = await puppeteer.launch({
@@ -243,14 +239,7 @@ export default async function handler(
     const itemCodeMatch = url.match(/item\.rakuten\.co\.jp\/[^\/]+\/([^\/\?]+)/);
     const itemCode = itemCodeMatch ? itemCodeMatch[1] : "";
 
-    console.log(`[Product by URL] Parsed product:`, {
-      itemCode,
-      itemName: product.itemName,
-      itemPrice: product.itemPrice,
-      imagesCount: product.images.length,
-      firstImage: product.images[0]
-    });
-
+    
     // Форматируем данные в стиле Rakuten API
     const formattedProduct = {
       itemCode,

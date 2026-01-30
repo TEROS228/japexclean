@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Проверяем кеш
   const cachedEntry = imagesCache.get(url);
   if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL) {
-    console.log('[Yahoo Images] Returning from cache:', url, '(', cachedEntry.images.length, 'images)');
+    ');
     return res.status(200).json({
       images: cachedEntry.images.slice(0, 10),
       success: true,
@@ -39,8 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    console.log('[Yahoo Images] Fetching images from:', url);
-
+    
     // Периодически очищаем устаревший кеш
     if (Math.random() < 0.1) {
       cleanExpiredCache();
@@ -178,8 +177,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    console.log('[Yahoo Images] Found images:', images.length);
-
+    
     // Сохраняем в кеш
     imagesCache.set(url, {
       images,

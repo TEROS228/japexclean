@@ -93,8 +93,7 @@ export default function CartPage() {
       if (response.ok) {
         const data = await response.json();
         setServerBalance(data.balance);
-        console.log('Cart balance updated:', data.balance);
-      }
+              }
     } catch (error) {
       console.error('Failed to fetch balance:', error);
     }
@@ -211,8 +210,7 @@ export default function CartPage() {
 
     // Listen for currency changes
     const handleCurrencyChange = (e: any) => {
-      console.log('💱 [CartPage] Currency changed to:', e.detail, '- forcing re-render');
-      setCurrencyKey(prev => prev + 1);
+            setCurrencyKey(prev => prev + 1);
     };
 
     window.addEventListener('currencyChanged', handleCurrencyChange);
@@ -220,8 +218,7 @@ export default function CartPage() {
 
     // Слушаем события обновления баланса
     const handleBalanceUpdate = () => {
-      console.log('Balance update event received in cart');
-      fetchServerBalance();
+            fetchServerBalance();
     };
 
     window.addEventListener('balanceUpdated', handleBalanceUpdate);
@@ -236,8 +233,7 @@ export default function CartPage() {
     // Проверяем параметр URL после успешного пополнения
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('topup') === 'success') {
-      console.log('Topup success detected, refreshing balance...');
-
+      
       // Даем время для обработки, затем обновляем баланс
       const timer = setTimeout(() => {
         fetchServerBalance();
@@ -316,9 +312,7 @@ export default function CartPage() {
 
     const token = getCompatibleAuthToken();
 
-    console.log('[CART] Payment attempt - selectedAddressId:', selectedAddressId);
-    console.log('[CART] Payment attempt - addresses:', addresses);
-
+        
     // Проверяем что выбран адрес доставки
     if (!selectedAddressId) {
       alert("Please select a delivery address from the list below");
@@ -387,8 +381,7 @@ export default function CartPage() {
       window.dispatchEvent(new Event('balanceUpdated'));
 
       // Отправляем broadcast СРАЗУ для админки и других вкладок
-      console.log('[CART] 📡 Broadcasting new order...');
-      broadcastUpdate('orders');
+            broadcastUpdate('orders');
       broadcastUpdate('admin-data');
 
       clearCart();

@@ -39,9 +39,6 @@ export default function SignUpModal({
         const fp = await FingerprintJS.load();
         const result = await fp.get();
 
-        // Логируем confidence score для мониторинга
-        console.log(`[Fingerprint] ID: ${result.visitorId.substring(0, 8)}..., Confidence: ${result.confidence?.score || 'N/A'}`);
-
         setFingerprint(result.visitorId);
       };
       generateFingerprint();
@@ -156,19 +153,14 @@ export default function SignUpModal({
       }
 
       if (data.token && data.user) {
-        console.log('[SignUp] Signup successful, saving auth data and redirecting...');
-
+        
         // Сохраняем данные в localStorage
         saveAuthData(data.token, data.user);
-
-        console.log('[SignUp] Auth data saved, token:', data.token.substring(0, 20) + '...');
-        console.log('[SignUp] User data:', data.user);
 
         // Закрываем модалку
         onClose();
 
         // Немедленно перенаправляем на профиль
-        console.log('[SignUp] Redirecting to /profile?tab=coupons');
         window.location.href = '/profile?tab=coupons';
       } else {
         throw new Error("Invalid response from server");

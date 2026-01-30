@@ -138,11 +138,14 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
 
     // Для Yahoo товаров сохраняем данные товара
     if (product._source === 'yahoo') {
-      console.log('[Category] Saving Yahoo product to sessionStorage:', product.itemCode, 'price:', product.itemPrice);
-      sessionStorage.setItem(`yahoo-product-${product.itemCode}`, JSON.stringify(product));
+            sessionStorage.setItem(`yahoo-product-${product.itemCode}`, JSON.stringify(product));
     }
 
-    router.push(`/product/${product.itemCode}`);
+    // Формируем URL с категорией
+    const currentCategoryName = category?.name || categoryName || '';
+    const productUrl = `/product/${product.itemCode}${currentCategoryName ? `?category=${encodeURIComponent(currentCategoryName)}` : ''}`;
+
+    router.push(productUrl);
   };
 
   // --- Восстановление позиции скролла и данных ---
@@ -195,27 +198,20 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
 
   // --- Обновление товаров при смене категории ---
   useEffect(() => {
-    console.log('[CategoryPage] useEffect triggered', {
-      categoryId,
-      initialProductsLength: initialProducts?.length,
-      isRestoring,
-      loadedPagesKeys: Object.keys(loadedPages)
-    });
+        });
 
     const savedData = sessionStorage.getItem(`data-category-${categoryId}`);
 
     // Если восстанавливаем из sessionStorage, ничего не делаем
     if (savedData || isRestoring) {
-      console.log('[CategoryPage] Skipping - restoring from session');
-      return;
+            return;
     }
 
     // Показываем loading сразу при смене категории
     setLoading(true);
 
     // Сбрасываем состояние при смене категории
-    console.log('[CategoryPage] Resetting state for new category');
-    setCurrentPage(1);
+        setCurrentPage(1);
     setMaxPageLoaded(1);
     setSortOrder("");
     setPriceMin("");
@@ -226,8 +222,7 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
 
     // Если есть товары от SSR/клиентской навигации - используем их
     if (initialProducts && initialProducts.length > 0) {
-      console.log('[CategoryPage] Using initialProducts:', initialProducts.length);
-      setLoadedPages({ 1: initialProducts });
+            setLoadedPages({ 1: initialProducts });
       // Небольшая задержка чтобы показать loading анимацию
       setTimeout(() => {
         setLoading(false);
@@ -235,8 +230,7 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
       hasLoadedRef.current = true;
     } else {
       // Иначе загружаем через API
-      console.log('[CategoryPage] Loading via API');
-      setLoadedPages({});
+            setLoadedPages({});
       setLoading(true);
       hasLoadedRef.current = true;
       const timer = setTimeout(() => {
@@ -291,8 +285,7 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
         ? `/api/yahoo/products?categoryId=${encodeURIComponent(categoryId)}&page=${pageNum}&sort=${encodeURIComponent(usedOrder)}`
         : `/api/products?genreId=${encodeURIComponent(categoryId)}&page=${pageNum}&sort=${encodeURIComponent(usedOrder)}${minPriceParam}${maxPriceParam}`;
 
-      console.log('[Category Page] Fetching:', { categoryId, pageNum, sort: usedOrder, minPrice: minPriceValue, maxPrice: maxPriceValue, endpoint });
-
+      
       const res = await fetch(endpoint);
       if (!res.ok) {
         console.error('API error:', res.status, res.statusText);
@@ -301,7 +294,7 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
       }
 
       const data = await res.json();
-      console.log('[Category Page] Received data:', { count: data?.length, isArray: Array.isArray(data), sort: usedOrder });
+      , sort: usedOrder });
 
       if (!Array.isArray(data)) {
         console.error('Invalid data format:', data);
@@ -311,8 +304,7 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
       }
 
       if (data.length === 0) {
-        console.warn('[Category Page] API returned empty array for:', { categoryId, pageNum, sort: usedOrder });
-      }
+              }
 
       // API уже возвращает отсортированные и отфильтрованные данные
       setLoadedPages((prev) => ({ ...prev, [pageNum]: data }));
@@ -394,8 +386,7 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
   // Получить товары для текущей страницы (фильтрация происходит на сервере)
   const currentProducts = loadedPages[currentPage] || [];
 
-  console.log(`[Category] 📄 Showing page ${currentPage}: ${currentProducts.length} products`);
-
+  
   const renderPagination = () => {
     const visiblePages = 6;
     const start = Math.max(currentPage - Math.floor(visiblePages / 2), 1);
@@ -683,10 +674,15 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5 relative z-0">
-            {currentProducts.map(product => (
+            {currentProducts.map(product => {
+              // Определяем название категории
+              const currentCategoryName = category?.name || categoryName || '';
+              const productUrl = `/product/${product.itemCode}${currentCategoryName ? `?category=${encodeURIComponent(currentCategoryName)}` : ''}`;
+
+              return (
               <a
                 key={product.itemCode}
-                href={`/product/${product.itemCode}`}
+                href={productUrl}
                 onClick={handleProductClick(product)}
                 className="group bg-white border-2 border-gray-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 hover:shadow-2xl active:shadow-2xl hover:border-green-300 active:border-green-300 transition-all duration-300 flex flex-col h-full hover:-translate-y-1 active:-translate-y-1 cursor-pointer touch-manipulation"
               >
@@ -723,7 +719,8 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
                   </div>
                 </div>
               </a>
-            ))}
+              );
+            })}
           </div>
         )}
 

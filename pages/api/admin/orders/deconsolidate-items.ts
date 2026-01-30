@@ -67,8 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Order has only one item, nothing to deconsolidate' });
     }
 
-    console.log(`Deconsolidating order ${orderId} with ${order.items.length} items`);
-
+    
     // Создаем уникальный ID группы для shared domestic shipping
     const sharedGroup = `shared_${Date.now()}_${orderId}`;
 

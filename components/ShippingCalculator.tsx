@@ -297,8 +297,7 @@ export default function ShippingCalculator() {
         isCommercial: fedexIsCommercial
       };
 
-      console.log('📦 Sending FedEx request:', requestData);
-
+      
       const response = await fetch('/api/fedex/calculate-rates', {
         method: 'POST',
         headers: {
@@ -308,8 +307,7 @@ export default function ShippingCalculator() {
       });
 
       const result = await response.json();
-      console.log('📬 FedEx response:', result);
-
+      
       if (!response.ok) {
         setFedexError(result.error || 'Failed to calculate shipping rates');
         console.error('❌ FedEx API error:', result.error);
@@ -318,11 +316,9 @@ export default function ShippingCalculator() {
 
       if (result.success && result.options && result.options.length > 0) {
         setFedexOptions(result.options);
-        console.log('✅ Found', result.options.length, 'FedEx options');
-      } else {
+              } else {
         setFedexError(result.error || 'No shipping rates available for this destination');
-        console.warn('⚠️ No FedEx rates available');
-      }
+              }
     } catch (error) {
       console.error('❌ Error fetching FedEx rates:', error);
       setFedexError('Failed to calculate rates. Please try again.');
@@ -330,7 +326,6 @@ export default function ShippingCalculator() {
       setLoadingFedex(false);
     }
   };
-
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">

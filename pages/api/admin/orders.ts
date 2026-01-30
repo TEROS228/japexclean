@@ -101,7 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           });
 
-          console.log(`✅ Created reward coupon ${coupon.code} for user ${updatedOrder.userId} (items total: ¥${itemsTotal})`);
+          `);
         } catch (error) {
           console.error('Error creating reward coupon:', error);
           // Не падаем, даже если купон не создался

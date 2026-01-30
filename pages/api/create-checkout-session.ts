@@ -13,8 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Упрощенная проверка авторизации - пропускаем все запросы
     // В реальном приложении замените на нормальную проверку
-    console.log('Stripe session creation - auth bypassed for development');
-
+    
     const { amount, userEmail, successUrl, cancelUrl } = req.body;
 
     // Проверяем минимальную сумму
@@ -25,13 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Клиент платит сумму + 3.6% комиссии
     const amountWithFee = Math.round(amount * 1.036);
     
-    console.log('Payment details:', {
-      original_amount: amount,
-      user_pays: amountWithFee,
-      stripe_fee: amountWithFee - amount,
-      user_receives: amount
-    });
-
+    
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -57,8 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
 
-    console.log('Session created:', session.id);
-    res.json({ sessionId: session.id, url: session.url });
+        res.json({ sessionId: session.id, url: session.url });
 
   } catch (error: any) {
     console.error('Error creating checkout session:', error.message);

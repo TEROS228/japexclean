@@ -33,8 +33,7 @@ class PaymentLogger {
         timestamp: new Date(),
         status: 'duplicate'
       });
-      console.warn(`⚠️ Duplicate payment detected: ${sessionId}`);
-      return false;
+            return false;
     }
 
     // Добавляем в обработанные
@@ -48,8 +47,7 @@ class PaymentLogger {
       status: 'processed'
     });
 
-    console.log(`✅ Payment logged: ${sessionId} - ${userEmail} - ¥${amount}`);
-    return true;
+        return true;
   }
 
   getLogs(): PaymentLog[] {

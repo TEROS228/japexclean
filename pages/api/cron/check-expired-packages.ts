@@ -40,8 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Если срок хранения истек (10 дней без оплаты)
       if (storageInfo.isExpired) {
-        console.log(`[Cron] Package ${pkg.id} expired, marking for disposal`);
-
+        
         // Помечаем как утилизированный
         await prisma.package.update({
           where: { id: pkg.id },
@@ -82,8 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         );
 
         if (daysSinceLastCheck >= 2) {
-          console.log(`[Cron] Sending storage warning for package ${pkg.id}`);
-
+          
           await prisma.notification.create({
             data: {
               userId: pkg.user.id,
@@ -111,8 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         );
 
         if (daysSinceLastCheck >= 1) {
-          console.log(`[Cron] Sending free storage warning for package ${pkg.id}`);
-
+          
           await prisma.notification.create({
             data: {
               userId: pkg.user.id,
@@ -134,8 +131,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    console.log(`[Cron] Checked ${packages.length} packages: ${expiredCount} expired, ${warningsSent} warnings sent`);
-
+    
     return res.status(200).json({
       success: true,
       checked: packages.length,

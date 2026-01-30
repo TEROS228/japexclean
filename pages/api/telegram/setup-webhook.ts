@@ -40,8 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Failed to set webhook', details: data });
     }
 
-    console.log('[Telegram Setup] Webhook set successfully:', webhookUrl);
-
+    
     // Получаем информацию о webhook
     const infoResponse = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo`

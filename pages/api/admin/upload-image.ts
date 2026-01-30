@@ -38,16 +38,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Создаем директорию для загрузок если её нет
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'photos');
-    console.log('📂 Upload directory:', uploadDir);
-    console.log('📂 Current working directory:', process.cwd());
+        );
 
     if (!fs.existsSync(uploadDir)) {
-      console.log('⚠️  Upload directory does not exist, creating...');
-      fs.mkdirSync(uploadDir, { recursive: true });
-      console.log('✅ Upload directory created');
-    } else {
-      console.log('✅ Upload directory exists');
-    }
+            fs.mkdirSync(uploadDir, { recursive: true });
+          } else {
+          }
 
     const form = formidable({
       uploadDir,
@@ -61,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Используем промис вместо колбэка для лучшей обработки ошибок
     const [fields, files] = await form.parse(req);
 
-    console.log('📁 Files received:', Object.keys(files));
+    );
 
     const file = files.image;
     if (!file) {
@@ -75,12 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fullPath = uploadedFile.filepath;
     const imageUrl = `/uploads/photos/${fileName}`;
 
-    console.log('✅ File uploaded successfully:');
-    console.log('   - Original name:', uploadedFile.originalFilename);
-    console.log('   - Saved as:', fileName);
-    console.log('   - Full path:', fullPath);
-    console.log('   - URL:', imageUrl);
-    console.log('   - File exists:', fs.existsSync(fullPath));
+                        );
 
     return res.status(200).json({ url: imageUrl });
 

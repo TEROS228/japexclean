@@ -164,26 +164,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       if (!userAddress || userAddress.userId !== dbUser.id) {
-        console.log('[ERROR] Invalid shipping address:', shippingAddressId);
-        return res.status(403).json({ error: 'Invalid shipping address' });
+                return res.status(403).json({ error: 'Invalid shipping address' });
       }
-      console.log('[OK] Using selected address:', userAddress.id, userAddress.country);
-    } else {
+          } else {
       // Если адрес не указан, берем первый доступный
       userAddress = await prisma.address.findFirst({
         where: { userId: dbUser.id }
       });
 
       if (!userAddress) {
-        console.log('[ERROR] No addresses found for user:', dbUser.id);
-        return res.status(400).json({ error: 'Please add a shipping address first' });
+                return res.status(400).json({ error: 'Please add a shipping address first' });
       }
-      console.log('[OK] Using first available address:', userAddress.id, userAddress.country);
-    }
+          }
 
     // Получаем посылку
-    console.log('Looking for package with id:', id, 'for user:', dbUser.id);
-
+    
     const pkg = await prisma.package.findUnique({
       where: {
         id: id as string,
@@ -195,33 +190,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (!pkg) {
-      console.log('Package not found');
-      return res.status(404).json({ error: 'Package not found' });
+            return res.status(404).json({ error: 'Package not found' });
     }
 
-    console.log('Package found:', pkg.id, 'shippingCost:', pkg.shippingCost, 'status:', pkg.status);
-
+    
     // Проверяем оплату domestic shipping
     if (pkg.domesticShippingCost > 0 && !pkg.domesticShippingPaid) {
-      console.log('[ERROR] Domestic shipping not paid for package:', pkg.id);
-      return res.status(400).json({ error: 'Please pay domestic shipping fee before requesting shipping' });
+            return res.status(400).json({ error: 'Please pay domestic shipping fee before requesting shipping' });
     }
 
     // Проверяем что посылка готова к отправке
     if (pkg.status !== 'ready' && pkg.status !== 'pending_shipping') {
-      console.log('[ERROR] Package status invalid:', pkg.id, pkg.status);
-      return res.status(400).json({ error: 'Package is not ready for shipping' });
+            return res.status(400).json({ error: 'Package is not ready for shipping' });
     }
 
     // Проверяем что нет активных сервисов в обработке
     if (pkg.photoService && pkg.photoServiceStatus === 'pending') {
-      console.log('[ERROR] Photo service pending for package:', pkg.id);
-      return res.status(400).json({ error: 'Photo service is still processing. Please wait.' });
+            return res.status(400).json({ error: 'Photo service is still processing. Please wait.' });
     }
 
     if (pkg.consolidation) {
-      console.log('[ERROR] Consolidation in progress for package:', pkg.id);
-      return res.status(400).json({ error: 'Package consolidation is in progress. Please wait.' });
+            return res.status(400).json({ error: 'Package consolidation is in progress. Please wait.' });
     }
 
     // Проверяем хранение
@@ -229,14 +218,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Если срок хранения истек (10 дней без оплаты) - нельзя отправить
     if (storageInfo.isExpired) {
-      console.log('[ERROR] Storage expired for package:', pkg.id);
-      return res.status(400).json({ error: 'Storage period expired (10 days without payment). This package has been marked for disposal.' });
+            return res.status(400).json({ error: 'Storage period expired (10 days without payment). This package has been marked for disposal.' });
     }
 
     // Если есть неоплаченные дни хранения - требуем оплату
     if (storageInfo.unpaidDays > 0) {
-      console.log('[ERROR] Storage fees unpaid:', pkg.id, 'Days:', storageInfo.unpaidDays, 'Fee:', storageInfo.currentFee);
-      return res.status(400).json({
+            return res.status(400).json({
         error: 'Please pay storage fees before requesting shipping',
         storageFee: storageInfo.currentFee,
         unpaidDays: storageInfo.unpaidDays,
@@ -249,52 +236,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Для FedEx - автоматически рассчитываем стоимость через FedEx API
     if (pkg.shippingMethod === 'fedex') {
-      console.log('📦 FedEx shipping detected for country:', userAddress.country);
-
+      
       if (!pkg.weight || pkg.weight === 0) {
-        console.log('[ERROR] Package weight missing for FedEx. Package:', pkg.id);
-        return res.status(400).json({
+                return res.status(400).json({
           error: 'Package weight is required for FedEx shipping. Please contact support to set the package weight.'
         });
       }
 
       // Проверяем наличие postal code
       if (!userAddress.postalCode || userAddress.postalCode.trim() === '') {
-        console.log('[ERROR] Postal code missing for address:', userAddress.id);
-        return res.status(400).json({
+                return res.status(400).json({
           error: 'Postal code is required for FedEx shipping. Please update your address with a valid postal code.'
         });
       }
 
       // Форматируем postal code: убираем пробелы и лишние символы (FedEx требует без пробелов)
       const formattedPostalCode = userAddress.postalCode.replace(/\s+/g, '').toUpperCase();
-      console.log('[OK] Postal code formatted:', userAddress.postalCode, '->', formattedPostalCode);
-
+      
       // Получаем код страны (для FedEx нужен 2-буквенный ISO код)
       const countryCode = getCountryCode(userAddress.country);
       if (!countryCode) {
-        console.log('[ERROR] Unable to determine country code:', userAddress.country);
-        return res.status(400).json({
+                return res.status(400).json({
           error: `Unable to determine country code for: ${userAddress.country}. Please contact support.`
         });
       }
 
-      console.log('[OK] Country code:', userAddress.country, '->', countryCode);
-
+      
       // Для США конвертируем название штата в 2-буквенный код
       // Для других стран - не передаем state (FedEx не требует для большинства стран)
       let stateCode: string | undefined = undefined;
       if (countryCode === 'US') {
         const convertedState = convertStateNameToCode(userAddress.state);
         if (!convertedState) {
-          console.log('[ERROR] Invalid US state:', userAddress.state);
-          return res.status(400).json({
+                    return res.status(400).json({
             error: `Invalid state: ${userAddress.state}. Please update your address with a valid US state.`
           });
         }
         stateCode = convertedState;
-        console.log('[OK] State converted:', userAddress.state, '->', stateCode);
-      } else if (countryCode === 'CA') {
+              } else if (countryCode === 'CA') {
         // Для Канады также можно передавать код провинции, если он короткий
         if (userAddress.state && userAddress.state.length <= 2) {
           stateCode = userAddress.state.toUpperCase();
@@ -304,8 +283,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Всегда получаем свежие цены (НЕ сохраняем в БД)
       if (!selectedService) {
-        console.log('[INFO] Fetching FedEx rates - Weight:', pkg.weight, 'To:', countryCode, userAddress.city, formattedPostalCode);
-        const allRates = await getAllFedExRates({
+                const allRates = await getAllFedExRates({
           weight: pkg.weight,
           fromCountry: 'JP',
           toCountry: countryCode,
@@ -333,8 +311,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Если пользователь выбрал сервис - получаем свежую цену для этого сервиса
       if (selectedService) {
-        console.log('[INFO] Fetching FedEx rates for service:', selectedService, 'Weight:', pkg.weight);
-        const allRates = await getAllFedExRates({
+                const allRates = await getAllFedExRates({
           weight: pkg.weight,
           fromCountry: 'JP',
           toCountry: countryCode,
@@ -355,8 +332,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const selectedOption = allRates.options.find((opt: any) => opt.serviceType === selectedService);
 
         if (!selectedOption) {
-          console.log('[ERROR] Invalid FedEx service:', selectedService);
-          return res.status(400).json({ error: 'Invalid FedEx service selected' });
+                    return res.status(400).json({ error: 'Invalid FedEx service selected' });
         }
 
         internationalShippingCost = selectedOption.rateJPY;
@@ -376,8 +352,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Проверяем баланс для оплаты доставки
     if (dbUser.balance < totalShippingCost) {
-      console.log('[ERROR] Insufficient balance. User:', dbUser.id, 'Balance:', dbUser.balance, 'Required:', totalShippingCost);
-      return res.status(400).json({ error: 'Insufficient balance for shipping' });
+            return res.status(400).json({ error: 'Insufficient balance for shipping' });
     }
 
     // Списываем стоимость доставки

@@ -87,8 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (existingIpUser) {
-      console.log(`[Lead Magnet] Blocked: IP ${ip} already used for registration`);
-      return res.status(400).json({ error: 'An account has already been created from this device' });
+            return res.status(400).json({ error: 'An account has already been created from this device' });
     }
 
     // Check if this browser fingerprint was already used for registration
@@ -99,8 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (existingFingerprintUser) {
-      console.log(`[Lead Magnet] Blocked: Fingerprint ${fingerprint} already used for registration`);
-      return res.status(400).json({ error: 'An account has already been created from this browser' });
+            return res.status(400).json({ error: 'An account has already been created from this browser' });
     }
 
     // Hash the password
@@ -142,7 +140,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: newUser.email,
     });
 
-    console.log(`[Lead Magnet] New user created: ${email} with welcome coupon ¥500 off (IP: ${ip}, Fingerprint: ${fingerprint.substring(0, 8)}..., Marketing: ${marketingConsent})`);
+    }..., Marketing: ${marketingConsent})`);
 
     return res.status(200).json({
       success: true,

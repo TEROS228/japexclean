@@ -5,16 +5,14 @@ import bcrypt from 'bcrypt';
 import { getVerificationCode, deleteVerificationCode } from '../send-verification-code';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log('Signup with verification API called');
-
+  
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
     const { name, secondName, email, password, code, marketingConsent, fingerprint } = req.body;
-    console.log('Signup attempt:', { email, name, secondName, marketingConsent });
-
+    
     if (!name || !secondName || !email || !password || !code) {
       return res.status(400).json({ message: 'All fields are required' });
     }
@@ -85,9 +83,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Даем бонус только если IP и fingerprint не использовались
       if (!existingIpUser && !existingFingerprintUser) {
         bonusAmount = 500;
-        console.log(`[SignUp] Granting ¥500 bonus to ${email} (IP: ${ip}, Fingerprint: ${fingerprint.substring(0, 8)}...)`);
+        }...)`);
       } else {
-        console.log(`[SignUp] No bonus for ${email} (IP or fingerprint already used)`);
+        `);
       }
     }
 
@@ -125,7 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       });
 
-      console.log(`[SignUp] Created welcome coupon for ${email} (¥500 off)`);
+      `);
     }
 
     // Создаем НАСТОЯЩИЙ JWT токен
@@ -134,8 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: newUser.email
     });
 
-    console.log('User created successfully:', newUser.id);
-
+    
     // Возвращаем успешный ответ
     res.status(201).json({
       token,

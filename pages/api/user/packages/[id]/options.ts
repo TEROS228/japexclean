@@ -36,8 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { shippingMethod, consolidation, photoService, reinforcement, cancelReturn, cancelPurchase, consolidateWith, additionalInsurance } = req.body;
 
-    console.log('Received options:', { shippingMethod, consolidation, photoService, reinforcement, cancelReturn, cancelPurchase, consolidateWith, additionalInsurance });
-
+    
     // Получаем текущую посылку
     const currentPackage = await prisma.package.findUnique({
       where: { id: id as string }
@@ -281,14 +280,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let futureConsolidatedId = currentPackage.futureConsolidatedId;
     const shouldSendNotification = (consolidation || consolidateWith) && !currentPackage.consolidation && !currentPackage.consolidateWith;
 
-    console.log('📧 [NOTIFICATION CHECK]:', {
-      consolidation,
-      consolidateWith,
-      currentPackageConsolidation: currentPackage.consolidation,
-      currentPackageConsolidateWith: currentPackage.consolidateWith,
-      shouldSendNotification
-    });
-
+    
     if (consolidation && !futureConsolidatedId) {
       // Генерируем читаемый ID для консолидации
       const now = new Date();
@@ -314,13 +306,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const sequenceNum = String(todayConsolidations + 1).padStart(3, '0');
       futureConsolidatedId = `CONS-${dateStr}-${sequenceNum}`;
-      console.log('Generated future consolidated package ID:', futureConsolidatedId);
-    }
+          }
 
     // Отправляем уведомление только если это НОВЫЙ запрос на консолидацию
     if (shouldSendNotification) {
-      console.log('✅ [NOTIFICATION] Sending consolidation notification...');
-      // Получаем информацию о пакетах для консолидации
+            // Получаем информацию о пакетах для консолидации
       const pkg = await prisma.package.findUnique({
         where: { id: id as string },
         include: { orderItem: true }
@@ -354,16 +344,14 @@ ${futureConsolidatedId ? `🔗 <b>Consolidated ID:</b> ${futureConsolidatedId}` 
         `.trim();
 
         await sendTelegramNotification(telegramMessage);
-        console.log('✅ [NOTIFICATION] Telegram notification sent');
-      }
+              }
 
       // Создаем уведомление для админа
       const adminUsers = await prisma.user.findMany({
         where: { isAdmin: true }
       });
 
-      console.log(`✅ [NOTIFICATION] Found ${adminUsers.length} admin users`);
-
+      
       const packageTitle = pkg?.orderItem?.title || 'Package';
       const consolidateCount = consolidateWithPackages.length;
 
@@ -376,18 +364,12 @@ ${futureConsolidatedId ? `🔗 <b>Consolidated ID:</b> ${futureConsolidatedId}` 
             message: `${dbUser.email} requested consolidation for "${packageTitle}"${consolidateCount > 0 ? ` with ${consolidateCount} other package(s)` : ''}`
           }
         });
-        console.log(`✅ [NOTIFICATION] Created notification for admin: ${admin.email}`);
-      }
+              }
     } else {
-      console.log('❌ [NOTIFICATION] Notification NOT sent - shouldSendNotification is false');
-    }
+          }
 
     // DEBUG: Логируем данные консолидации
-    console.log('🔍 [OPTIONS API] Package update:', {
-      packageId: id,
-      consolidation,
-      consolidateWith,
-      willSetConsolidation: consolidation || (consolidateWith ? true : false),
+    ,
       autoConsolidated: currentPackage.autoConsolidated
     });
 
@@ -431,8 +413,7 @@ ${futureConsolidatedId ? `🔗 <b>Consolidated ID:</b> ${futureConsolidatedId}` 
       }
     });
 
-    console.log('Updated package:', updatedPackage);
-
+    
     res.status(200).json({ package: updatedPackage, charged });
 
   } catch (error) {

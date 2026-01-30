@@ -21,8 +21,7 @@ export const migrateMockToken = async (): Promise<boolean> => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     
     if (token && token.startsWith('mock-token-')) {
-      console.log('🔄 Migrating mock token to JWT');
-      
+            
       const userDataStr = localStorage.getItem(USER_DATA_KEY);
       if (userDataStr) {
         const userData: User = JSON.parse(userDataStr);
@@ -36,8 +35,7 @@ export const migrateMockToken = async (): Promise<boolean> => {
           
           // Сохраняем новый токен
           localStorage.setItem(AUTH_TOKEN_KEY, realToken);
-          console.log('✅ Mock token migrated to JWT');
-          return true;
+                    return true;
         }
       }
     }

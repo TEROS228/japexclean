@@ -515,10 +515,8 @@ export default function Home() {
                       top: rect.bottom + 10,
                       left: rect.left + rect.width / 2
                     });
-                    console.log('[Category Hint] Categories button position:', { top: rect.bottom, left: rect.left, width: rect.width });
-                  } else {
-                    console.log('[Category Hint] Categories button not found!');
-                  }
+                                      } else {
+                                      }
                   setShowCategoryHint(true);
                   // Автоматически скрываем через 8 секунд
                   setTimeout(() => setShowCategoryHint(false), 8000);
@@ -596,10 +594,8 @@ export default function Home() {
                       top: rect.bottom + 10,
                       left: rect.left + rect.width / 2
                     });
-                    console.log('[Category Hint] Categories button position:', { top: rect.bottom, left: rect.left, width: rect.width });
-                  } else {
-                    console.log('[Category Hint] Categories button not found!');
-                  }
+                                      } else {
+                                      }
                   setShowCategoryHint(true);
                   // Автоматически скрываем через 8 секунд
                   setTimeout(() => setShowCategoryHint(false), 8000);

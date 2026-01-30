@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'GET') {
-    console.log(`[Coupons API] Fetching coupons for user ${user.id} (${user.email})`);
+    `);
 
     // Получить все купоны пользователя
     const coupons = await prisma.coupon.findMany({
@@ -32,8 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       orderBy: { createdAt: 'desc' }
     });
 
-    console.log(`[Coupons API] Found ${coupons.length} coupons`);
-
+    
     // Обновляем статус истекших купонов
     const now = new Date();
     for (const coupon of coupons) {
@@ -51,8 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       orderBy: { createdAt: 'desc' }
     });
 
-    console.log(`[Coupons API] Returning ${updatedCoupons.length} coupons`);
-    return res.status(200).json({ coupons: updatedCoupons });
+        return res.status(200).json({ coupons: updatedCoupons });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

@@ -103,8 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const itemsInOrder = orderItem.order.items;
     const itemsWithoutPackages = itemsInOrder.filter(item => !item.package);
 
-    console.log(`Order has ${itemsInOrder.length} items, ${itemsWithoutPackages.length} without packages yet`);
-
+    
     // Обрабатываем загруженное фото
     let packagePhotoUrl = null;
     if (files.packagePhoto) {
@@ -115,8 +114,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // АВТО-КОНСОЛИДАЦИЯ: Если в заказе несколько items (одинаковый товар с разными вариантами)
     if (itemsInOrder.length > 1) {
-      console.log('Auto-consolidating multiple items from same order...');
-
+      
       // Создаем dummy OrderItem для консолидированного пакета
       const consolidatedTitle = `${itemsInOrder[0].title.split(/[(\[{]/)[0].trim()} (${itemsInOrder.length} variants)`;
       const totalPrice = itemsInOrder.reduce((sum, item) => sum + item.price, 0);
@@ -167,8 +165,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       });
 
-      console.log(`Auto-consolidated package created: ${packageRecord.id}`);
-
+      
       return res.status(200).json({
         success: true,
         package: packageRecord,
@@ -191,8 +188,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (existingGroupPackages) {
         domesticShippingAlreadyPaid = true;
-        console.log(`Domestic shipping already paid for group ${orderItem.sharedDomesticShippingGroup}, auto-marking as paid`);
-      }
+              }
     }
 
     const packageRecord = await prisma.package.create({

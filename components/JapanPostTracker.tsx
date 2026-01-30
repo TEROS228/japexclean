@@ -18,9 +18,7 @@ function JapanPostTracker() {
   });
 
   useEffect(() => {
-    console.log('📮 JapanPostTracker mounted');
-    return () => console.log('📮 JapanPostTracker unmounted');
-  }, []);
+        return () =>   }, []);
 
   // Сохраняем выбор сервиса в localStorage
   useEffect(() => {

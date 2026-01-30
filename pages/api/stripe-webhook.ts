@@ -36,8 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const buf = await buffer(req);
     const event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
 
-    console.log("✅ Webhook verified:", event.type);
-
+    
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       
@@ -47,11 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const amountReceived = session.metadata?.amountAfterFee;
 
         if (userEmail && amountPaid && amountReceived) {
-          console.log("💰 Payment received:", {
-            email: userEmail,
-            paid: amountPaid,
-            received: amountReceived,
-            fee: amountPaid - parseInt(amountReceived),
+          ,
             sessionId: session.id
           });
 

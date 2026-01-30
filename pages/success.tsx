@@ -46,8 +46,7 @@ export default function SuccessPage() {
   useEffect(() => {
     // Предотвращаем повторную обработку
     if (hasProcessed) {
-      console.log('⚠️ Payment already processed, skipping...');
-      return;
+            return;
     }
 
     const processPayment = async () => {
@@ -68,24 +67,21 @@ export default function SuccessPage() {
       // Проверяем, не был ли этот session_id уже обработан
       const processedSessions = JSON.parse(localStorage.getItem('processedSessions') || '[]');
       if (processedSessions.includes(sessionId)) {
-        console.log('✅ This session was already processed, showing success screen');
-        setSuccess(true);
+                setSuccess(true);
         setProcessing(false);
         setHasProcessed(true);
         return;
       }
 
       try {
-        console.log('Processing payment with session:', sessionId);
-        setHasProcessed(true);
+                setHasProcessed(true);
         
         // 1. Проверяем платеж
         const verifyResponse = await fetch(`/api/balance/verify?session_id=${sessionId}`);
         if (!verifyResponse.ok) throw new Error(`Verify failed: ${verifyResponse.status}`);
         
         const verifyData = await verifyResponse.json();
-        console.log('Verification result:', verifyData);
-
+        
         if (!verifyData.paid || !verifyData.amountAfterFee) {
           throw new Error(verifyData.error || 'Payment not completed');
         }
@@ -110,8 +106,7 @@ export default function SuccessPage() {
         }
 
         const updateData = await updateResponse.json();
-        console.log('Balance updated successfully:', updateData.newBalance);
-
+        
         // 3. Обновляем localStorage
         updateUserBalance(updateData.newBalance); // ← Исправленная функция!
 
@@ -124,7 +119,7 @@ export default function SuccessPage() {
         localStorage.setItem('processedSessions', JSON.stringify(processedSessions));
 
         // 6. Показываем успех вместо редиректа
-        console.log('✅ Payment completed successfully - showing success screen (no redirect)');
+        ');
         setAmount(verifyData.amountAfterFee);
         setNewBalance(updateData.newBalance);
         setSuccess(true);

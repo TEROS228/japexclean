@@ -50,13 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         data: { balance: newBalance }
       });
 
-      console.log('Balance updated:', {
-        email: user.email,
-        amount,
-        newBalance,
-        description
-      });
-
+      
       return res.json({ success: true, newBalance });
     }
 

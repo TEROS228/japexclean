@@ -152,8 +152,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Item URL is required' });
     }
 
-    console.log('[Parse Material] Fetching URL:', itemUrl);
-
+    
     let browser;
     let html = '';
 
@@ -189,14 +188,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       await browser.close();
 
-      console.log('[Parse Material] HTML length:', html.length);
-      console.log('[Parse Material] Looking for 素材 section...');
-
+            
       // Парсим материалы
       const material = parseMaterialFromText(html);
 
-      console.log('[Parse Material] Result:', material);
-
+      
       if (material) {
         return res.status(200).json({ material });
       } else {
@@ -205,8 +201,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const hasMaterial = html.includes('material');
         const hasPercent = html.includes('%') || html.includes('％');
 
-        console.log('[Parse Material] Debug - has 素材:', has素材, 'has material:', hasMaterial, 'has %:', hasPercent);
-
+        
         return res.status(200).json({
           material: '',
           message: 'Material not found',

@@ -22,8 +22,7 @@ export function broadcastUpdate(type: 'packages' | 'orders' | 'admin-data' | 'ba
 
   // КРИТИЧЕСКИ ВАЖНО: Отправляем локальное событие для принудительного обновления ТЕКУЩЕЙ вкладки
   if (typeof window !== 'undefined') {
-    console.log(`📡 [broadcastUpdate] Triggering ${type} update event`);
-
+    
     // Отправляем специфичное событие
     if (type === 'packages') {
       window.dispatchEvent(new CustomEvent('packagesUpdated'));

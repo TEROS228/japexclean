@@ -22,8 +22,7 @@ if (typeof window !== 'undefined') {
     localStorage.removeItem('translation_cache_v1');
 
     if (!localStorage.getItem(CACHE_CLEARED_FLAG)) {
-      console.log('[Translation] Switched to DeepL API - clearing old cache');
-      localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_KEY);
       // Remove all old flags
       for (let i = 1; i <= 8; i++) {
         localStorage.removeItem(`translation_cache_v${i}_*`);
@@ -37,7 +36,6 @@ if (typeof window !== 'undefined') {
       // Проверяем срок годности кеша
       if (parsed.timestamp && Date.now() - parsed.timestamp < CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000) {
         Object.assign(cache, parsed.data || {});
-        console.log(`[Translation] Loaded ${Object.keys(cache).length} cached translations from localStorage`);
       } else {
         // Кеш устарел, удаляем
         localStorage.removeItem(CACHE_KEY);
@@ -171,18 +169,15 @@ async function translateBatch(
   // Если все тексты в кеше, возвращаем их
   if (uncachedTexts.length === 0) {
     if (cacheHits > 0) {
-      console.log(`[Translation] ⚡ All ${cacheHits} texts from localStorage cache`);
-    }
+          }
     return results;
   }
 
   if (cacheHits > 0) {
-    console.log(`[Translation] ⚡ ${cacheHits} from cache, ${uncachedTexts.length} need translation`);
-  }
+      }
 
   try {
-    console.log(`[Translation API] Requesting translation for ${uncachedTexts.length} texts`);
-
+    
     const response = await fetch('/api/translate', {
       method: 'POST',
       headers: {
@@ -234,12 +229,11 @@ async function translateBatch(
           }
         });
         saveCache(); // Сохраняем весь батч в localStorage
-        console.log(`[Translation API] ✓ Received ${data.translations.length} translations (${translatedCount} actually translated)`);
       }
 
       return results;
     } catch (jsonError) {
-      console.error(`[Translation API] JSON parse error:`, jsonError);
+      console.error('[Translation API] JSON parse error:', jsonError);
       // Возвращаем оригинальные тексты
       uncachedIndices.forEach((originalIndex, i) => {
         results[originalIndex] = uncachedTexts[i];
@@ -247,7 +241,7 @@ async function translateBatch(
       return results;
     }
   } catch (error) {
-    console.error(`[Translation API] Network error:`, error);
+    console.error('[Translation API] Network error:', error);
     // Возвращаем оригинальные тексты при ошибке
     uncachedIndices.forEach((originalIndex, i) => {
       results[originalIndex] = uncachedTexts[i];
@@ -340,8 +334,7 @@ async function translateNodes(container: HTMLElement, targetLang: Language) {
     return;
   }
 
-  console.log(`[Translation] Found ${textNodes.length} new text nodes to translate`);
-
+  
   // Переводим батчами по 5 узлов (меньше чтобы не перегружать API)
   const batchSize = 5;
   const totalBatches = Math.ceil(textNodes.length / batchSize);
@@ -352,8 +345,7 @@ async function translateNodes(container: HTMLElement, targetLang: Language) {
       const texts = batch.map(item => item.text);
       const batchNumber = i / batchSize + 1;
 
-      console.log(`[Translation] Processing batch ${batchNumber}/${totalBatches}`);
-      const translations = await translateBatch(texts, 'ja', targetLang);
+            const translations = await translateBatch(texts, 'ja', targetLang);
 
       // Применяем переводы
       batch.forEach((item, index) => {
@@ -365,8 +357,7 @@ async function translateNodes(container: HTMLElement, targetLang: Language) {
 
           // ВАЖНО: Проверяем что текст узла не изменился с момента сканирования
           if (currentText !== expectedText) {
-            console.warn(`[Translation] Skipping - text changed: "${expectedText}" -> "${currentText}"`);
-            return;
+                        return;
           }
 
           // Помечаем элемент как обработанный
@@ -381,10 +372,9 @@ async function translateNodes(container: HTMLElement, targetLang: Language) {
 
             item.node.textContent = translatedText;
 
-            console.log(`✅ Translated: "${originalPreview}" -> "${translatedPreview}"`);
-          }
+                      }
         } catch (nodeError) {
-          console.error(`[Translation] Error applying translation:`, nodeError);
+          console.error('[Translation] Error applying translation:', nodeError);
           // Продолжаем с остальными узлами
         }
       });
@@ -399,8 +389,7 @@ async function translateNodes(container: HTMLElement, targetLang: Language) {
     }
   }
 
-  console.log(`[Translation] Completed translation of ${textNodes.length} text nodes`);
-}
+  }
 
 // Функция для перевода всех текстовых узлов на странице
 export async function translatePage(targetLang: Language) {
@@ -423,20 +412,17 @@ export async function translatePage(targetLang: Language) {
 
   currentLanguage = targetLang;
 
-  console.log(`[Translation] Starting page translation to ${targetLang}`);
-
+  
   // Переводим существующий контент
   await translateNodes(document.body, targetLang);
 
-  console.log(`[Translation] Initial translation complete. Checking for new content every 5 seconds.`);
-
+  
   // Повторяем перевод периодически (каждые 5 секунд) для динамического контента
   let autoTranslateInterval = setInterval(async () => {
     if (currentLanguage === targetLang) {
       await translateNodes(document.body, targetLang);
     } else {
-      console.log(`[Translation] Language changed, stopping auto-translation`);
-      clearInterval(autoTranslateInterval);
+            clearInterval(autoTranslateInterval);
     }
   }, 5000);
 }

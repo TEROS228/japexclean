@@ -38,9 +38,6 @@ export default function LeadMagnetPopup() {
       const result = await fp.get();
       const visitorId = result.visitorId;
 
-      // Логируем confidence score для мониторинга
-      console.log(`[Fingerprint] ID: ${visitorId.substring(0, 8)}..., Confidence: ${result.confidence?.score || 'N/A'}`);
-
       setFingerprint(visitorId);
 
       // Проверяем на сервере не получал ли этот браузер/IP уже бонус

@@ -9,8 +9,7 @@ export function useForceUpdate() {
 
   useEffect(() => {
     const forceUpdate = () => {
-      console.log('🔄 [useForceUpdate] Force updating component');
-      setTick(tick => tick + 1);
+            setTick(tick => tick + 1);
     };
 
     // Слушаем ВСЕ типы обновлений
@@ -39,6 +38,5 @@ export function useForceUpdate() {
  * Функция для отправки события обновления
  */
 export function triggerUpdate(type: string) {
-  console.log(`📡 [triggerUpdate] Broadcasting ${type} update`);
-  window.dispatchEvent(new CustomEvent(type));
+    window.dispatchEvent(new CustomEvent(type));
 }

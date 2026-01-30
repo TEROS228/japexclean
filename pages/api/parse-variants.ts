@@ -86,9 +86,7 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
               const jsonStr = afterKey.substring(arrayStart, arrayEnd);
               try {
                 variantSelectors = JSON.parse(jsonStr);
-                // console.log('[HTML Parser] ✓ Found variantSelectors:', variantSelectors.length);
               } catch (e) {
-                // console.log('[HTML Parser] Failed to parse variantSelectors');
               }
             }
           }
@@ -118,9 +116,7 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
               const jsonStr = afterKey.substring(arrayStart, arrayEnd);
               try {
                 skuArray = JSON.parse(jsonStr);
-                // console.log('[HTML Parser] ✓ Found sku array:', skuArray.length);
               } catch (e) {
-                // console.log('[HTML Parser] Failed to parse sku');
               }
             }
           }
@@ -154,9 +150,7 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
                 const jsonStr = afterColon.substring(arrayStart, arrayEnd);
                 try {
                   variantMappedInventories = JSON.parse(jsonStr);
-                  // console.log('[HTML Parser] ✓ Found variantMappedInventories:', variantMappedInventories.length);
                 } catch (e) {
-                  // console.log('[HTML Parser] Failed to parse variantMappedInventories:', e);
                 }
               }
             }
@@ -168,11 +162,7 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
     }
 
     if (variantSelectors.length && skuArray.length) {
-      console.log('=== 🔍 VARIANT PARSING DEBUG ===');
-      console.log('[1] Found variantSelectors:', variantSelectors.length, 'groups');
-      console.log('[2] Found skuArray:', skuArray.length, 'SKUs');
-      console.log('[3] Found variantMappedInventories:', variantMappedInventories.length, 'items');
-
+                        
       // Строим маппинг инвентаря из variantMappedInventories: variantId -> quantity
       const inventoryMap: Record<string, number> = {};
       if (variantMappedInventories.length > 0) {
@@ -181,13 +171,9 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
             inventoryMap[inv.sku] = inv.quantity;
           }
         });
-        console.log('[4] ✅ Built inventory map:', Object.keys(inventoryMap).length, 'items');
-        console.log('    Inventory sample (first 10):');
         Object.entries(inventoryMap).slice(0, 10).forEach(([sku, qty]) => {
-          console.log(`      ${sku}: ${qty} items ${qty > 0 ? '✓ IN STOCK' : '✗ OUT OF STOCK'}`);
         });
       } else {
-        console.log('[4] ⚠️ No variantMappedInventories found - availability may be inaccurate!');
       }
 
       // Строим маппинг цен из SKU
@@ -195,11 +181,6 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
       skuArray.forEach((sku: any, index: number) => {
         if (sku.selectorValues && sku.selectorValues.length > 0) {
           const key = sku.selectorValues[0];
-
-          // Debug: логируем первый SKU чтобы посмотреть структуру
-          // if (index === 0) {
-          //   console.log('[HTML Parser] Sample SKU structure:', JSON.stringify(sku, null, 2));
-          // }
 
           // Пробуем разные места где может быть цена
           let price = sku.taxIncludedPrice ||
@@ -220,14 +201,9 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
 
           if (price && typeof price === 'number' && price > 0) {
             priceMap[key] = price;
-            // console.log(`[HTML Parser] Found price for "${key}": ¥${price}`);
-          } else {
-            // console.log(`[HTML Parser] No price found for "${key}"`);
           }
         }
       });
-
-      // console.log('[HTML Parser] Final price map:', JSON.stringify(priceMap, null, 2));
 
       // Строим маппинг доступности на основе inventoryMap: вариант доступен если quantity > 0
       const availabilityMap: Record<string, boolean> = {};
@@ -241,8 +217,7 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
       });
 
       // Помечаем доступные варианты на основе SKU + inventory + stockCondition
-      console.log('[5] Processing SKU availability...');
-      let availableCount = 0;
+            let availableCount = 0;
       let unavailableCount = 0;
 
       skuArray.forEach((sku: any, index: number) => {
@@ -276,15 +251,6 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
             isInStock = stockCondition !== 'sold-out';
           }
 
-          // Логируем первые 5 SKU для примера
-          if (index < 5) {
-            console.log(`    SKU #${index + 1}:`, sku.selectorValues.join(' + '));
-            console.log(`      variantId: ${variantId}`);
-            console.log(`      quantity: ${quantity !== undefined ? quantity : 'N/A'}`);
-            console.log(`      stockCondition: ${stockCondition || 'N/A'}`);
-            console.log(`      → ${isInStock ? '✓ AVAILABLE' : '✗ UNAVAILABLE'}`);
-          }
-
           if (isInStock) {
             availableCount++;
             sku.selectorValues.forEach((value: string) => {
@@ -296,15 +262,11 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
         }
       });
 
-      console.log(`[6] SKU Summary: ${availableCount} available, ${unavailableCount} unavailable`);
-      console.log('[7] Final availability map:');
       Object.entries(availabilityMap).forEach(([variant, available]) => {
-        console.log(`      ${variant}: ${available ? '✓ AVAILABLE' : '✗ UNAVAILABLE'}`);
       });
 
       // Строим группы из variantSelectors
-      console.log('[8] Building variant groups...');
-      variantSelectors.forEach((selector: any, index: number) => {
+            variantSelectors.forEach((selector: any, index: number) => {
         const groupName = selector.label || selector.key;
         const options = selector.values.map((v: any) => {
           const value = v.value || v.label;
@@ -321,16 +283,12 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
 
         groups.push({ name: groupName, key: selector.key, options });
 
-        // Логируем каждую группу
-        console.log(`    Group #${index + 1}: "${groupName}"`);
         options.forEach((opt: any) => {
           const priceStr = opt.price ? ` (¥${opt.price})` : '';
-          console.log(`      - ${opt.value}${priceStr}: ${opt.available ? '✓ AVAILABLE' : '✗ UNAVAILABLE'}`);
         });
       });
 
-      console.log('=== ✅ VARIANT PARSING COMPLETE ===\n');
-
+      
       // Строим маппинг доступности из SKU (для комбинаций)
       if (groups.length >= 2) {
         const firstGroup = groups[0];
@@ -346,8 +304,7 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
           // Используем Map для агрегации доступности по secondaryValue
           const secondaryMap = new Map<string, boolean>();
 
-          // console.log(`\n[HTML Parser] Processing primary option: ${primaryOpt.value}`);
-
+          // 
           skuArray.forEach((sku: any) => {
             if (sku.selectorValues && sku.selectorValues[primaryIndex] === primaryOpt.value && !sku.hidden) {
               const secondaryValue = sku.selectorValues[secondaryIndex];
@@ -377,15 +334,13 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
                 isAvailable = !stockCondition || stockCondition !== 'sold-out';
               }
 
-              // console.log(`[HTML Parser]   SKU: variantId=${variantId}, primary=${sku.selectorValues[primaryIndex]}, secondary=${secondaryValue}, quantity=${quantity}, stockCondition=${stockCondition}, available=${isAvailable}`);
-
+              // 
               // Если комбинация уже есть в мапе и доступна, не меняем
               // Если комбинация еще не добавлена или была недоступна, обновляем
               const currentAvailability = secondaryMap.get(secondaryValue) || false;
               const newAvailability = currentAvailability || isAvailable;
 
-              // console.log(`[HTML Parser]   Updating ${secondaryValue}: currentAvailability=${currentAvailability}, newAvailability=${newAvailability}`);
-
+              // 
               secondaryMap.set(secondaryValue, newAvailability);
             }
           });
@@ -396,15 +351,9 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>) 
               available
             }));
             colorSizeMapping[primaryOpt.value] = availableSecondary;
-
-            // console.log(`[HTML Parser] Final mapping for ${primaryOpt.value}:`, availableSecondary);
           }
         });
-
-        // console.log('[HTML Parser] Color-Size mapping:', JSON.stringify(colorSizeMapping, null, 2));
       }
-
-      // console.log('[HTML Parser] ✓ Parsed', groups.length, 'groups');
     }
 
   } catch (error) {
@@ -431,8 +380,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   // Если уже есть pending запрос для этого URL, ждем его завершения
   const pendingRequest = pendingRequests.get(cacheKey);
   if (pendingRequest) {
-    console.log(`[Rakuten Parser] Waiting for pending request: ${targetUrl}`);
-    try {
+        try {
       const result = await pendingRequest;
       return res.status(200).json(result);
     } catch (error) {
@@ -459,17 +407,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
           if (apiRes.ok) {
             const apiData: any = await apiRes.json();
             const flag = apiData.Items?.[0]?.Item?.postageFlag || 0;
-            console.log('[Rakuten Parser] Got postageFlag from API:', flag);
-            return flag;
+                        return flag;
           }
         } catch (e) {
-          console.log('[Rakuten Parser] Failed to get postageFlag from API');
-        }
+                  }
         return 0;
       })() : Promise.resolve(0);
 
-      // console.log(`[Rakuten Parser] Fetching HTML with fast fetch: ${targetUrl}`);
-
+      // 
       // НОВЫЙ ПОДХОД: Сразу используем быстрый fetch вместо медленного Puppeteer
       // HTML парсинг отлично работает с JavaScript данными в статическом HTML
       let html = '';
@@ -495,7 +440,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
         const buffer = await response.arrayBuffer();
         html = iconv.decode(Buffer.from(buffer), 'EUC-JP');
-        // console.log(`[Rakuten Parser] Fetched HTML length: ${html.length}`);
       } catch (error) {
         console.error(`[Rakuten Parser] Fetch error:`, error);
         html = '';
@@ -503,8 +447,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
       // Если HTML пустой, возвращаем пустой результат
       if (!html || html.length < 100) {
-        console.log('[Rakuten Parser] HTML is empty or too short, returning empty result');
-        return {
+                return {
           success: true,
           variants: [],
           groups: [],
@@ -526,8 +469,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       apiPostageFlag = await apiPromise;
       const postageFlag = apiPostageFlag;
 
-      // console.log(`[Rakuten Parser] Found ${variantGroups.length} variant groups`);
-      // console.log(`[Rakuten Parser] postageFlag: ${postageFlag} (from API)`);
+      //       // `);
 
       // Преобразуем в плоский список для совместимости
       const allVariants: IVariant[] = [];
@@ -572,7 +514,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       };
     } finally {
       pendingRequests.delete(cacheKey);
-      // console.log(`[Rakuten Parser] Finished processing`);
     }
   })();
 

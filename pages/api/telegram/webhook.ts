@@ -28,7 +28,7 @@ setInterval(() => {
   for (const [chatId, context] of chatContext.entries()) {
     if (now - context.timestamp > twoHours) {
       chatContext.delete(chatId);
-      console.log(`[Telegram] Cleared old context for chat ${chatId} (order #${context.orderNumber})`);
+      `);
     }
   }
 }, 30 * 60 * 1000); // Проверяем каждые 30 минут, но удаляем только старые 2+ часа
@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const update = req.body;
-    console.log('[Telegram Webhook] Received update:', JSON.stringify(update, null, 2));
+    );
 
     const message = update.message;
     if (!message) {
@@ -63,8 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           timestamp: Date.now()
         });
 
-        console.log(`[Telegram] ✅ Set context for chat ${chatId}: order #${orderNumber}`);
-        console.log(`[Telegram] Current contexts:`, Array.from(chatContext.entries()).map(([id, ctx]) => ({ chatId: id, order: ctx.orderNumber })));
+                ).map(([id, ctx]) => ({ chatId: id, order: ctx.orderNumber })));
 
         await sendTelegramMessage(chatId, `✅ Order #${orderNumber} set. Now send photos for this order.`);
       }
@@ -74,17 +73,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Проверяем наличие фото
     if (!message.photo) {
-      console.log('[Telegram Webhook] No photos found');
-      return res.status(200).json({ ok: true, message: 'No action needed' });
+            return res.status(200).json({ ok: true, message: 'No action needed' });
     }
 
     const mediaGroupId = message.media_group_id;
 
     // Если это медиа-группа (несколько фото отправлено вместе)
     if (mediaGroupId) {
-      console.log('[Telegram Webhook] MEDIA GROUP ID:', mediaGroupId);
-      console.log('[Telegram Webhook] Message ID:', message.message_id);
-
+            
       // Получаем или создаем группу
       let group = mediaGroups.get(mediaGroupId);
 
@@ -106,8 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const largestPhoto = message.photo[message.photo.length - 1];
       group.photos.push(largestPhoto);
 
-      console.log(`[Telegram Webhook] Added photo to group ${mediaGroupId}, total: ${group.photos.length}`);
-
+      
       return res.status(200).json({ ok: true, message: 'Photo added to group' });
     }
 
@@ -122,8 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (orderNumberMatch) {
         orderNumber = parseInt(orderNumberMatch[1]);
-        console.log('[Telegram Webhook] Found order number in caption:', orderNumber);
-
+        
         // Обновляем контекст
         chatContext.set(chatId, {
           orderNumber,
@@ -136,14 +130,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!orderNumber) {
       const context = chatContext.get(chatId);
 
-      console.log(`[Telegram Webhook] 🔍 Looking for context for chat ${chatId}`);
-      console.log(`[Telegram Webhook] Available contexts:`, Array.from(chatContext.entries()).map(([id, ctx]) => ({ chatId: id, order: ctx.orderNumber })));
+            ).map(([id, ctx]) => ({ chatId: id, order: ctx.orderNumber })));
 
       if (context) {
         orderNumber = context.orderNumber;
-        console.log(`[Telegram Webhook] ✅ Using order number from context: #${orderNumber}`);
-      } else {
-        console.log('[Telegram Webhook] ❌ No order number found (no caption and no context)');
+              } else {
+        ');
         await sendTelegramMessage(chatId, '❌ Order number not found. Please send order number first (e.g., #301) or send photo with caption #301');
         return res.status(200).json({ ok: true, message: 'No order number' });
       }
@@ -165,8 +157,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (!order) {
-      console.log('[Telegram Webhook] Order not found:', orderNumber);
-      await sendTelegramMessage(message.chat.id, `❌ Order #${orderNumber} not found`);
+            await sendTelegramMessage(message.chat.id, `❌ Order #${orderNumber} not found`);
       return res.status(200).json({ ok: true, message: 'Order not found' });
     }
 
@@ -183,8 +174,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (!pkg) {
-      console.log('[Telegram Webhook] No package with photo service found for order:', orderNumber);
-      await sendTelegramMessage(message.chat.id, `❌ Order #${orderNumber} has no package with photo service requested`);
+            await sendTelegramMessage(message.chat.id, `❌ Order #${orderNumber} has no package with photo service requested`);
       return res.status(200).json({ ok: true, message: 'Photo service not requested' });
     }
 
@@ -219,8 +209,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    console.log(`[Telegram Webhook] Found ${uniquePhotos.size} unique photos out of ${photos.length} total`);
-
+    
     let photoIndex = 1;
     for (const [uniqueId, photo] of uniquePhotos) {
       try {
@@ -253,8 +242,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         photoUrls.push(`/uploads/photos/${packageId}/${fileName}`);
         photoIndex++;
 
-        console.log('[Telegram Webhook] Photo saved:', fileName);
-      } catch (error) {
+              } catch (error) {
         console.error('[Telegram Webhook] Error downloading photo:', error);
       }
     }
@@ -283,8 +271,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
-    console.log('[Telegram Webhook] Package updated successfully:', packageId);
-
+    
     // Отправляем подтверждение админу
     await sendTelegramMessage(
       message.chat.id,
@@ -303,12 +290,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function processMediaGroup(mediaGroupId: string) {
   const group = mediaGroups.get(mediaGroupId);
   if (!group) {
-    console.log(`[Telegram Webhook] Media group ${mediaGroupId} not found`);
-    return;
+        return;
   }
 
-  console.log(`[Telegram Webhook] Processing media group ${mediaGroupId} with ${group.photos.length} photos`);
-
+  
   // Удаляем группу из хранилища
   mediaGroups.delete(mediaGroupId);
   clearTimeout(group.timeout);
@@ -321,8 +306,7 @@ async function processMediaGroup(mediaGroupId: string) {
   const orderNumberMatch = caption.match(/#(\d+)/);
   if (orderNumberMatch) {
     orderNumber = parseInt(orderNumberMatch[1]);
-    console.log('[Telegram Webhook] Media group order number from caption:', orderNumber);
-
+    
     // Обновляем контекст
     chatContext.set(chatId, {
       orderNumber,
@@ -336,9 +320,8 @@ async function processMediaGroup(mediaGroupId: string) {
 
     if (context) {
       orderNumber = context.orderNumber;
-      console.log('[Telegram Webhook] Media group using order number from context:', orderNumber);
-    } else {
-      console.log('[Telegram Webhook] No order number in media group (no caption and no context)');
+          } else {
+      ');
       await sendTelegramMessage(chatId, '❌ Order number not found. Please send order number first (e.g., #301) or send photos with caption #301');
       return;
     }
@@ -421,8 +404,7 @@ async function processMediaGroup(mediaGroupId: string) {
         photoUrls.push(`/uploads/photos/${packageId}/${fileName}`);
         photoIndex++;
 
-        console.log('[Telegram Webhook] Photo saved:', fileName);
-      } catch (error) {
+              } catch (error) {
         console.error('[Telegram Webhook] Error downloading photo:', error);
       }
     }
@@ -451,8 +433,7 @@ async function processMediaGroup(mediaGroupId: string) {
       }
     });
 
-    console.log('[Telegram Webhook] Package updated successfully:', packageId);
-
+    
     await sendTelegramMessage(
       chatId,
       `✅ Success!\n\n📦 Order: #${orderNumber}\n👤 User: ${order.user.email}\n📦 Item: ${orderItem?.title || 'N/A'}\n📸 Photos uploaded: ${photoUrls.length}\n\nUser has been notified.`
