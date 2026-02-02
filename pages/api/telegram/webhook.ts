@@ -215,7 +215,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Получаем информацию о файле
         const fileInfoResponse = await fetch(
-          `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`
+          'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/getFile?file_id=' + fileId
         );
         const fileInfo = await fileInfoResponse.json() as any;
 
@@ -225,7 +225,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         const filePath = fileInfo.result.file_path;
-        const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${filePath}`;
+        const fileUrl = 'https://api.telegram.org/file/bot' + TELEGRAM_BOT_TOKEN + '/' + filePath;
 
         // Скачиваем файл
         const imageResponse = await fetch(fileUrl);
@@ -390,7 +390,7 @@ async function processMediaGroup(mediaGroupId: string) {
         }
 
         const filePath = fileInfo.result.file_path;
-        const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${filePath}`;
+        const fileUrl = 'https://api.telegram.org/file/bot' + TELEGRAM_BOT_TOKEN + '/' + filePath;
 
         const imageResponse = await fetch(fileUrl);
         const imageBuffer = await imageResponse.buffer();

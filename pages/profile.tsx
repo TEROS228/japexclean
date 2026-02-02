@@ -3686,13 +3686,6 @@ function DeliveryOptionsModal({ package: pkg, options, addresses, lastUpdateTime
 
             const passesAll = Object.values(checks).every(v => v);
 
-            if (!passesAll) {
-              } filtered out:`, checks);
-              .filter(([k, v]) => !v).map(([k]) => k));
-            } else {
-              } PASSED all checks`);
-            }
-
             return passesAll;
           });
 
