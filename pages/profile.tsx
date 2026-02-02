@@ -6979,7 +6979,6 @@ function CompensationModal({ onClose }: { onClose: () => void }) {
           return isShipped && isNotConsolidatedIntoAnother && hasNoClaim;
         });
 
-        :', shippedPackages);
         setPackages(shippedPackages);
       }
     } catch (error) {

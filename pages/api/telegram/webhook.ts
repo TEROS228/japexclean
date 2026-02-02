@@ -380,7 +380,7 @@ async function processMediaGroup(mediaGroupId: string) {
         const fileId = photo.file_id;
 
         const fileInfoResponse = await fetch(
-          `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`
+          'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/getFile?file_id=' + fileId
         );
         const fileInfo = await fileInfoResponse.json() as any;
 
@@ -395,11 +395,11 @@ async function processMediaGroup(mediaGroupId: string) {
         const imageResponse = await fetch(fileUrl);
         const imageBuffer = await imageResponse.buffer();
 
-        const fileName = `photo_${photoIndex}.jpg`;
+        const fileName = 'photo_' + photoIndex + '.jpg';
         const localPath = path.join(uploadDir, fileName);
         fs.writeFileSync(localPath, imageBuffer);
 
-        photoUrls.push(`/uploads/photos/${packageId}/${fileName}`);
+        photoUrls.push('/uploads/photos/' + packageId + '/' + fileName);
         photoIndex++;
 
               } catch (error) {
