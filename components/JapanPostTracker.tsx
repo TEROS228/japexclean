@@ -18,7 +18,8 @@ function JapanPostTracker() {
   });
 
   useEffect(() => {
-        return () =>   }, []);
+    return () => {};
+  }, []);
 
   // Сохраняем выбор сервиса в localStorage
   useEffect(() => {

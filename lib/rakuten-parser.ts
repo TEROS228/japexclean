@@ -72,7 +72,7 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
       const url = response.url();
       const status = response.status();
       if (url.includes('rakuten.co.jp') && !url.includes('.jpg') && !url.includes('.png')) {
-        );
+        // Response logged
       }
     });
 
@@ -84,23 +84,22 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
         timeout: 20000
       });
       navigationSuccess = true;
-      ');
     } catch (navigationError: any) {
       console.error('[Rakuten Parser] ✗ Navigation failed:', navigationError.message);
     }
 
     // Ждем пока body появится
-        try {
+    try {
       await page.waitForSelector('body', { timeout: 10000 });
-          } catch (err) {
+    } catch (err) {
       console.error('[Rakuten Parser] ✗ Body element not found!');
     }
 
     // Ждем пока document станет interactive или complete
-        await page.waitForFunction(
+    await page.waitForFunction(
       () => document.readyState === 'interactive' || document.readyState === 'complete',
       { timeout: 10000 }
-    ).catch(() => );
+    ).catch(() => {});
 
     // Дополнительная задержка для загрузки скриптов
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -118,13 +117,14 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
     
     // Ждём появления контента с вариантами
     try {
-            await Promise.race([
+      await Promise.race([
         page.waitForSelector('[irc="SkuSelectionArea"]', { timeout: 5000 }),
         page.waitForSelector('[irc="OptionArea"]', { timeout: 5000 }),
         new Promise(resolve => setTimeout(resolve, 5000))
       ]);
-          } catch {
-          }
+    } catch {
+      // Timeout - continue anyway
+    }
 
     // Еще одна задержка для React рендеринга
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -265,13 +265,9 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
       return { success: false, foundVariantSelectors, foundSku };
     });
 
-    // Логируем результаты JS парсинга
-    if (!variantsFromJS.success) {
-          }
-
     // Если нашли данные в JS, используем их
     if (variantsFromJS.success && variantsFromJS.groups) {
-            return {
+      return {
         groups: variantsFromJS.groups,
         colorSizeMapping: variantsFromJS.mapping
       };
@@ -355,18 +351,6 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
       };
     });
 
-                                    
-    if (pageInfo.spacerBlocksCount > 0) {
-      :', pageInfo.spacerTexts);
-    }
-
-    if (pageInfo.buttonsWithAriaLabelCount > 0) {
-          }
-
-    if (pageInfo.bodyLength < 1000) {
-          }
-
-    
     const variantsStructure = await page.evaluate(() => {
       const result: VariantGroup[] = [];
       const debug = {
@@ -384,38 +368,33 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
       const skuArea = document.querySelector('[irc="SkuSelectionArea"], .display-sku-area');
       debug.hasSkuArea = !!skuArea;
 
-      
       if (skuArea) {
-        
         // Находим все группы вариантов (Цвет, Размер и т.д.)
         const groups = skuArea.querySelectorAll('.spacer--3J57F.block--_IJiJ.padding-bottom-small--UuLKJ');
         debug.skuGroupsCount = groups.length;
 
-                
-      groups.forEach((group, groupIndex) => {
-        
-        // Находим название группы (любое)
+        groups.forEach((group, groupIndex) => {
+          // Находим название группы (любое)
         const labelElements = group.querySelectorAll('.text-display--2xC98');
         let groupName = '';
 
-        
         for (const el of Array.from(labelElements)) {
           const text = el.textContent?.trim() || '';
-                    // Берём первый непустой текст, который не "未選択" (не выбрано)
+          // Берём первый непустой текст, который не "未選択" (не выбрано)
           if (text && text.length > 0 && text.length < 50 && !text.includes('未選択')) {
             // Убираем двоеточие и берём только первую часть
             groupName = text.replace('：', '').replace(':', '').trim();
-                        break;
+            break;
           }
         }
 
         if (!groupName) {
-                    return;
+          return;
         }
 
         // Находим все кнопки вариантов в этой группе
         const buttons = group.querySelectorAll('button[class*="sku-button"]');
-                const options: { value: string; label: string; available: boolean; element: Element; price?: number }[] = [];
+        const options: { value: string; label: string; available: boolean; element: Element; price?: number }[] = [];
 
         buttons.forEach((button) => {
           const ariaLabel = button.getAttribute('aria-label');
@@ -476,7 +455,6 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
         });
 
         if (options.length > 0) {
-          
           const variantGroup = {
             name: groupName,
             key: groupName,
@@ -497,15 +475,13 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
 
           if (isColorGroup) {
             colorGroup = variantGroup;
-                      } else if (isSizeGroup) {
+          } else if (isSizeGroup) {
             sizeGroup = variantGroup;
-                      }
-        } else {
-                  }
-      });
+          }
+        }
+        });
       }
 
-      
       // Стратегия 2: Select элементы в OptionArea (для товаров с выпадающими списками)
       const optionArea = document.querySelector('[irc="OptionArea"]');
       debug.hasOptionArea = !!optionArea;
@@ -580,8 +556,6 @@ export async function parseRakutenVariants(url: string): Promise<ParsedVariantsR
       debug: any;
     } = variantsStructure;
 
-    // Логируем результаты DOM парсинга
-    
     let colorSizeMapping: Record<string, Array<{ value: string; available: boolean }>> = {};
 
     // Если есть и цвета, и размеры - пропускаем проверку через клики

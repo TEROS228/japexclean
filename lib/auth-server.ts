@@ -3,8 +3,6 @@ import { prisma } from '@/lib/prisma';
 
 export const verifyServerToken = async (token: string): Promise<{ id: string; email: string } | null> => {
   try {
-     + '...');
-    
     // Разрешить mock-токены в development для тестирования
     if (process.env.NODE_ENV === 'development' && token.startsWith('mock-token-')) {
             

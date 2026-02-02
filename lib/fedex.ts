@@ -64,7 +64,6 @@ async function getExchangeRate(): Promise<number> {
     // Сохраняем в кеш
     exchangeRateCache = { rate, timestamp: Date.now() };
 
-    `);
     return rate;
   } catch (error) {
         return 150; // Fallback курс
@@ -187,8 +186,6 @@ export async function calculateFedExRate(request: FedExRateRequest): Promise<Fed
       }
     };
 
-    );
-
     const response = await fetch('https://apis.fedex.com/rate/v1/rates/quotes', {
       method: 'POST',
       headers: {
@@ -221,7 +218,6 @@ export async function calculateFedExRate(request: FedExRateRequest): Promise<Fed
     }
 
     const data = JSON.parse(responseText);
-    );
 
     // Извлекаем самый дешевый вариант доставки
     if (!data.output?.rateReplyDetails || data.output.rateReplyDetails.length === 0) {
@@ -437,8 +433,6 @@ export async function getExactFedExRates(request: FedExRateRequest): Promise<Fed
               rateJPY,
               deliveryDays: undefined
             });
-
-            `);
           }
         }
       } catch (error) {
@@ -454,8 +448,6 @@ export async function getExactFedExRates(request: FedExRateRequest): Promise<Fed
     }
 
     options.sort((a, b) => a.rateJPY - b.rateJPY);
-
-    );
 
     return {
       success: true,
@@ -732,12 +724,9 @@ export async function getAllFedExRates(request: FedExRateRequest): Promise<FedEx
               priceNote: 'Official FedEx rate (includes all fees)'
             };
 
-            `);
             options.push(option);
-          } else {
-                      }
-        } else {
-                  }
+          }
+        }
       } catch (error) {
         console.error(`   ❌ ${serviceType} exception:`, error instanceof Error ? error.message : error);
         continue;
@@ -771,8 +760,6 @@ export async function getAllFedExRates(request: FedExRateRequest): Promise<FedEx
 
     options.sort((a, b) => a.rateJPY - b.rateJPY);
 
-    `);
-    
     return {
       success: true,
       options
