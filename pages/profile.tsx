@@ -3639,20 +3639,6 @@ function DeliveryOptionsModal({ package: pkg, options, addresses, lastUpdateTime
           // Фильтруем: только ready, не текущая посылка, и без активного запроса на отмену
           // Исключаем: pending, awaiting_payment, paid, approved
           // Разрешаем: rejected (отклонен продавцом - можно консолидировать)
-
-                     => ({
-            id: p.id,
-            title: p.orderItem?.title?.substring(0, 50),
-            status: p.status,
-            shippingRequested: p.shippingRequested,
-            shippedAt: p.shippedAt,
-            consolidated: p.consolidated,
-            consolidation: p.consolidation,
-            cancelPurchase: p.cancelPurchase,
-            reinforcement: p.reinforcement,
-            disposalRequested: p.disposalRequested,
-            disposed: p.disposed
-          })));
           
           const available = data.packages.filter((p: any) => {
             // Проверяем cancelPurchase - блокируем если запрос активен (не rejected)

@@ -172,7 +172,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (!pkg) {
-            await sendTelegramMessage(message.chat.id, `❌ Order #${orderNumber} has no package with photo service requested`);
+            await sendTelegramMessage(message.chat.id, 'Order #' + orderNumber + ' has no package with photo service requested');
       return res.status(200).json({ ok: true, message: 'Photo service not requested' });
     }
 
