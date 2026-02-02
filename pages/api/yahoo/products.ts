@@ -77,13 +77,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Это подкатегория - используем genre_category_id API
-    `);
-
     // Используем прямой запрос по ID категории для подкатегорий
     const yahooProducts = await getYahooProductsByCategory(categoryIdNum, pageNum, 20, sortParam);
     const products = yahooProducts.map(convertYahooToRakutenFormat);
 
-    
     // Сохраняем в кеш
     categoryCache.set(cacheKey, {
       products,

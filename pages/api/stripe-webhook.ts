@@ -46,10 +46,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const amountReceived = session.metadata?.amountAfterFee;
 
         if (userEmail && amountPaid && amountReceived) {
-          ,
-            sessionId: session.id
-          });
-
           // Отправляем уведомление в Telegram
           const telegramMessage = `
 💰 <b>NEW BALANCE TOP-UP</b>

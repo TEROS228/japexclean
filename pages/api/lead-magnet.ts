@@ -140,8 +140,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: newUser.email,
     });
 
-    }..., Marketing: ${marketingConsent})`);
-
     return res.status(200).json({
       success: true,
       message: 'Welcome coupon received: ¥500 off!',

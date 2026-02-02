@@ -63,8 +63,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           timestamp: Date.now()
         });
 
-                ).map(([id, ctx]) => ({ chatId: id, order: ctx.orderNumber })));
-
         await sendTelegramMessage(chatId, `✅ Order #${orderNumber} set. Now send photos for this order.`);
       }
 

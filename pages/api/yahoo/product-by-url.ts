@@ -177,15 +177,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (isProductImage && !isNotProductImage && img.naturalWidth >= 200 && !imageSet.has(fullUrl)) {
           imageSet.add(fullUrl);
           images.push(fullUrl);
-          );
         }
       });
 
-      
       // Если не нашли изображения, добавляем хотя бы og:image
       if (images.length === 0 && ogImage) {
         images.push(ogImage);
-              }
+      }
 
       // Бесплатная доставка
       const freeShipping = document.body.textContent?.includes('送料無料') || false;

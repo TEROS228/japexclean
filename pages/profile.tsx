@@ -881,19 +881,6 @@ function PackagesSection({ setSelectedPhoto }: any) {
 
       if (response.ok) {
         const data = await response.json();
-                 => ({ id: p.id.slice(0, 8), status: p.status })));
-
-        // DEBUG: Логируем consolidateWith для автоконсолидированных пакетов
-        const autoConsolidatedPackages = data.packages.filter((p: any) => p.autoConsolidated);
-        if (autoConsolidatedPackages.length > 0) {
-           => ({
-            id: p.id.slice(0, 8),
-            consolidation: p.consolidation,
-            consolidateWith: p.consolidateWith,
-            consolidated: p.consolidated
-          })));
-        }
-
         setPackages(data.packages);
       }
 

@@ -30,7 +30,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Проверяем кеш
   const cachedEntry = imagesCache.get(url);
   if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL) {
-    ');
     return res.status(200).json({
       images: cachedEntry.images.slice(0, 10),
       success: true,

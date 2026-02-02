@@ -364,14 +364,8 @@ ${futureConsolidatedId ? `🔗 <b>Consolidated ID:</b> ${futureConsolidatedId}` 
             message: `${dbUser.email} requested consolidation for "${packageTitle}"${consolidateCount > 0 ? ` with ${consolidateCount} other package(s)` : ''}`
           }
         });
-              }
-    } else {
-          }
-
-    // DEBUG: Логируем данные консолидации
-    ,
-      autoConsolidated: currentPackage.autoConsolidated
-    });
+      }
+    }
 
     // Обновляем настройки посылки
     const updatedPackage = await prisma.package.update({

@@ -24,8 +24,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'GET') {
-    `);
-
     // Получить все купоны пользователя
     const coupons = await prisma.coupon.findMany({
       where: { userId: user.id },

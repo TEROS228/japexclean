@@ -19,13 +19,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'State/Province is required for this country' });
     }
 
-    ,
-      toCountry,
-      toCity,
-      toState: toState || 'N/A',
-      toPostalCode
-    });
-
     const result = await getAllFedExRates({
       weight: parseFloat(weight),
       fromCountry: 'JP',

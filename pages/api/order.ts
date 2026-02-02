@@ -29,9 +29,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Cart is empty' });
   }
 
-  // Логируем полученную корзину для отладки
-  );
-
   try {
     // Находим пользователя в БД
     const dbUser = await prisma.user.findUnique({

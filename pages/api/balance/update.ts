@@ -6,11 +6,9 @@ const processedTransactions = new Set<string>();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  
-         + '...' : 'none');
-  
+
   if (!token) {
-        return res.status(401).json({ error: 'Token required' });
+    return res.status(401).json({ error: 'Token required' });
   }
 
   const user = await verifyServerToken(token);

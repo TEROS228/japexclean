@@ -83,9 +83,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Даем бонус только если IP и fingerprint не использовались
       if (!existingIpUser && !existingFingerprintUser) {
         bonusAmount = 500;
-        }...)`);
-      } else {
-        `);
       }
     }
 

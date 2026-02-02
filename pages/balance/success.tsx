@@ -119,7 +119,6 @@ export default function BalanceSuccessPage() {
         localStorage.setItem('processedSessions', JSON.stringify(processedSessions));
 
         // 6. Показываем успех вместо редиректа
-        ');
         setAmount(verifyData.amountAfterFee);
         setNewBalance(updateData.newBalance);
         setSuccess(true);

@@ -100,8 +100,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               read: false
             }
           });
-
-          `);
         } catch (error) {
           console.error('Error creating reward coupon:', error);
           // Не падаем, даже если купон не создался

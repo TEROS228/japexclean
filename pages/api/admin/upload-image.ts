@@ -38,12 +38,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Создаем директорию для загрузок если её нет
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'photos');
-        );
 
     if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-          } else {
-          }
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
 
     const form = formidable({
       uploadDir,
