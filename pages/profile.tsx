@@ -1092,7 +1092,6 @@ function PackagesSection({ setSelectedPhoto }: any) {
 
           return true;
         }).map((pkg) => {
-          , 'reinforcement:', pkg.reinforcement, 'paid:', pkg.reinforcementPaid, 'status:', pkg.status, 'reinforcementStatus:', pkg.reinforcementStatus);
           // Проверяем, не является ли этот пакет частью чужой консолидации
           const isPartOfConsolidation = packages.some(p => {
             if (!p.consolidateWith || p.id === pkg.id) return false;

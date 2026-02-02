@@ -55,8 +55,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       groupedItems[baseCode].push(item);
     }
 
-    .length, 'groups');
-
     // Создаем заказ для каждой группы товаров
     const orders = [];
 

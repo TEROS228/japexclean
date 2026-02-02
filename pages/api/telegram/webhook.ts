@@ -63,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           timestamp: Date.now()
         });
 
-        await sendTelegramMessage(chatId, `✅ Order #${orderNumber} set. Now send photos for this order.`);
+        await sendTelegramMessage(chatId, `Order #${orderNumber} set. Now send photos for this order.`);
       }
 
       return res.status(200).json({ ok: true, message: 'Text processed' });

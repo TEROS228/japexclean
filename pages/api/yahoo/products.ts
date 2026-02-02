@@ -57,7 +57,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (mainCategory) {
       // Это главная категория - используем поиск по её японскому названию
-      `);
       const yahooProducts = await searchYahooProducts(mainCategory.jpName, pageNum, 20, sortParam);
       const products = yahooProducts.map(convertYahooToRakutenFormat);
       

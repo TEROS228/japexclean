@@ -55,8 +55,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Используем промис вместо колбэка для лучшей обработки ошибок
     const [fields, files] = await form.parse(req);
 
-    );
-
     const file = files.image;
     if (!file) {
       console.error('No image file found in request');
@@ -68,8 +66,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fileName = path.basename(uploadedFile.filepath);
     const fullPath = uploadedFile.filepath;
     const imageUrl = `/uploads/photos/${fileName}`;
-
-                        );
 
     return res.status(200).json({ url: imageUrl });
 

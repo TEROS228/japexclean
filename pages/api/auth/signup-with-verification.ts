@@ -119,8 +119,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           expiresAt: expiresAt
         }
       });
-
-      `);
     }
 
     // Создаем НАСТОЯЩИЙ JWT токен
