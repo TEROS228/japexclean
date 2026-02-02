@@ -37,6 +37,8 @@
     "playwright": "^1.55.0",
     "prisma": "^6.19.0",
     "puppeteer": "^24.18.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-feather": "^2.0.10",

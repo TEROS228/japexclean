@@ -37,15 +37,22 @@ export async function getProductByUrl(rakutenUrl: string) {
   return cached(
     `rakuten:product:url:${rakutenUrl}`,
     async () => {
-      if (!RAKUTEN_APP_ID) return null;
+      if (!RAKUTEN_APP_ID) {
+        console.error('[Rakuten API] Missing RAKUTEN_APP_ID');
+        return null;
+      }
 
       // Извлекаем shopCode и itemCode из URL
       // URL формат: https://item.rakuten.co.jp/{shopCode}/{itemCode}/
       const urlMatch = rakutenUrl.match(/item\.rakuten\.co\.jp\/([^\/]+)\/([^\/\?]+)/);
-      if (!urlMatch) return null;
+      if (!urlMatch) {
+        console.error('[Rakuten API] Failed to extract shopCode and itemCode from URL:', rakutenUrl);
+        return null;
+      }
 
       const shopCode = urlMatch[1];
       const itemCode = urlMatch[2];
+
 
       // Пробуем поиск по shopCode:itemCode (полный идентификатор товара)
       const fullItemCode = `${shopCode}:${itemCode}`;
@@ -54,16 +61,32 @@ export async function getProductByUrl(rakutenUrl: string) {
         RAKUTEN_APP_ID
       )}&itemCode=${encodeURIComponent(fullItemCode)}&format=json`;
 
+
       try {
         const res = await fetch(url);
-    if (!res.ok) return null;
+        if (!res.ok) {
+          console.error('[Rakuten API] HTTP error:', res.status, res.statusText);
 
-    const data: any = await res.json();
-    const product = data.Items?.[0]?.Item;
-    if (!product) {
-            // Если не нашли по полному коду, пробуем искать по shopCode
-      return await getProductByShopCode(shopCode, itemCode);
-    }
+          // Логируем ответ для отладки
+          const errorText = await res.text().catch(() => 'Could not read error body');
+          console.error('[Rakuten API] Error response:', errorText.substring(0, 500));
+
+          // Если 400 ошибка, пробуем искать по shopCode
+          if (res.status === 400) {
+            return await getProductByShopCode(shopCode, itemCode);
+          }
+
+          return null;
+        }
+
+        const data: any = await res.json();
+        const product = data.Items?.[0]?.Item;
+
+        if (!product) {
+          // Если не нашли по полному коду, пробуем искать по shopCode
+          return await getProductByShopCode(shopCode, itemCode);
+        }
+
 
     // Собираем все доступные изображения
     const images: Array<{ imageUrl: string }> = [];
@@ -138,27 +161,56 @@ export async function getProductByUrl(rakutenUrl: string) {
   );
 }
 
-// Поиск товара по shopCode
+// Поиск товара по shopCode с пагинацией
 async function getProductByShopCode(shopCode: string, itemCode: string) {
   if (!RAKUTEN_APP_ID) return null;
 
-  const url = `${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(
-    RAKUTEN_APP_ID
-  )}&shopCode=${encodeURIComponent(shopCode)}&hits=30&format=json`;
+  // Пробуем искать на нескольких страницах (до 10 страниц = 300 товаров)
+  for (let page = 1; page <= 10; page++) {
+    const url = `${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(
+      RAKUTEN_APP_ID
+    )}&shopCode=${encodeURIComponent(shopCode)}&hits=30&page=${page}&format=json`;
 
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
 
-    const data: any = await res.json();
-    const items = data.Items || [];
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.error('[Rakuten API] shopCode search HTTP error:', res.status, res.statusText);
+        continue;
+      }
 
-    // Ищем товар с нужным itemCode
-    const productData = items.find((item: any) =>
-      item.Item?.itemCode?.toLowerCase().includes(itemCode.toLowerCase())
-    );
+      const data: any = await res.json();
+      const items = data.Items || [];
 
-    if (!productData) return null;
+      if (items.length === 0) {
+        break;
+      }
+
+
+      // Логируем первые несколько itemCode для отладки (только на первой странице)
+      if (page === 1 && items.length > 0) {
+      }
+
+      // Ищем товар с нужным itemCode - улучшенный поиск
+      const productData = items.find((item: any) => {
+        const fullItemCode = item.Item?.itemCode || '';
+        // Проверяем точное совпадение полного кода
+        if (fullItemCode.toLowerCase() === `${shopCode}:${itemCode}`.toLowerCase()) {
+          return true;
+        }
+        // Проверяем совпадение только itemCode части
+        const parts = fullItemCode.split(':');
+        if (parts.length === 2 && parts[1] === itemCode) {
+          return true;
+        }
+        // Проверяем включение itemCode
+        if (fullItemCode.toLowerCase().includes(itemCode.toLowerCase())) {
+          return true;
+        }
+        return false;
+      });
+
+      if (productData) {
 
     const product = productData.Item;
 
@@ -200,36 +252,42 @@ async function getProductByShopCode(shopCode: string, itemCode: string) {
       images.push({ imageUrl: mainImageUrl });
     }
 
-    // Debug logs отключены для производительности
-    // 
-    return {
-      itemCode: product.itemCode,
-      itemName: product.itemName,
-      catchcopy: product.catchcopy,
-      itemCaption: product.itemCaption,
-      itemPrice: product.itemPrice,
-      itemUrl: product.itemUrl,
-      affiliateUrl: product.affiliateUrl,
-      imageUrl: mainImageUrl || '/placeholder.png',
-      availability: product.availability,
-      taxFlag: product.taxFlag,
-      postageFlag: product.postageFlag,
-      creditCardFlag: product.creditCardFlag,
-      shopOfTheYearFlag: product.shopOfTheYearFlag,
-      shipOverseasFlag: product.shipOverseasFlag,
-      asurakuFlag: product.asurakuFlag,
-      mediumImageUrls: images.length > 0 ? images : [{ imageUrl: '/placeholder.png' }],
-      reviewCount: product.reviewCount,
-      reviewAverage: product.reviewAverage,
-      shopName: product.shopName,
-      shopCode: product.shopCode,
-      genreId: product.genreId,
-      genreName: genreName,
-    };
-  } catch (error) {
-    console.error("Error fetching product by shopCode:", error);
-    return null;
+        // Debug logs отключены для производительности
+        //
+        return {
+          itemCode: product.itemCode,
+          itemName: product.itemName,
+          catchcopy: product.catchcopy,
+          itemCaption: product.itemCaption,
+          itemPrice: product.itemPrice,
+          itemUrl: product.itemUrl,
+          affiliateUrl: product.affiliateUrl,
+          imageUrl: mainImageUrl || '/placeholder.png',
+          availability: product.availability,
+          taxFlag: product.taxFlag,
+          postageFlag: product.postageFlag,
+          creditCardFlag: product.creditCardFlag,
+          shopOfTheYearFlag: product.shopOfTheYearFlag,
+          shipOverseasFlag: product.shipOverseasFlag,
+          asurakuFlag: product.asurakuFlag,
+          mediumImageUrls: images.length > 0 ? images : [{ imageUrl: '/placeholder.png' }],
+          reviewCount: product.reviewCount,
+          reviewAverage: product.reviewAverage,
+          shopName: product.shopName,
+          shopCode: product.shopCode,
+          genreId: product.genreId,
+          genreName: genreName,
+        };
+      }
+    } catch (error) {
+      console.error(`[Rakuten API] Error on page ${page}:`, error);
+      continue;
+    }
   }
+
+  // Не нашли товар ни на одной странице
+  console.error('[Rakuten API] Product not found in shop products after checking all pages');
+  return null;
 }
 
 // Получить товар по itemCode

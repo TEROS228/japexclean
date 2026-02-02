@@ -367,65 +367,24 @@ export default function SearchPage() {
     setLoading(true);
     setError("");
 
-    try {
-      // Используем API route для получения товара
-      const res = await fetch(`/api/product/by-url?url=${encodeURIComponent(url)}`);
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch product");
-      }
-
-      const data = await res.json();
-
-      if (data.success && data.product) {
-                // Показываем товар как карточку в результатах поиска
-        setProducts([data.product]);
-        setLoadedPages({ 1: [data.product] });
-        setCurrentPage(1);
-        setMaxPageLoaded(1);
-      } else {
-        throw new Error("Product not found");
-      }
-    } catch (err: any) {
-      console.error("Product fetch error:", err);
-      setError(err.message || "Failed to load product from URL. Please try searching by product name instead.");
-    } finally {
-      setLoading(false);
-    }
+    // Сразу показываем инструкцию для любого Rakuten URL
+    setError(
+      "❌ Rakuten URL not supported\n\n" +
+      "💡 Solution: Copy the full product name from the Rakuten page and paste it into the search bar above to find this product."
+    );
+    setLoading(false);
   };
 
   const handleProductByYahooUrl = async (url: string) => {
     setLoading(true);
     setError("");
 
-    try {
-      
-      // Используем новый endpoint для парсинга Yahoo страницы напрямую
-      const res = await fetch(`/api/yahoo/product-by-url?url=${encodeURIComponent(url)}`);
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to fetch Yahoo product");
-      }
-
-      const data = await res.json();
-
-      if (data.success && data.product && data.product.itemCode) {
-        
-        // Показываем товар как карточку в результатах поиска
-        setProducts([data.product]);
-        setLoadedPages({ 1: [data.product] });
-        setCurrentPage(1);
-        setMaxPageLoaded(1);
-      } else {
-        throw new Error("Yahoo product not found");
-      }
-    } catch (err: any) {
-      console.error("Yahoo product fetch error:", err);
-      setError(err.message || "Failed to load product from Yahoo URL. Please try searching by product name instead.");
-    } finally {
-      setLoading(false);
-    }
+    // Показываем инструкцию использовать поиск вместо URL
+    setError(
+      "❌ Yahoo Shopping URL not supported\n\n" +
+      "💡 Yahoo Solution: Copy the full product name from the Yahoo Shopping page and paste it into the search bar above to find this product."
+    );
+    setLoading(false);
   };
 
   const handleSearch = async (
@@ -680,14 +639,69 @@ export default function SearchPage() {
         {loading ? (
           <SearchLoadingAnimation marketplace={marketplace} />
         ) : error ? (
-          <div className="text-center py-16 bg-white rounded-3xl shadow-sm border border-gray-100">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-100 to-red-200 rounded-3xl mb-6">
-              <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="text-center py-16 bg-white rounded-3xl shadow-sm border border-gray-100 max-w-3xl mx-auto">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-200 rounded-3xl mb-6">
+              <svg className="w-10 h-10 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-red-600 text-lg font-medium mb-2">{error}</p>
-            <p className="text-gray-500">Please try a different search term</p>
+            <div className="text-left px-8">
+              {error.split('\n').map((line, i) => (
+                <p key={i} className={`mb-3 ${
+                  line.startsWith('❌') ? 'text-red-600 text-xl font-bold' :
+                  line.startsWith('💡') ? 'text-green-700 text-lg font-semibold' :
+                  'text-gray-700'
+                }`}>
+                  {line}
+                </p>
+              ))}
+
+              {/* Показываем скриншот-инструкцию если это ошибка с URL */}
+              {error.includes('💡 Solution') && (
+                <div className="mt-6 border-2 border-green-200 rounded-2xl overflow-hidden bg-green-50/50">
+                  <a
+                    href="/Copyname.jpg"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block hover:opacity-90 transition-opacity cursor-pointer"
+                  >
+                    <img
+                      src="/Copyname.jpg"
+                      alt="How to copy product name from Rakuten"
+                      className="w-full h-auto"
+                    />
+                    <div className="bg-green-100 border-t-2 border-green-200 px-4 py-2 text-center">
+                      <span className="text-green-700 font-semibold text-sm">
+                        🔍 Click to view full size
+                      </span>
+                    </div>
+                  </a>
+                </div>
+              )}
+
+              {/* Показываем скриншот-инструкцию для Yahoo */}
+              {error.includes('💡 Yahoo Solution') && (
+                <div className="mt-6 border-2 border-red-200 rounded-2xl overflow-hidden bg-red-50/50">
+                  <a
+                    href="/Copynameyahoo.jpg"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block hover:opacity-90 transition-opacity cursor-pointer"
+                  >
+                    <img
+                      src="/Copynameyahoo.jpg"
+                      alt="How to copy product name from Yahoo Shopping"
+                      className="w-full h-auto"
+                    />
+                    <div className="bg-red-100 border-t-2 border-red-200 px-4 py-2 text-center">
+                      <span className="text-red-700 font-semibold text-sm">
+                        🔍 Click to view full size
+                      </span>
+                    </div>
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         ) : loadedPages[currentPage]?.length === 0 || Object.keys(loadedPages).length === 0 ? (
           <div className="text-center py-16 bg-white rounded-3xl shadow-sm border border-gray-100">

@@ -198,20 +198,18 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
 
   // --- Обновление товаров при смене категории ---
   useEffect(() => {
-        });
-
     const savedData = sessionStorage.getItem(`data-category-${categoryId}`);
 
     // Если восстанавливаем из sessionStorage, ничего не делаем
     if (savedData || isRestoring) {
-            return;
+      return;
     }
 
     // Показываем loading сразу при смене категории
     setLoading(true);
 
     // Сбрасываем состояние при смене категории
-        setCurrentPage(1);
+    setCurrentPage(1);
     setMaxPageLoaded(1);
     setSortOrder("");
     setPriceMin("");
@@ -222,7 +220,7 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
 
     // Если есть товары от SSR/клиентской навигации - используем их
     if (initialProducts && initialProducts.length > 0) {
-            setLoadedPages({ 1: initialProducts });
+      setLoadedPages({ 1: initialProducts });
       // Небольшая задержка чтобы показать loading анимацию
       setTimeout(() => {
         setLoading(false);
@@ -230,13 +228,10 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
       hasLoadedRef.current = true;
     } else {
       // Иначе загружаем через API
-            setLoadedPages({});
+      setLoadedPages({});
       setLoading(true);
       hasLoadedRef.current = true;
-      const timer = setTimeout(() => {
-        fetchPage(1);
-      }, 10);
-      return () => clearTimeout(timer);
+      fetchPage(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId]);
@@ -294,7 +289,6 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
       }
 
       const data = await res.json();
-      , sort: usedOrder });
 
       if (!Array.isArray(data)) {
         console.error('Invalid data format:', data);
@@ -304,7 +298,8 @@ const CategoryPage: NextPage<Props> = ({ products: initialProducts, categoryName
       }
 
       if (data.length === 0) {
-              }
+        // Handle empty results
+      }
 
       // API уже возвращает отсортированные и отфильтрованные данные
       setLoadedPages((prev) => ({ ...prev, [pageNum]: data }));

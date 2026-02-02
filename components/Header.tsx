@@ -356,10 +356,32 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
                         <ol className="text-xs text-gray-600 space-y-1.5 list-decimal list-inside">
                           <li>Visit Rakuten or Yahoo marketplace</li>
                           <li>Find the product you want</li>
-                          <li>Copy the product URL</li>
+                          <li>Copy the <strong>full product name</strong></li>
                           <li>Paste it in our search bar above</li>
-                          <li>Click "Search" to order</li>
+                          <li>Select the product from search results</li>
+                          <li>Click "Add to cart" to order</li>
                         </ol>
+
+                        {/* Screenshot instruction */}
+                        <div className="mt-3 border-2 border-blue-200 rounded-xl overflow-hidden bg-blue-50/50">
+                          <a
+                            href="/Copyname.jpg"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block hover:opacity-90 transition-opacity"
+                          >
+                            <img
+                              src="/Copyname.jpg"
+                              alt="How to copy product name"
+                              className="w-full h-auto"
+                            />
+                            <div className="bg-blue-100 border-t-2 border-blue-200 px-3 py-1.5 text-center">
+                              <span className="text-blue-700 font-semibold text-xs">
+                                🔍 Click to view full size
+                              </span>
+                            </div>
+                          </a>
+                        </div>
                       </div>
 
                       {/* Marketplace Links */}
@@ -629,7 +651,7 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder="Search or paste link"
+                  placeholder="Search by product name"
                   className="w-full rounded-full border-2 border-gray-200 bg-white pl-8 sm:pl-12 pr-16 sm:pr-28 text-sm sm:text-base font-medium text-gray-900 placeholder-gray-400 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 focus:outline-none transition-all shadow-sm focus:shadow-md"
                   style={{ height: '48px', lineHeight: '48px', paddingTop: '0', paddingBottom: '0' }}
                   value={searchTerm}

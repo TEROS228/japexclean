@@ -1632,8 +1632,8 @@ export async function getServerSideProps(context: any) {
       );
 
       await page.goto(urlParam, {
-        waitUntil: "networkidle2",
-        timeout: 30000,
+        waitUntil: "networkidle0",
+        timeout: 60000,
       });
 
       const product = await page.evaluate(() => {
