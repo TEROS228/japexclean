@@ -446,7 +446,7 @@ async function processMediaGroup(mediaGroupId: string) {
 // Вспомогательная функция для отправки сообщений в Telegram
 async function sendTelegramMessage(chatId: number, text: string) {
   try {
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    await fetch('https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

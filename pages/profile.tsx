@@ -7941,9 +7941,7 @@ function DisputesSection() {
         </div>
         <button
           onClick={() => {
-            , current state:', showCompensationModal);
             setShowCompensationModal(true);
-            ');
           }}
           className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-700 active:from-red-600 active:to-red-700 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 touch-manipulation text-sm sm:text-base"
         >
