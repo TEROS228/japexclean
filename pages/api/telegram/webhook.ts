@@ -28,7 +28,6 @@ setInterval(() => {
   for (const [chatId, context] of chatContext.entries()) {
     if (now - context.timestamp > twoHours) {
       chatContext.delete(chatId);
-      `);
     }
   }
 }, 30 * 60 * 1000); // Проверяем каждые 30 минут, но удаляем только старые 2+ часа
