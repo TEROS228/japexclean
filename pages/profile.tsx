@@ -5253,7 +5253,6 @@ function AddressesSection() {
   const confirmSaveAddress = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      );
 
       if (!token) {
         alert('Authentication token missing. Please login again.');

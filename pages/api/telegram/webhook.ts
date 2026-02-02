@@ -232,12 +232,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const imageBuffer = await imageResponse.buffer();
 
         // Сохраняем файл
-        const fileName = `photo_${photoIndex}.jpg`;
+        const fileName = 'photo_' + photoIndex + '.jpg';
         const localPath = path.join(uploadDir, fileName);
         fs.writeFileSync(localPath, imageBuffer);
 
         // Добавляем публичный URL
-        photoUrls.push(`/uploads/photos/${packageId}/${fileName}`);
+        photoUrls.push('/uploads/photos/' + packageId + '/' + fileName);
         photoIndex++;
 
               } catch (error) {
@@ -246,7 +246,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (photoUrls.length === 0) {
-      await sendTelegramMessage(message.chat.id, `❌ Failed to download photos for package #${packageId}`);
+      await sendTelegramMessage(message.chat.id, 'Failed to download photos for package #' + packageId);
       return res.status(200).json({ ok: true, message: 'Failed to download photos' });
     }
 
@@ -264,8 +264,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       data: {
         userId: order.user.id,
         type: 'photos_uploaded',
-        title: '📸 Photos uploaded',
-        message: `Your photos for order #${orderNumber} (${orderItem?.title || 'package'}) are now available. Check your package details to view them.`
+        title: 'Photos uploaded',
+        message: 'Your photos for order #' + orderNumber + ' (' + (orderItem?.title || 'package') + ') are now available. Check your package details to view them.'
       }
     });
 
@@ -273,7 +273,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Отправляем подтверждение админу
     await sendTelegramMessage(
       message.chat.id,
-      `✅ Success!\n\n📦 Order: #${orderNumber}\n👤 User: ${order.user.email}\n📦 Item: ${orderItem?.title || 'N/A'}\n📸 Photos uploaded: ${photoUrls.length}\n\nUser has been notified.`
+      'Success! Order: #' + orderNumber + ', User: ' + order.user.email + ', Item: ' + (orderItem?.title || 'N/A') + ', Photos uploaded: ' + photoUrls.length + '. User has been notified.'
     );
 
     return res.status(200).json({ ok: true, message: 'Photos uploaded successfully' });
@@ -342,7 +342,7 @@ async function processMediaGroup(mediaGroupId: string) {
     });
 
     if (!order) {
-      await sendTelegramMessage(chatId, `❌ Order #${orderNumber} not found`);
+      await sendTelegramMessage(chatId, 'Order #' + orderNumber + ' not found');
       return;
     }
 
@@ -359,7 +359,7 @@ async function processMediaGroup(mediaGroupId: string) {
     }
 
     if (!pkg) {
-      await sendTelegramMessage(chatId, `❌ Order #${orderNumber} has no package with photo service requested`);
+      await sendTelegramMessage(chatId, 'Order #' + orderNumber + ' has no package with photo service requested');
       return;
     }
 
@@ -408,7 +408,7 @@ async function processMediaGroup(mediaGroupId: string) {
     }
 
     if (photoUrls.length === 0) {
-      await sendTelegramMessage(chatId, `❌ Failed to download photos`);
+      await sendTelegramMessage(chatId, 'Failed to download photos');
       return;
     }
 
@@ -426,20 +426,20 @@ async function processMediaGroup(mediaGroupId: string) {
       data: {
         userId: order.user.id,
         type: 'photos_uploaded',
-        title: '📸 Photos uploaded',
-        message: `Your photos for order #${orderNumber} (${orderItem?.title || 'package'}) are now available. Check your package details to view them.`
+        title: 'Photos uploaded',
+        message: 'Your photos for order #' + orderNumber + ' (' + (orderItem?.title || 'package') + ') are now available. Check your package details to view them.'
       }
     });
 
-    
+
     await sendTelegramMessage(
       chatId,
-      `✅ Success!\n\n📦 Order: #${orderNumber}\n👤 User: ${order.user.email}\n📦 Item: ${orderItem?.title || 'N/A'}\n📸 Photos uploaded: ${photoUrls.length}\n\nUser has been notified.`
+      'Success! Order: #' + orderNumber + ', User: ' + order.user.email + ', Item: ' + (orderItem?.title || 'N/A') + ', Photos uploaded: ' + photoUrls.length + '. User has been notified.'
     );
 
   } catch (error) {
     console.error('[Telegram Webhook] Error processing media group:', error);
-    await sendTelegramMessage(chatId, `❌ Error processing photos`);
+    await sendTelegramMessage(chatId, 'Error processing photos');
   }
 }
 
