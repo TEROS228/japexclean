@@ -155,7 +155,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (!order) {
-            await sendTelegramMessage(message.chat.id, `❌ Order #${orderNumber} not found`);
+            await sendTelegramMessage(message.chat.id, 'Order #' + orderNumber + ' not found');
       return res.status(200).json({ ok: true, message: 'Order not found' });
     }
 

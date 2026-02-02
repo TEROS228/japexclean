@@ -1641,7 +1641,6 @@ function PackagesSection({ setSelectedPhoto }: any) {
               {/* Reinforcement Service Status */}
               {(() => {
                 const shouldShow = pkg.reinforcement && pkg.reinforcementPaid;
-                , 'shouldShow reinforcement block:', shouldShow, 'reinforcement:', pkg.reinforcement, 'paid:', pkg.reinforcementPaid);
                 return shouldShow;
               })() && (
                 <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-amber-50 border border-amber-200 rounded-lg">
