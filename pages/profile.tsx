@@ -1111,14 +1111,7 @@ function PackagesSection({ setSelectedPhoto }: any) {
 
           // DEBUG: Выводим информацию о консолидации
           if (pkg.autoConsolidated) {
-            ,
-              consolidation: pkg.consolidation,
-              consolidateWith: pkg.consolidateWith,
-              consolidated: pkg.consolidated,
-              isPartOfConsolidation,
-              hasOwnConsolidation,
-              isInConsolidation
-            });
+            // Auto consolidated package
           }
 
           return (

@@ -130,16 +130,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       orders.push(order);
-      `);
     }
 
     // Формируем и отправляем уведомление в Telegram для всех заказов
     const telegramMessage = formatOrderNotification(orders[0], user.email, cart);
     const telegramSent = await sendTelegramNotification(telegramMessage);
-
-    if (telegramSent) {
-          } else {
-          }
 
     // Помечаем купон как использованный, если он был применён
     if (couponCode) {
