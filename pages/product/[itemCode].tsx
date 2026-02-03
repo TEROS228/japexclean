@@ -991,7 +991,9 @@ export default function ProductPage({ product: initialProduct }: { product: any 
 
   return (
     <>
-      <Head></Head>
+      <Head>
+        <title>{product?.itemName || 'Product'}</title>
+      </Head>
       <style jsx global>{`
         /* Desktop версия - ограничиваем размер логотипа */
         @media (min-width: 769px) {
