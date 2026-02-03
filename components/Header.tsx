@@ -365,13 +365,13 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
                         {/* Screenshot instruction */}
                         <div className="mt-3 border-2 border-blue-200 rounded-xl overflow-hidden bg-blue-50/50">
                           <a
-                            href="/Copyname.jpg"
+                            href={marketplace === 'yahoo' ? '/Copynameyahoo.jpg' : '/Copyname.jpg'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="block hover:opacity-90 transition-opacity"
                           >
                             <img
-                              src="/Copyname.jpg"
+                              src={marketplace === 'yahoo' ? '/Copynameyahoo.jpg' : '/Copyname.jpg'}
                               alt="How to copy product name"
                               className="w-full h-auto"
                             />
