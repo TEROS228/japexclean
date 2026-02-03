@@ -39,7 +39,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const update = req.body;
-    );
 
     const message = update.message;
     if (!message) {
