@@ -126,12 +126,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!orderNumber) {
       const context = chatContext.get(chatId);
 
-            ).map(([id, ctx]) => ({ chatId: id, order: ctx.orderNumber })));
-
       if (context) {
         orderNumber = context.orderNumber;
-              } else {
-        ');
+      } else {
         await sendTelegramMessage(chatId, '❌ Order number not found. Please send order number first (e.g., #301) or send photo with caption #301');
         return res.status(200).json({ ok: true, message: 'No order number' });
       }
@@ -316,8 +313,7 @@ async function processMediaGroup(mediaGroupId: string) {
 
     if (context) {
       orderNumber = context.orderNumber;
-          } else {
-      ');
+    } else {
       await sendTelegramMessage(chatId, '❌ Order number not found. Please send order number first (e.g., #301) or send photos with caption #301');
       return;
     }
