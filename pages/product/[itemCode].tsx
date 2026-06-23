@@ -1993,8 +1993,9 @@ export async function getServerSideProps(context: any) {
     console.error("Failed to load product from API:", e);
   }
 
-  // В крайнем случае пробуем через Puppeteer (только если есть URL)
-  if (urlParam && typeof urlParam === 'string') {
+  // Puppeteer только для не-Rakuten URL (Rakuten API достаточно)
+  const isRakutenUrl = urlParam && typeof urlParam === 'string' && (urlParam as string).includes('rakuten.co.jp');
+  if (urlParam && typeof urlParam === 'string' && !isRakutenUrl) {
     try {
             // Импортируем puppeteer для серверного рендеринга
       const puppeteer = require('puppeteer');
