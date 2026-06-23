@@ -105,9 +105,6 @@ export async function getProductByUrl(rakutenUrl: string) {
       const shopCode = urlMatch[1];
       const itemCode = urlMatch[2];
 
-      // Извлекаем числовой код из slug (например "shorts-10100284" → "10100284")
-      const numericCode = itemCode.match(/(\d{5,})/)?.[1];
-
       // Пробуем поиск по shopCode:itemCode (полный идентификатор товара)
       const fullItemCode = `${shopCode}:${itemCode}`;
 
@@ -121,20 +118,6 @@ export async function getProductByUrl(rakutenUrl: string) {
           const errorText = await res.text().catch(() => '');
           console.error('[Rakuten API] HTTP error:', res.status, errorText.substring(0, 200));
 
-          // Если есть числовой код в slug — пробуем его как itemCode напрямую
-          if (numericCode && res.status === 400) {
-            const numericItemCode = `${shopCode}:${numericCode}`;
-            const numRes = await fetch(`${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(RAKUTEN_APP_ID)}&itemCode=${encodeURIComponent(numericItemCode)}&format=json`);
-            if (numRes.ok) {
-              const numData: any = await numRes.json();
-              const numProduct = numData.Items?.[0]?.Item;
-              if (numProduct) {
-                console.log('[Rakuten API] Found by numeric code:', numericItemCode);
-                return buildProductFromRakutenItem(numProduct);
-              }
-            }
-          }
-
           if (res.status === 400) {
             return await getProductByShopCode(shopCode, itemCode);
           }
@@ -146,19 +129,6 @@ export async function getProductByUrl(rakutenUrl: string) {
         const product = data.Items?.[0]?.Item;
 
         if (!product) {
-          // Если есть числовой код — пробуем его
-          if (numericCode) {
-            const numericItemCode = `${shopCode}:${numericCode}`;
-            const numRes = await fetch(`${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(RAKUTEN_APP_ID)}&itemCode=${encodeURIComponent(numericItemCode)}&format=json`);
-            if (numRes.ok) {
-              const numData: any = await numRes.json();
-              const numProduct = numData.Items?.[0]?.Item;
-              if (numProduct) {
-                console.log('[Rakuten API] Found by numeric code:', numericItemCode);
-                return buildProductFromRakutenItem(numProduct);
-              }
-            }
-          }
           return await getProductByShopCode(shopCode, itemCode);
         }
 
@@ -261,18 +231,15 @@ async function getProductByShopCode(shopCode: string, itemCode: string) {
       return null;
     }
 
-    // Ищем товар с нужным itemCode
-    // Извлекаем числовой код из slug (например "shorts-10100284" → "10100284")
-    const numericCode = itemCode.match(/(\d{5,})/)?.[1] || '';
-
+    // Ищем товар с нужным itemCode строго в рамках того же магазина
     const productData = items.find((item: any) => {
       const fullItemCode = item.Item?.itemCode || '';
+      const itemShopCode = fullItemCode.split(':')[0] || '';
+      // Только товары этого же магазина
+      if (itemShopCode.toLowerCase() !== shopCode.toLowerCase()) return false;
       if (fullItemCode.toLowerCase() === `${shopCode}:${itemCode}`.toLowerCase()) return true;
       const parts = fullItemCode.split(':');
       if (parts.length === 2 && parts[1] === itemCode) return true;
-      if (fullItemCode.toLowerCase().includes(itemCode.toLowerCase())) return true;
-      // Сопоставляем по числовому коду из slug
-      if (numericCode && fullItemCode.includes(numericCode)) return true;
       // Сопоставляем по itemUrl товара
       const itemUrl = item.Item?.itemUrl || '';
       if (itemUrl.includes(`/${itemCode}/`) || itemUrl.includes(`/${itemCode}?`)) return true;
