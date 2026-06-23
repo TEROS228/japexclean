@@ -88,27 +88,36 @@ export async function getProductByUrl(rakutenUrl: string) {
         }
 
 
-    // Собираем все доступные изображения
-    const images: Array<{ imageUrl: string }> = [];
+    // Только товарные CDN-домены Rakuten (не баннеры магазина)
+    const isProductImage = (url: string) =>
+      url.includes('thumbnail.image.rakuten.co.jp') ||
+      url.includes('tshop.r10s.jp') ||
+      url.includes('r10s.jp');
 
-    // Добавляем mediumImageUrls
+    // Главное изображение товара
+    const mainImageUrl = getBestImageUrl(product);
+
+    const images: Array<{ imageUrl: string }> = [];
+    if (mainImageUrl) images.push({ imageUrl: mainImageUrl });
+
+    // Добавляем mediumImageUrls только с товарных CDN-доменов
     if (product.mediumImageUrls && product.mediumImageUrls.length > 0) {
       product.mediumImageUrls.forEach((img: any) => {
         if (img.imageUrl) {
           const upgraded = upgradeImageUrl(img.imageUrl);
-          if (upgraded) {
+          if (upgraded && isProductImage(upgraded) && !images.find(i => i.imageUrl === upgraded)) {
             images.push({ imageUrl: upgraded });
           }
         }
       });
     }
 
-    // Если изображений мало, добавляем smallImageUrls
+    // Добавляем smallImageUrls только с товарных CDN-доменов если мало изображений
     if (images.length < 5 && product.smallImageUrls && product.smallImageUrls.length > 0) {
       product.smallImageUrls.forEach((img: any) => {
         if (img.imageUrl) {
           const upgraded = upgradeImageUrl(img.imageUrl);
-          if (upgraded && !images.find(i => i.imageUrl === upgraded)) {
+          if (upgraded && isProductImage(upgraded) && !images.find(i => i.imageUrl === upgraded)) {
             images.push({ imageUrl: upgraded });
           }
         }
@@ -118,16 +127,8 @@ export async function getProductByUrl(rakutenUrl: string) {
     // Используем genreName из товара, не делаем дополнительный запрос для ускорения
     const genreName = product.genreName || null;
 
-    // Получаем главное изображение
-    const mainImageUrl = getBestImageUrl(product);
-
-    // Если нет изображений в массиве, используем главное
-    if (images.length === 0 && mainImageUrl) {
-      images.push({ imageUrl: mainImageUrl });
-    }
-
-    // Debug logs отключены для производительности
-    // 
+    console.log('[Rakuten Images] mediumImageUrls raw:', product.mediumImageUrls?.map((i: any) => i.imageUrl));
+    console.log('[Rakuten Images] collected images:', images.map(i => i.imageUrl));
     return {
       itemCode: product.itemCode,
       itemName: product.itemName,
@@ -165,129 +166,99 @@ export async function getProductByUrl(rakutenUrl: string) {
 async function getProductByShopCode(shopCode: string, itemCode: string) {
   if (!RAKUTEN_APP_ID) return null;
 
-  // Пробуем искать на нескольких страницах (до 10 страниц = 300 товаров)
-  for (let page = 1; page <= 10; page++) {
-    const url = `${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(
-      RAKUTEN_APP_ID
-    )}&shopCode=${encodeURIComponent(shopCode)}&hits=30&page=${page}&format=json`;
+  // Ищем по keyword=itemCode внутри магазина — один запрос вместо 10 страниц
+  const url = `${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(
+    RAKUTEN_APP_ID
+  )}&shopCode=${encodeURIComponent(shopCode)}&keyword=${encodeURIComponent(itemCode)}&hits=10&format=json`;
 
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error('[Rakuten API] shopCode search HTTP error:', res.status, res.statusText);
+      return null;
+    }
 
-    try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        console.error('[Rakuten API] shopCode search HTTP error:', res.status, res.statusText);
-        continue;
-      }
+    const data: any = await res.json();
+    const items = data.Items || [];
 
-      const data: any = await res.json();
-      const items = data.Items || [];
+    if (items.length === 0) {
+      console.error('[Rakuten API] Product not found in shop products after checking all pages');
+      return null;
+    }
 
-      if (items.length === 0) {
-        break;
-      }
+    // Ищем товар с нужным itemCode
+    const productData = items.find((item: any) => {
+      const fullItemCode = item.Item?.itemCode || '';
+      if (fullItemCode.toLowerCase() === `${shopCode}:${itemCode}`.toLowerCase()) return true;
+      const parts = fullItemCode.split(':');
+      if (parts.length === 2 && parts[1] === itemCode) return true;
+      if (fullItemCode.toLowerCase().includes(itemCode.toLowerCase())) return true;
+      return false;
+    }) || items[0]; // Если точного совпадения нет — берём первый результат
 
-
-      // Логируем первые несколько itemCode для отладки (только на первой странице)
-      if (page === 1 && items.length > 0) {
-      }
-
-      // Ищем товар с нужным itemCode - улучшенный поиск
-      const productData = items.find((item: any) => {
-        const fullItemCode = item.Item?.itemCode || '';
-        // Проверяем точное совпадение полного кода
-        if (fullItemCode.toLowerCase() === `${shopCode}:${itemCode}`.toLowerCase()) {
-          return true;
-        }
-        // Проверяем совпадение только itemCode части
-        const parts = fullItemCode.split(':');
-        if (parts.length === 2 && parts[1] === itemCode) {
-          return true;
-        }
-        // Проверяем включение itemCode
-        if (fullItemCode.toLowerCase().includes(itemCode.toLowerCase())) {
-          return true;
-        }
-        return false;
-      });
-
-      if (productData) {
-
+    if (!productData) return null;
     const product = productData.Item;
 
-    // Собираем все доступные изображения
-    const images: Array<{ imageUrl: string }> = [];
+    // Только товарные CDN-домены Rakuten (не баннеры магазина)
+    const isProductImage = (url: string) =>
+      url.includes('thumbnail.image.rakuten.co.jp') ||
+      url.includes('tshop.r10s.jp') ||
+      url.includes('r10s.jp');
 
-    // Добавляем mediumImageUrls
-    if (product.mediumImageUrls && product.mediumImageUrls.length > 0) {
-      product.mediumImageUrls.forEach((img: any) => {
-        if (img.imageUrl) {
-          const upgraded = upgradeImageUrl(img.imageUrl);
-          if (upgraded) {
-            images.push({ imageUrl: upgraded });
-          }
-        }
-      });
-    }
-
-    // Если изображений мало, добавляем smallImageUrls
-    if (images.length < 5 && product.smallImageUrls && product.smallImageUrls.length > 0) {
-      product.smallImageUrls.forEach((img: any) => {
-        if (img.imageUrl) {
-          const upgraded = upgradeImageUrl(img.imageUrl);
-          if (upgraded && !images.find(i => i.imageUrl === upgraded)) {
-            images.push({ imageUrl: upgraded });
-          }
-        }
-      });
-    }
-
-    // Используем genreName из товара, не делаем дополнительный запрос для ускорения
-    const genreName = product.genreName || null;
-
-    // Получаем главное изображение
+    // Главное изображение товара
     const mainImageUrl = getBestImageUrl(product);
 
-    // Если нет изображений в массиве, используем главное
-    if (images.length === 0 && mainImageUrl) {
-      images.push({ imageUrl: mainImageUrl });
+    const images: Array<{ imageUrl: string }> = [];
+    if (mainImageUrl) images.push({ imageUrl: mainImageUrl });
+
+    if (product.mediumImageUrls) {
+      product.mediumImageUrls.forEach((img: any) => {
+        const upgraded = upgradeImageUrl(img.imageUrl);
+        if (upgraded && isProductImage(upgraded) && !images.find(i => i.imageUrl === upgraded)) {
+          images.push({ imageUrl: upgraded });
+        }
+      });
     }
 
-        // Debug logs отключены для производительности
-        //
-        return {
-          itemCode: product.itemCode,
-          itemName: product.itemName,
-          catchcopy: product.catchcopy,
-          itemCaption: product.itemCaption,
-          itemPrice: product.itemPrice,
-          itemUrl: product.itemUrl,
-          affiliateUrl: product.affiliateUrl,
-          imageUrl: mainImageUrl || '/placeholder.png',
-          availability: product.availability,
-          taxFlag: product.taxFlag,
-          postageFlag: product.postageFlag,
-          creditCardFlag: product.creditCardFlag,
-          shopOfTheYearFlag: product.shopOfTheYearFlag,
-          shipOverseasFlag: product.shipOverseasFlag,
-          asurakuFlag: product.asurakuFlag,
-          mediumImageUrls: images.length > 0 ? images : [{ imageUrl: '/placeholder.png' }],
-          reviewCount: product.reviewCount,
-          reviewAverage: product.reviewAverage,
-          shopName: product.shopName,
-          shopCode: product.shopCode,
-          genreId: product.genreId,
-          genreName: genreName,
-        };
-      }
-    } catch (error) {
-      console.error(`[Rakuten API] Error on page ${page}:`, error);
-      continue;
+    if (images.length < 5 && product.smallImageUrls) {
+      product.smallImageUrls.forEach((img: any) => {
+        const upgraded = upgradeImageUrl(img.imageUrl);
+        if (upgraded && isProductImage(upgraded) && !images.find(i => i.imageUrl === upgraded)) {
+          images.push({ imageUrl: upgraded });
+        }
+      });
     }
+
+    const genreName = product.genreName || null;
+
+    return {
+      itemCode: product.itemCode,
+      itemName: product.itemName,
+      catchcopy: product.catchcopy,
+      itemCaption: product.itemCaption,
+      itemPrice: product.itemPrice,
+      itemUrl: product.itemUrl,
+      affiliateUrl: product.affiliateUrl,
+      imageUrl: mainImageUrl || '/placeholder.png',
+      availability: product.availability,
+      taxFlag: product.taxFlag,
+      postageFlag: product.postageFlag,
+      creditCardFlag: product.creditCardFlag,
+      shopOfTheYearFlag: product.shopOfTheYearFlag,
+      shipOverseasFlag: product.shipOverseasFlag,
+      asurakuFlag: product.asurakuFlag,
+      mediumImageUrls: images.length > 0 ? images : [{ imageUrl: '/placeholder.png' }],
+      reviewCount: product.reviewCount,
+      reviewAverage: product.reviewAverage,
+      shopName: product.shopName,
+      shopCode: product.shopCode,
+      genreId: product.genreId,
+      genreName: genreName,
+    };
+  } catch (error) {
+    console.error('[Rakuten API] shopCode search error:', error);
+    return null;
   }
-
-  // Не нашли товар ни на одной странице
-  console.error('[Rakuten API] Product not found in shop products after checking all pages');
-  return null;
 }
 
 // Получить товар по itemCode

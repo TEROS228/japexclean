@@ -337,152 +337,178 @@ export default function Home() {
         </div>
       )}
 
-      {/* Hero Section - Premium Modern Design */}
-      <section ref={heroRef as React.RefObject<HTMLElement>} className="relative overflow-hidden" style={{ backgroundColor: '#faf9f6' }}>
-        {/* Animated Background with Parallax */}
-        <div className="absolute inset-0 overflow-hidden">
-          {/* Moving gradient orbs */}
-          <div
-            className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded-full mix-blend-screen filter blur-3xl animate-blob"
-            style={{ transform: `translateY(${scrollY * 0.1}px)` }}
-          ></div>
-          <div
-            className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-cyan-500/30 to-blue-500/30 rounded-full mix-blend-screen filter blur-3xl animate-blob animation-delay-2000"
-            style={{ transform: `translateY(${scrollY * 0.15}px)` }}
-          ></div>
-          <div
-            className="absolute top-1/2 left-1/2 w-96 h-96 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full mix-blend-screen filter blur-3xl animate-blob animation-delay-4000"
-            style={{ transform: `translateY(${scrollY * 0.05}px)` }}
-          ></div>
+      {/* Hero Section - Dark Modern */}
+      <section ref={heroRef as React.RefObject<HTMLElement>} className="relative overflow-hidden bg-[#080808] min-h-screen flex items-center">
 
-          {/* Grid pattern overlay */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+        {/* Big kanji background */}
+        <div className="absolute inset-0 flex items-center justify-end pr-8 lg:pr-24 pointer-events-none select-none overflow-hidden">
+          <span
+            className="text-[28vw] font-black text-white/[0.03] leading-none tracking-tighter"
+            style={{ transform: `translateY(${scrollY * 0.08}px)` }}
+          >
+            日
+          </span>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 lg:py-32">
-          <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
-            <div className={`space-y-6 sm:space-y-8 ${heroVisible ? 'opacity-100' : 'opacity-0'}`}>
-              <div className={`inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-full shadow-sm ${heroVisible ? 'animate-fadeInUp' : ''}`}>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wide">Trusted by 10,000+ customers worldwide</span>
+        {/* Subtle grid */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:80px_80px]" />
+
+        {/* Green glow bottom-left */}
+        <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-green-500/10 rounded-full blur-[120px] pointer-events-none" />
+        {/* Subtle red glow top-right */}
+        <div className="absolute -top-32 right-0 w-[400px] h-[400px] bg-red-500/8 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 w-full">
+          <div className="max-w-4xl">
+
+            {/* Tag line */}
+            <div className={`flex items-center gap-3 mb-8 ${heroVisible ? 'animate-fadeInUp' : 'opacity-0'}`}>
+              <div className="h-px w-8 bg-green-500" />
+              <span className="text-green-400 text-xs sm:text-sm font-semibold tracking-[0.2em] uppercase">Japan's finest — delivered worldwide</span>
+            </div>
+
+            {/* Main heading */}
+            <h1 className={`text-5xl sm:text-7xl lg:text-8xl font-black leading-[0.95] tracking-tight text-white mb-8 ${heroVisible ? 'animate-fadeInUp delay-100' : 'opacity-0'}`}>
+              Shop Japan.<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">
+                No borders.
+              </span>
+            </h1>
+
+            {/* Subtitle */}
+            <p className={`text-gray-400 text-base sm:text-xl leading-relaxed max-w-xl mb-10 ${heroVisible ? 'animate-fadeInUp delay-200' : 'opacity-0'}`}>
+              Direct access to Rakuten & Yahoo Shopping. Authentic Japanese products, transparent pricing, fast international shipping.
+            </p>
+
+            {/* Bonus Banner */}
+            {!user && isBonusEligible && (
+              <div className={`relative w-full max-w-sm mb-10 p-5 rounded-2xl border border-green-500/30 bg-green-500/10 backdrop-blur-sm overflow-hidden ${heroVisible ? 'animate-fadeInUp delay-250' : 'opacity-0'}`}>
+                <div className="absolute inset-0 bg-[conic-gradient(from_0deg,transparent,rgba(34,197,94,0.1),transparent)] animate-spin-slow pointer-events-none" />
+                <div className="relative z-10 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center text-xl font-black text-green-400">¥</div>
+                  <div>
+                    <div className="text-white font-bold text-sm">Register & get ¥500 bonus</div>
+                    <div className="text-gray-400 text-xs mt-0.5">Instant bonus added to your balance</div>
+                  </div>
+                  <button
+                    onClick={() => window.dispatchEvent(new Event('openLeadMagnet'))}
+                    className="ml-auto text-green-400 hover:text-green-300 transition-colors text-sm font-semibold whitespace-nowrap"
+                  >
+                    Claim →
+                  </button>
+                </div>
               </div>
+            )}
 
-              <h1 className={`text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight ${heroVisible ? 'animate-fadeInUp delay-100' : ''}`}>
-                <span className="text-gray-900">Your gateway to</span>
-                <span className="block mt-2 bg-gradient-to-r from-green-600 via-emerald-600 to-cyan-600 bg-clip-text text-transparent animate-gradient">
-                  Japanese excellence
-                </span>
-              </h1>
+            {/* CTA buttons */}
+            <div className={`flex flex-col sm:flex-row gap-4 mb-16 ${heroVisible ? 'animate-fadeInUp delay-300' : 'opacity-0'}`}>
+              <button
+                onClick={() => router.push("/category/100371")}
+                className="group relative px-8 py-4 bg-green-500 hover:bg-green-400 text-black text-base font-black rounded-xl transition-all hover:shadow-[0_0_40px_rgba(34,197,94,0.5)] hover:scale-105 active:scale-95 touch-manipulation flex items-center justify-center gap-2"
+              >
+                Start Shopping
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </button>
+              <button
+                onClick={() => router.push("/how-to-order")}
+                className="px-8 py-4 bg-transparent text-white text-base font-bold rounded-xl border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all hover:scale-105 active:scale-95 touch-manipulation"
+              >
+                How It Works
+              </button>
+            </div>
 
-              <p className={`text-base sm:text-lg lg:text-xl text-gray-700 leading-relaxed max-w-xl ${heroVisible ? 'animate-fadeInUp delay-200' : ''}`}>
-                Access authentic products from Japan's leading marketplaces. Professional service, transparent pricing, worldwide delivery.
-              </p>
-
-              {/* Bonus Banner */}
-              {!user && isBonusEligible && (
-                <div className={`bonus-banner relative w-full max-w-md p-6 sm:p-7 rounded-[20px] bg-gradient-to-br from-green-500 to-green-700 text-white overflow-hidden shadow-[0_25px_60px_rgba(22,163,74,0.35)] ${heroVisible ? 'animate-fadeInUp delay-250' : ''}`}>
-                  {/* Rotating Glow */}
-                  <div className="absolute w-[180%] h-[180%] -top-[40%] -left-[40%] bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.35),transparent)] animate-spin-slow pointer-events-none"></div>
-
-                  {/* Content */}
-                  <div className="relative z-10">
-                    <div className="inline-block px-3 py-1.5 rounded-full bg-white/20 text-xs font-semibold mb-3.5">
-                      🎉 Welcome bonus
-                    </div>
-                    <h2 className="text-[26px] font-bold leading-[1.15] mb-3">
-                      Register & get <span className="text-emerald-50 font-black">¥500</span>
-                    </h2>
-                    <p className="text-sm opacity-90 mb-5">
-                      Instant bonus added to your balance after sign up
-                    </p>
-                    <button
-                      onClick={() => {
-                        window.dispatchEvent(new Event('openLeadMagnet'));
-                      }}
-                      className="inline-flex items-center gap-2 px-5 py-3.5 rounded-[14px] bg-white text-green-800 font-bold text-sm transition-all hover:shadow-[0_10px_25px_rgba(0,0,0,0.2)] hover:-translate-y-0.5 active:translate-y-0"
-                    >
-                      Create account
-                      <span className="inline-block animate-bounce-subtle">→</span>
-                    </button>
-                  </div>
-
-                  {/* Yen Icon */}
-                  <div className="absolute -right-[30px] -bottom-[30px] w-[140px] h-[140px] rounded-full bg-gradient-to-t from-emerald-100 to-white text-green-800 font-black text-[42px] flex items-center justify-center opacity-25 animate-float">
-                    ¥
-                  </div>
-                </div>
-              )}
-
-              <div className={`flex flex-col sm:flex-row gap-4 ${heroVisible ? 'animate-fadeInUp delay-300' : ''}`}>
-                <button
-                  onClick={() => router.push("/category/100371")}
-                  className="group relative px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-base font-bold rounded-xl overflow-hidden transition-all hover:shadow-[0_0_40px_rgba(34,197,94,0.6)] hover:scale-105 active:scale-95 touch-manipulation"
-                >
-                  <span className="relative z-10 flex items-center justify-center gap-2">
-                    Explore Products
-                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </button>
-
-                <button
-                  onClick={() => {
-                    sessionStorage.setItem('openCategoryMenu', 'true');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="px-8 py-4 bg-white text-gray-900 text-base font-bold rounded-xl border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 active:bg-gray-50 hover:shadow-lg transition-all hover:scale-105 active:scale-95 touch-manipulation"
-                >
-                  Browse Categories
-                </button>
+            {/* Stats row */}
+            <div className={`flex flex-wrap gap-8 sm:gap-12 border-t border-white/10 pt-8 ${heroVisible ? 'animate-fadeInUp delay-400' : 'opacity-0'}`}>
+              <div>
+                <div className="text-2xl sm:text-3xl font-black text-white">50K+</div>
+                <div className="text-gray-500 text-xs sm:text-sm mt-0.5">Products</div>
               </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-black text-white">150+</div>
+                <div className="text-gray-500 text-xs sm:text-sm mt-0.5">Countries</div>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-black text-white">10K+</div>
+                <div className="text-gray-500 text-xs sm:text-sm mt-0.5">Customers</div>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-black text-white flex items-center gap-1">
+                  <span className="text-green-400">●</span> Live
+                </div>
+                <div className="text-gray-500 text-xs sm:text-sm mt-0.5">Always online</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Trust badges */}
-              <div className={`flex flex-wrap items-center gap-6 pt-4 ${heroVisible ? 'animate-fadeInUp delay-400' : ''}`}>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-700">Secure Payment</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-                      <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-700">Fast Shipping</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-2 0c0 .993-.241 1.929-.668 2.754l-1.524-1.525a3.997 3.997 0 00.078-2.183l1.562-1.562C15.802 8.249 16 9.1 16 10zm-5.165 3.913l1.58 1.58A5.98 5.98 0 0110 16a5.976 5.976 0 01-2.516-.552l1.562-1.562a4.006 4.006 0 001.789.027zm-4.677-2.796a4.002 4.002 0 01-.041-2.08l-.08.08-1.53-1.533A5.98 5.98 0 004 10c0 .954.223 1.856.619 2.657l1.54-1.54zm1.088-6.45A5.974 5.974 0 0110 4c.954 0 1.856.223 2.657.619l-1.54 1.54a4.002 4.002 0 00-2.346.033L7.246 4.668zM12 10a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-700">24/7 Support</span>
-                </div>
+        {/* Right side — floating cards, desktop only */}
+        <div className={`hidden lg:flex absolute right-0 top-0 h-full w-[44%] items-center justify-center pr-12 ${heroVisible ? 'animate-slideInRight delay-200' : 'opacity-0'}`}>
+          <div className="relative w-full max-w-sm">
+
+            {/* Central glow */}
+            <div className="absolute inset-0 bg-green-500/5 rounded-3xl blur-3xl" />
+
+            {/* Card 1 — top left */}
+            <div className="absolute -top-8 -left-6 bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 flex items-center gap-3 shadow-xl hover:bg-white/8 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-sm">🛍️</div>
+              <div>
+                <div className="text-white text-xs font-bold">Rakuten</div>
+                <div className="text-gray-500 text-[10px]">50M+ products</div>
               </div>
             </div>
 
-            <div
-              className={`relative mt-8 lg:mt-0 ${heroVisible ? 'animate-slideInRight delay-200' : 'opacity-0'}`}
-            >
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/40 hover:shadow-[0_0_40px_rgba(0,0,0,0.3)] transition-all duration-500 group">
-                <div className="relative h-[600px] sm:h-[700px] lg:h-[800px]">
-                  <Image
-                    src="/logobanner.jpg?v=2"
-                    alt="Japrix Banner"
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    priority
-                  />
-                </div>
+            {/* Card 2 — top right */}
+            <div className="absolute -top-2 right-0 bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 flex items-center gap-3 shadow-xl hover:bg-white/8 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-sm">🏪</div>
+              <div>
+                <div className="text-white text-xs font-bold">Yahoo Shopping</div>
+                <div className="text-gray-500 text-[10px]">Best deals</div>
               </div>
             </div>
+
+            {/* Main center card */}
+            <div className="relative z-10 mt-16 bg-white/5 border border-white/10 backdrop-blur-sm rounded-3xl p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Latest order</span>
+                <span className="text-green-400 text-xs font-bold flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block animate-pulse"></span>Shipped</span>
+              </div>
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center text-2xl">👟</div>
+                <div>
+                  <div className="text-white font-bold text-sm">Nike Air Force 1</div>
+                  <div className="text-gray-400 text-xs mt-0.5">Size: 27cm · White</div>
+                  <div className="text-green-400 text-sm font-black mt-1">¥12,800</div>
+                </div>
+              </div>
+              <div className="w-full bg-white/5 rounded-full h-1.5 mb-2">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-400 h-1.5 rounded-full w-[72%]" />
+              </div>
+              <div className="flex justify-between text-[10px] text-gray-500">
+                <span>Tokyo warehouse</span>
+                <span>72% — In transit</span>
+              </div>
+            </div>
+
+            {/* Card 3 — bottom left */}
+            <div className="absolute -bottom-6 -left-4 bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 flex items-center gap-3 shadow-xl hover:bg-white/8 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center text-sm">✈️</div>
+              <div>
+                <div className="text-white text-xs font-bold">EMS Express</div>
+                <div className="text-gray-500 text-[10px]">3–7 days worldwide</div>
+              </div>
+            </div>
+
+            {/* Card 4 — bottom right */}
+            <div className="absolute -bottom-2 right-2 bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 flex items-center gap-3 shadow-xl hover:bg-white/8 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-sm">⭐</div>
+              <div>
+                <div className="text-white text-xs font-bold">4.9 / 5.0</div>
+                <div className="text-gray-500 text-[10px]">10K+ reviews</div>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>

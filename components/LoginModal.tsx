@@ -259,6 +259,19 @@ export default function LoginModal({
             </button>
           </div>
         </form>
+
+        {onSwitchToSignUp && (
+          <p className="text-center text-sm text-gray-500 mt-6">
+            Don't have an account yet?{" "}
+            <button
+              type="button"
+              onClick={onSwitchToSignUp}
+              className="text-green-600 font-semibold hover:text-green-700 hover:underline transition-colors"
+            >
+              Sign up
+            </button>
+          </p>
+        )}
       </div>
 
       <style jsx>{`

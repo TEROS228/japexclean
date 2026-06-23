@@ -1,14 +1,39 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import puppeteer from 'puppeteer';
-import { PrismaClient } from '@prisma/client';
+import { cacheGet, cacheSet } from '@/lib/cache';
 
-const prisma = new PrismaClient();
+// Семафор: максимум 3 браузера одновременно
+const MAX_CONCURRENT = 3;
+let activeBrowsers = 0;
+const waitQueue: Array<() => void> = [];
+
+function acquireBrowser(): Promise<void> {
+  return new Promise((resolve) => {
+    if (activeBrowsers < MAX_CONCURRENT) {
+      activeBrowsers++;
+      resolve();
+    } else {
+      waitQueue.push(() => {
+        activeBrowsers++;
+        resolve();
+      });
+    }
+  });
+}
+
+function releaseBrowser() {
+  activeBrowsers--;
+  const next = waitQueue.shift();
+  if (next) next();
+}
+
+// Дедупликация параллельных запросов на один URL
+const pendingRequests = new Map<string, Promise<any>>();
 
 // Нормализуем URL (убираем параметры типа rafcid)
 function normalizeUrl(url: string): string {
   try {
     const urlObj = new URL(url);
-    // Удаляем параметры которые не влияют на контент
     urlObj.searchParams.delete('rafcid');
     urlObj.searchParams.delete('scid');
     return urlObj.toString();
@@ -54,9 +79,31 @@ export default async function handler(
   }
 
   const normalizedUrl = normalizeUrl(targetUrl);
+  const cacheKey = `yahoo:variants:${normalizedUrl}`;
 
-  try {
-    const browser = await puppeteer.launch({
+  // 1. Проверяем постоянный кэш
+  const cached = await cacheGet<YahooVariantsResponse>(cacheKey);
+  if (cached) {
+    return res.status(200).json(cached);
+  }
+
+  // 2. Дедупликация: если уже идёт запрос на этот URL — ждём его
+  const pending = pendingRequests.get(cacheKey);
+  if (pending) {
+    try {
+      const result = await pending;
+      return res.status(200).json(result);
+    } catch {
+      // продолжаем и делаем новый запрос
+    }
+  }
+
+  const requestPromise = (async () => {
+    // 3. Семафор — ждём свободного слота
+    await acquireBrowser();
+    let browser: any = null;
+    try {
+    browser = await puppeteer.launch({
       headless: true,
       args: [
         '--no-sandbox',
@@ -80,7 +127,7 @@ export default async function handler(
 
     // Блокируем загрузку ненужных ресурсов для ускорения
     await page.setRequestInterception(true);
-    page.on('request', (request) => {
+    page.on('request', (request: any) => {
       const resourceType = request.resourceType();
       if (['image', 'font', 'media'].includes(resourceType)) {
         request.abort();
@@ -730,11 +777,9 @@ export default async function handler(
 
     const { groups: variantGroups, colorSizeMapping, postageFlag } = result;
 
-    // Convert to flat list for compatibility
     const allVariants: YahooVariant[] = [];
     for (const group of variantGroups) {
       for (const option of group.options) {
-        // Добавляем (Sold Out) к значению если недоступно
         const displayValue = option.available
           ? option.value
           : `${option.value} (Sold Out)`;
@@ -747,7 +792,7 @@ export default async function handler(
       }
     }
 
-    return res.status(200).json({
+    return {
       success: true,
       variants: allVariants,
       groups: variantGroups,
@@ -760,11 +805,26 @@ export default async function handler(
         hasVariants: variantGroups.length > 0,
         postageFlag
       }
-    });
+    };
 
+    } catch (err) {
+      if (browser) await browser.close().catch(() => {});
+      throw err;
+    } finally {
+      releaseBrowser();
+    }
+  })();
+
+  pendingRequests.set(cacheKey, requestPromise);
+
+  try {
+    const result = await requestPromise;
+    if (result.success && result.groups && result.groups.length > 0) {
+      await cacheSet(cacheKey, result, { ttl: 1800 });
+    }
+    return res.status(200).json(result);
   } catch (error) {
     console.error('[Yahoo Variants] Error:', error);
-
     return res.status(200).json({
       success: true,
       variants: [],
@@ -776,6 +836,8 @@ export default async function handler(
         method: 'Failed'
       }
     });
+  } finally {
+    pendingRequests.delete(cacheKey);
   }
 }
 

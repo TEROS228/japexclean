@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Head from "next/head";
@@ -42,6 +42,10 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const [product, setProduct] = useState(initialProduct || null);
   const [loading, setLoading] = useState(!initialProduct);
   const [mainImage, setMainImage] = useState(PLACEHOLDER_IMAGE);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [imageAnimating, setImageAnimating] = useState<'left' | 'right' | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
@@ -87,6 +91,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const [loadingVariants, setLoadingVariants] = useState(!!initialProduct);
   const [variantError, setVariantError] = useState<string | null>(null);
   const [colorSizeMapping, setColorSizeMapping] = useState<Record<string, Array<{ value: string; available: boolean }>>>({});
+  const [skuCombinations, setSkuCombinations] = useState<Record<string, Array<{ value: string; available: boolean }>>>({});
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [averageRating, setAverageRating] = useState(0);
@@ -229,7 +234,18 @@ export default function ProductPage({ product: initialProduct }: { product: any 
       // Если товара нет в sessionStorage, пробуем загрузить через Yahoo API
       
       try {
-        const productCode = typeof itemCode === 'string' ? itemCode.split('_').pop() : itemCode;
+        // Extract Yahoo product code from URL param if available, else from itemCode
+        const urlParam = router.query.url as string | undefined;
+        let productCode: string | undefined;
+        if (urlParam) {
+          const m = urlParam.match(/store\.shopping\.yahoo\.co\.jp\/[^\/]+\/([^\/\?#]+)/);
+          productCode = m ? m[1].replace(/\.html?$/i, '') : undefined;
+        }
+        if (!productCode && typeof itemCode === 'string') {
+          // fallback: yahoo-{shop}-{code} — take everything after second dash-segment
+          const parts = itemCode.replace(/^yahoo-/, '').split('-');
+          productCode = parts.length > 1 ? parts.slice(1).join('-') : parts[0];
+        }
 
                 const res = await fetch(`/api/yahoo/product?code=${encodeURIComponent(productCode as string)}`);
 
@@ -370,7 +386,12 @@ export default function ProductPage({ product: initialProduct }: { product: any 
             // Сохраняем colorSizeMapping если есть
             if (data.colorSizeMapping) {
               setColorSizeMapping(data.colorSizeMapping);
-                          }
+            }
+
+            // Сохраняем skuCombinations для 3-х групп (Size|Type -> Color[])
+            if (data.skuCombinations) {
+              setSkuCombinations(data.skuCombinations);
+            }
 
             const convertedVariants: Variant[] = [];
 
@@ -392,6 +413,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                   });
                 }
               });
+            } else {
               // Fallback: разделяем варианты на цвета и размеры
               const colorVariants = variantsArray.filter(v =>
                 v.name.includes('ブラック') || v.name.includes('ブルー') ||
@@ -831,12 +853,78 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const getFilteredVariants = () => {
     if (!variants || variants.length === 0) return [];
 
-    // Если нет colorSizeMapping, возвращаем все варианты как есть
-    if (Object.keys(colorSizeMapping).length === 0) {
+    const hasSkuCombinations = Object.keys(skuCombinations).length > 0;
+    const hasColorSizeMapping = Object.keys(colorSizeMapping).length > 0;
+
+    if (!hasColorSizeMapping && !hasSkuCombinations) {
       return variants;
     }
 
-    // Определяем структуру mapping: Size->Color или Color->Size
+    // Для 3-х групп используем skuCombinations ("group0|group1" -> group2[])
+    if (hasSkuCombinations) {
+      const sizeOptionName = Object.keys(selectedOptions).find(k => k.includes('サイズ') || k.includes('Size'));
+      const typeOptionName = Object.keys(selectedOptions).find(k => !k.includes('サイズ') && !k.includes('Size') && !k.includes('カラー') && !k.includes('Color'));
+      const selectedSize = sizeOptionName ? selectedOptions[sizeOptionName] : undefined;
+      const selectedType = typeOptionName ? selectedOptions[typeOptionName] : undefined;
+
+      return variants.map(variant => {
+        const isSize = variant.optionName.includes('サイズ') || variant.optionName.includes('Size');
+        const isColor = variant.optionName.includes('カラー') || variant.optionName.includes('Color');
+        const isType = !isSize && !isColor;
+
+        if (isSize) {
+          // Доступность размера — есть ли хоть одна доступная комбинация size|* -> *
+          const updatedValues = variant.values.map(v => {
+            const typesForSize = colorSizeMapping[v.value];
+            if (typesForSize) {
+              const hasAvailable = typesForSize.some(t => {
+                if (!t.available) return false;
+                // Проверяем есть ли доступные цвета для size|type
+                const comboKey = `${v.value}|${t.value}`;
+                const colorsForCombo = skuCombinations[comboKey];
+                return !colorsForCombo || colorsForCombo.some(c => c.available !== false);
+              });
+              return { ...v, isAvailable: hasAvailable };
+            }
+            return v;
+          });
+          return { ...variant, values: updatedValues };
+        }
+
+        if (isType && selectedSize) {
+          // Доступность типа — есть ли доступная комбинация size|type -> *
+          const typesForSize = colorSizeMapping[selectedSize];
+          if (typesForSize) {
+            const updatedValues = variant.values.map(v => {
+              const typeInfo = typesForSize.find(t => t.value === v.value);
+              if (!typeInfo) return { ...v, isAvailable: false };
+              const comboKey = `${selectedSize}|${v.value}`;
+              const colorsForCombo = skuCombinations[comboKey];
+              const hasAvailableColor = !colorsForCombo || colorsForCombo.some(c => c.available !== false);
+              return { ...v, isAvailable: typeInfo.available && hasAvailableColor };
+            });
+            return { ...variant, values: updatedValues };
+          }
+        }
+
+        if (isColor && selectedSize && selectedType) {
+          // Фильтруем цвета по выбранной комбинации size|type
+          const comboKey = `${selectedSize}|${selectedType}`;
+          const colorsForCombo = skuCombinations[comboKey];
+          if (colorsForCombo) {
+            const updatedValues = variant.values.map(v => {
+              const colorInfo = colorsForCombo.find(c => c.value === v.value);
+              return { ...v, isAvailable: colorInfo ? colorInfo.available !== false : false };
+            }).filter(v => colorsForCombo.some(c => c.value === v.value));
+            return { ...variant, values: updatedValues };
+          }
+        }
+
+        return variant;
+      });
+    }
+
+    // Для 2-х групп используем colorSizeMapping
     const firstKey = Object.keys(colorSizeMapping)[0];
     const isSizeFirst = variants.some(v =>
       (v.optionName.includes('Size') || v.optionName.includes('サイズ')) &&
@@ -845,101 +933,72 @@ export default function ProductPage({ product: initialProduct }: { product: any 
 
     const filtered = variants.map(variant => {
       if (isSizeFirst) {
-        // Структура: colorSizeMapping[size] -> colors[]
-
-        // Обрабатываем Size варианты - обновляем доступность
+        // colorSizeMapping[size] -> colors[]
         if (variant.optionName.includes('Size') || variant.optionName.includes('サイズ')) {
           const updatedValues = variant.values.map(v => {
             const colorsForSize = colorSizeMapping[v.value];
             if (colorsForSize) {
-              const hasAvailableColor = colorsForSize.some(c => c.available !== false);
-              return {
-                ...v,
-                isAvailable: hasAvailableColor
-              };
+              return { ...v, isAvailable: colorsForSize.some(c => c.available !== false) };
             }
             return v;
           });
-
-          return {
-            ...variant,
-            values: updatedValues
-          };
+          return { ...variant, values: updatedValues };
         }
 
-        // Обрабатываем Color варианты - фильтруем по выбранному размеру
-        if (variant.optionName.includes('Color') || variant.optionName.includes('カラー')) {
-          // Находим название опции размера
+        // カラー OR 品番 (любая вторичная группа) — фильтруем по выбранному размеру
+        if (!variant.optionName.includes('Size') && !variant.optionName.includes('サイズ')) {
           const sizeOptionName = Object.keys(selectedOptions).find(key => key.includes('Size') || key.includes('サイズ'));
           const selectedSize = sizeOptionName ? selectedOptions[sizeOptionName] : undefined;
 
           if (selectedSize && colorSizeMapping[selectedSize]) {
             const colorsForSize = colorSizeMapping[selectedSize];
-            const filteredValues = variant.values.filter(v =>
-              colorsForSize.some(c => c.value === v.value)
-            );
+            const hasColorMatch = variant.values.some(v => colorsForSize.some(c => c.value === v.value));
+            if (!hasColorMatch) return variant;
 
-            const updatedValues = filteredValues.map(v => {
-              const colorInfo = colorsForSize.find(c => c.value === v.value);
-              return {
-                ...v,
-                isAvailable: colorInfo?.available !== false
-              };
-            });
-
-            return {
-              ...variant,
-              values: updatedValues
-            };
+            const updatedValues = variant.values
+              .filter(v => colorsForSize.some(c => c.value === v.value))
+              .map(v => {
+                const colorInfo = colorsForSize.find(c => c.value === v.value);
+                return { ...v, isAvailable: colorInfo?.available !== false };
+              });
+            return { ...variant, values: updatedValues };
           }
         }
       } else {
-        // Структура: colorSizeMapping[color] -> sizes[]
+        // colorSizeMapping[primaryValue] -> secondaryValues[]
+        // Первичная группа — та чьи значения являются ключами colorSizeMapping
+        const isPrimary = variant.values.some(v => colorSizeMapping[v.value] !== undefined);
 
-        // Обрабатываем Color варианты - обновляем доступность
-        if (variant.optionName.includes('Color') || variant.optionName.includes('カラー')) {
+        if (isPrimary) {
+          // Показываем доступность первичного варианта — есть ли хоть один доступный вторичный
           const updatedValues = variant.values.map(v => {
-            const sizesForColor = colorSizeMapping[v.value];
-            if (sizesForColor) {
-              const hasAvailableSize = sizesForColor.some(s => s.available !== false);
-              return {
-                ...v,
-                isAvailable: hasAvailableSize
-              };
+            const secondary = colorSizeMapping[v.value];
+            if (secondary) {
+              return { ...v, isAvailable: secondary.some(s => s.available !== false) };
             }
             return v;
           });
+          return { ...variant, values: updatedValues };
+        } else {
+          // Вторичная группа — фильтруем по выбранному первичному значению
+          const primaryOptionName = Object.keys(selectedOptions).find(key => {
+            const val = selectedOptions[key];
+            return val && colorSizeMapping[val] !== undefined;
+          });
+          const selectedPrimary = primaryOptionName ? selectedOptions[primaryOptionName] : undefined;
 
-          return {
-            ...variant,
-            values: updatedValues
-          };
-        }
+          if (selectedPrimary && colorSizeMapping[selectedPrimary]) {
+            const secondaryForPrimary = colorSizeMapping[selectedPrimary];
+            const hasMatch = variant.values.some(v => secondaryForPrimary.some(s => s.value === v.value));
+            if (!hasMatch) return variant;
 
-        // Обрабатываем Size варианты - фильтруем по выбранному цвету
-        if (variant.optionName.includes('Size') || variant.optionName.includes('サイズ')) {
-          // Находим название опции цвета
-          const colorOptionName = Object.keys(selectedOptions).find(key => key.includes('Color') || key.includes('カラー'));
-          const selectedColor = colorOptionName ? selectedOptions[colorOptionName] : undefined;
-
-          if (selectedColor && colorSizeMapping[selectedColor]) {
-            const sizesForColor = colorSizeMapping[selectedColor];
-            const filteredValues = variant.values.filter(v =>
-              sizesForColor.some(s => s.value === v.value)
-            );
-
-            const updatedValues = filteredValues.map(v => {
-              const sizeInfo = sizesForColor.find(s => s.value === v.value);
-              return {
-                ...v,
-                isAvailable: sizeInfo?.available !== false
-              };
-            });
-
-            return {
-              ...variant,
-              values: updatedValues
-            };
+            const updatedValues = variant.values
+              .filter(v => secondaryForPrimary.some(s => s.value === v.value))
+              .map(v => {
+                const info = secondaryForPrimary.find(s => s.value === v.value);
+                return { ...v, isAvailable: info?.available !== false };
+              });
+            return { ...variant, values: updatedValues };
           }
         }
       }
@@ -954,10 +1013,27 @@ export default function ProductPage({ product: initialProduct }: { product: any 
     e.currentTarget.src = PLACEHOLDER_IMAGE;
   };
 
+  const [highlightMissing, setHighlightMissing] = useState(false);
+  const [showOriginalBanner, setShowOriginalBanner] = useState(false);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem('japrix_original_banner_dismissed');
+    if (!dismissed) setShowOriginalBanner(true);
+  }, []);
+
   const handleAddToCart = () => {
     if (!product) return;
 
-    // Определяем маркетплейс из _source или по URL изображения
+    const filteredVariants = getFilteredVariants();
+    const missingOptions = filteredVariants.filter(v => !selectedOptions[v.optionName]);
+
+    if (missingOptions.length > 0) {
+      setHighlightMissing(true);
+      setTimeout(() => setHighlightMissing(false), 2000);
+      showNotification(`Please select: ${missingOptions.map(v => v.optionName).join(', ')}`);
+      return;
+    }
+
     const marketplace = product._source === 'yahoo' ? 'yahoo' :
                        mainImage?.includes('yimg.jp') ? 'yahoo' : 'rakuten';
 
@@ -1105,6 +1181,47 @@ export default function ProductPage({ product: initialProduct }: { product: any 
           height: auto !important;
           display: block;
         }
+
+        /* Product description HTML rendering */
+        .product-description br {
+          display: block;
+          content: '';
+          margin-top: 0.5em;
+        }
+        .product-description p {
+          margin-bottom: 0.75em;
+        }
+        .product-description img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 6px;
+          margin: 0.5em 0;
+        }
+        .product-description table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 0.75em 0;
+          font-size: 0.85em;
+        }
+        .product-description td, .product-description th {
+          padding: 6px 10px;
+          border: 1px solid #e5e7eb;
+        }
+        .product-description th {
+          background: #f9fafb;
+          font-weight: 600;
+        }
+        .product-description strong, .product-description b {
+          font-weight: 600;
+          color: #111827;
+        }
+        .product-description ul, .product-description ol {
+          padding-left: 1.25em;
+          margin: 0.5em 0;
+        }
+        .product-description li {
+          margin-bottom: 0.25em;
+        }
       `}</style>
       <div className="min-h-screen bg-gray-50">
       {/* Breadcrumbs */}
@@ -1126,37 +1243,31 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                   <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                  <Link
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      router.back();
-                    }}
+                  <button
+                    type="button"
+                    onClick={() => router.back()}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-gray-600 hover:text-green-600 hover:bg-green-50 transition-all duration-200 whitespace-nowrap group"
                   >
                     <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                     </svg>
                     <span className="font-medium">{String(category)}</span>
-                  </Link>
+                  </button>
                   {subcategory && (
                     <>
                       <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
-                      <Link
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          router.back();
-                        }}
+                      <button
+                        type="button"
+                        onClick={() => router.back()}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-gray-600 hover:text-green-600 hover:bg-green-50 transition-all duration-200 whitespace-nowrap group"
                       >
                         <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                         </svg>
                         <span className="font-medium">{String(subcategory)}</span>
-                      </Link>
+                      </button>
                     </>
                   )}
                   <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1187,43 +1298,127 @@ export default function ProductPage({ product: initialProduct }: { product: any 
         ) : (
           <>
         <div className="grid lg:grid-cols-2 gap-0 lg:gap-6" style={{ minWidth: '720px' }}>
-          {/* Левая колонка - Фотки */}
-          <div className="flex flex-col">
-            <div className="bg-white mb-2 sm:mb-3">
-              <div className="w-full overflow-hidden flex items-center justify-center bg-white">
-                <img
-                  src={mainImage}
-                  alt={product.itemName || "Product image"}
-                  className="w-full h-auto object-contain"
-                  onError={handleImageError}
-                />
-              </div>
-            </div>
-            {product.mediumImageUrls && product.mediumImageUrls.length > 1 && (
-              <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 px-3 lg:px-0">
-                {product.mediumImageUrls.map((img: any, idx: number) => {
-                  const imageUrl = img.imageUrl.replace("?_ex=128x128", "");
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => setMainImage(imageUrl)}
-                      className={`flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 bg-white rounded border-2 overflow-hidden touch-manipulation transition-all ${
-                        mainImage === imageUrl
-                          ? "border-green-500 shadow-sm"
-                          : "border-gray-200 hover:border-gray-300 active:border-gray-300"
-                      }`}
-                    >
-                      <img
-                        src={imageUrl}
-                        alt={`Thumbnail ${idx + 1}`}
-                        className="object-contain w-full h-full p-0.5 sm:p-1"
-                        onError={handleImageError}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+          {/* Левая колонка - Галерея */}
+          <div className="flex flex-col gap-3">
+            {(() => {
+              const images = (product.mediumImageUrls?.length > 0
+                ? product.mediumImageUrls.map((img: any) => (img.imageUrl || '').replace(/_ex=\d+x\d+/g, '_ex=700x700').replace(/\?$/, ''))
+                : [mainImage]
+              ).filter(Boolean);
+              const total = images.length;
+
+              const goTo = (idx: number, dir: 'left' | 'right') => {
+                setImageAnimating(dir);
+                setTimeout(() => {
+                  setActiveImageIndex(idx);
+                  setMainImage(images[idx]);
+                  setImageAnimating(null);
+                }, 220);
+              };
+
+              const prev = () => goTo((activeImageIndex - 1 + total) % total, 'right');
+              const next = () => goTo((activeImageIndex + 1) % total, 'left');
+
+              return (
+                <>
+                  {/* Главное фото */}
+                  <div className="relative group">
+                    {/* Рамка с градиентной границей */}
+                    <div className="relative rounded-2xl p-[2px] bg-gradient-to-br from-gray-200 via-gray-100 to-gray-300 shadow-xl">
+                      <div className="rounded-2xl overflow-hidden bg-white lg:h-[500px] flex items-center justify-center">
+                        <img
+                          key={activeImageIndex}
+                          src={images[activeImageIndex]}
+                          alt={product.itemName || "Product image"}
+                          className="w-full h-auto object-contain lg:h-full lg:w-auto lg:max-w-full transition-all duration-200 cursor-zoom-in"
+                          style={{
+                            opacity: imageAnimating ? 0 : 1,
+                            transform: imageAnimating === 'left'
+                              ? 'translateX(-18px)'
+                              : imageAnimating === 'right'
+                              ? 'translateX(18px)'
+                              : 'translateX(0)',
+                          }}
+                          onError={handleImageError}
+                          onClick={() => { setLightboxIndex(activeImageIndex); setLightboxOpen(true); }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Счётчик фото */}
+                    {total > 1 && (
+                      <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full">
+                        {activeImageIndex + 1} / {total}
+                      </div>
+                    )}
+
+                    {/* Стрелки — только если больше 1 фото */}
+                    {total > 1 && (
+                      <>
+                        <button
+                          onClick={prev}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:shadow-xl hover:scale-110 active:scale-95"
+                        >
+                          <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={next}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:shadow-xl hover:scale-110 active:scale-95"
+                        >
+                          <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Точки-индикаторы (мобайл) + миниатюры (десктоп) */}
+                  {total > 1 && (
+                    <>
+                      {/* Миниатюры — десктоп */}
+                      <div className="hidden lg:flex gap-2 overflow-x-auto pb-1">
+                        {images.map((imgUrl: string, idx: number) => (
+                          <button
+                            key={idx}
+                            onClick={() => goTo(idx, idx > activeImageIndex ? 'left' : 'right')}
+                            className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all duration-200 ${
+                              idx === activeImageIndex
+                                ? "border-green-500 shadow-md scale-105"
+                                : "border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100"
+                            }`}
+                          >
+                            <img
+                              src={imgUrl}
+                              alt={`Photo ${idx + 1}`}
+                              className="object-contain w-full h-full p-1"
+                              onError={handleImageError}
+                            />
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Точки — мобайл */}
+                      <div className="flex lg:hidden justify-center gap-1.5 mt-1">
+                        {images.map((_: any, idx: number) => (
+                          <button
+                            key={idx}
+                            onClick={() => goTo(idx, idx > activeImageIndex ? 'left' : 'right')}
+                            className={`rounded-full transition-all duration-200 ${
+                              idx === activeImageIndex
+                                ? "w-5 h-2 bg-green-500"
+                                : "w-2 h-2 bg-gray-300 hover:bg-gray-400"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Правая колонка - Информация */}
@@ -1275,6 +1470,57 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                 {product?.itemName || "Unnamed Product"}
               </h1>
 
+              {/* Original marketplace banner */}
+              {showOriginalBanner && product?.itemUrl && (
+                <div className="relative mb-3 rounded-xl overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10" />
+                  <div className="relative flex items-center gap-3 border border-indigo-200/60 rounded-xl px-3.5 py-3 backdrop-blur-sm bg-white/70">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm text-gray-700 font-medium leading-snug">
+                        Need to see more photos or clarify colors & sizes?
+                      </p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <a
+                          href={product.itemUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-xs font-semibold rounded-full shadow-sm transition-all hover:shadow-md"
+                        >
+                          View on {product._source === 'yahoo' ? 'Yahoo Shopping' : 'Rakuten'}
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                        <button
+                          onClick={() => {
+                            localStorage.setItem('japrix_original_banner_dismissed', '1');
+                            setShowOriginalBanner(false);
+                          }}
+                          className="text-gray-400 hover:text-gray-600 text-xs transition-colors"
+                        >
+                          Don't show again
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowOriginalBanner(false)}
+                      className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                      aria-label="Close"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {averageRating > 0 && (
                 <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
                   <div className="flex">
@@ -1323,10 +1569,12 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                   <p className="text-amber-800 text-sm">{variantError}</p>
                 </div>
               ) : hasVariants ? (
-                getFilteredVariants().map((v, idx) => (
-                  <div key={idx} className="mb-2 sm:mb-3">
-                    <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-1 sm:mb-1.5">
-                      {v.optionName}
+                getFilteredVariants().map((v, idx) => {
+                  const isMissing = highlightMissing && !selectedOptions[v.optionName];
+                  return (
+                  <div key={idx} className={`mb-2 sm:mb-3 rounded-lg transition-all duration-300 ${isMissing ? 'ring-2 ring-red-400 ring-offset-1 bg-red-50 p-1.5' : ''}`}>
+                    <label className={`block text-xs sm:text-sm font-semibold mb-1 sm:mb-1.5 ${isMissing ? 'text-red-600' : 'text-gray-900'}`}>
+                      {v.optionName}{isMissing && <span className="ml-1 text-red-500">← Please select</span>}
                     </label>
                     <div className="grid grid-cols-3 gap-1 sm:gap-1.5">
                       {v.values.map((val, i) => {
@@ -1368,7 +1616,8 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                       })}
                     </div>
                   </div>
-                ))
+                  );
+                })
               ) : null}
 
               {/* Количество */}
@@ -1441,9 +1690,15 @@ export default function ProductPage({ product: initialProduct }: { product: any 
               </h2>
             </div>
             <div className="px-4 sm:px-6 py-3 sm:py-4">
-              <div className="text-xs sm:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed overflow-hidden break-words">
-                {product.itemCaption}
-              </div>
+              <div
+                className="text-xs sm:text-sm text-gray-700 leading-relaxed overflow-hidden break-words product-description"
+                dangerouslySetInnerHTML={{
+                  __html: product.itemCaption
+                    .replace(/<script[\s\S]*?<\/script>/gi, '')
+                    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+                    .replace(/on\w+="[^"]*"/gi, '')
+                }}
+              />
             </div>
           </div>
         )}
@@ -1574,6 +1829,73 @@ export default function ProductPage({ product: initialProduct }: { product: any 
         )}
       </div>
     </div>
+
+    {/* Lightbox */}
+    {lightboxOpen && (() => {
+      const imgs = product?.mediumImageUrls?.length > 0
+        ? product.mediumImageUrls.map((img: any) => (img.imageUrl || '').replace(/_ex=\d+x\d+/g, '_ex=1200x1200').replace(/\?$/, '')).filter(Boolean)
+        : [mainImage];
+      const total = imgs.length;
+      const lbPrev = () => setLightboxIndex(i => (i - 1 + total) % total);
+      const lbNext = () => setLightboxIndex(i => (i + 1) % total);
+      return (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
+          onClick={() => setLightboxOpen(false)}
+          onKeyDown={e => { if (e.key === 'Escape') setLightboxOpen(false); if (e.key === 'ArrowLeft') lbPrev(); if (e.key === 'ArrowRight') lbNext(); }}
+          tabIndex={0}
+          ref={el => el?.focus()}
+        >
+          {/* Закрыть */}
+          <button
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Счётчик */}
+          {total > 1 && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
+              {lightboxIndex + 1} / {total}
+            </div>
+          )}
+
+          {/* Фото */}
+          <img
+            src={imgs[lightboxIndex]}
+            alt={product?.itemName || 'Product image'}
+            className="max-w-[90vw] max-h-[90vh] object-contain select-none"
+            onClick={e => e.stopPropagation()}
+            onError={handleImageError}
+          />
+
+          {/* Стрелки */}
+          {total > 1 && (
+            <>
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                onClick={e => { e.stopPropagation(); lbPrev(); }}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                onClick={e => { e.stopPropagation(); lbNext(); }}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
+      );
+    })()}
     </>
   );
 }
@@ -1638,6 +1960,9 @@ export async function getServerSideProps(context: any) {
         timeout: 60000,
       });
 
+      // Ждём появления названия магазина (Rakuten рендерит через JS)
+      await page.waitForSelector('.rfc-shopHeader__shopName', { timeout: 5000 }).catch(() => {});
+
       const product = await page.evaluate(() => {
         // Название товара - пробуем разные селекторы
         let itemName =
@@ -1701,84 +2026,75 @@ export async function getServerSideProps(context: any) {
         // Изображения товара
         const images: string[] = [];
 
-        // Главное изображение - пробуем разные селекторы
-        const mainImageSelectors = [
-          '[itemprop="image"]',
-          '#rakutenLimitedId_ImageMain img',
-          '.item_image img',
-          '.main_image img',
-          'img[id*="ItemImg"]',
-          'img[class*="item"]'
-        ];
+        const upgradeImgSrc = (src: string) =>
+          src.replace(/_ex=\d+x\d+/g, '_ex=700x700');
 
-        for (const selector of mainImageSelectors) {
-          const img = document.querySelector(selector) as HTMLImageElement;
-          if (img?.src && !images.includes(img.src)) {
-            let imgSrc = img.src;
-            // Upgrade to largest size
-            imgSrc = imgSrc
-              .replace('_ex=128x128', '_ex=600x600')
-              .replace('_ex=200x200', '_ex=600x600')
-              .replace('_ex=300x300', '_ex=600x600');
-            images.push(imgSrc);
-            break;
+        const isJunk = (src: string) => {
+          const lower = src.toLowerCase();
+          // Only block clearly non-product images
+          return lower.includes('/banner') || lower.includes('_banner') ||
+            lower.includes('/icon/') || lower.includes('/logo/') ||
+            lower.includes('/common/') || lower.includes('/header/') ||
+            lower.includes('/footer/') || lower.includes('/ad/') ||
+            lower.includes('_ad_') || lower.includes('/coupon') ||
+            lower.includes('campaign_') || /\.(gif)$/.test(lower);
+        };
+
+        const addImg = (src: string) => {
+          const upgraded = upgradeImgSrc(src);
+          if (!images.includes(upgraded)) images.push(upgraded);
+        };
+
+        // Название товара для сопоставления alt-атрибутов
+        const productTitle = (document.querySelector('h1[itemprop="name"], h1.item_name, .item_name h1, h1')?.textContent || '').trim().slice(0, 30);
+
+        // 1. Изображения с тем же alt что и название товара (самый точный способ)
+        if (productTitle.length > 5) {
+          const allImgs = Array.from(document.querySelectorAll('img[src*="r10s.jp"], img[src*="rakuten.co.jp"]')) as HTMLImageElement[];
+          for (const img of allImgs) {
+            const alt = img.alt || '';
+            if (alt.includes(productTitle.slice(0, 10)) && img.src.startsWith('http') && !isJunk(img.src)) {
+              addImg(img.src);
+              if (images.length >= 6) break;
+            }
           }
         }
 
-        // Миниатюры товара - только из галереи
-        const thumbnailSelectors = [
-          '#rakutenLimitedId_thumblist img',
-          '.sub_image img',
-          '.thumbnail_list img',
-          '.item_thumb img'
-        ];
-
-        thumbnailSelectors.forEach(selector => {
-          const thumbs = document.querySelectorAll(selector);
-          thumbs.forEach((img: any) => {
-            let src = img.src;
-            if (src && !images.includes(src) && img.width >= 50 && img.height >= 50) {
-              // Upgrade to largest size
-              src = src
-                .replace('_ex=128x128', '_ex=600x600')
-                .replace('_ex=200x200', '_ex=600x600')
-                .replace('_ex=300x300', '_ex=600x600');
-              images.push(src);
+        // 2. Официальные gallery/thumb блоки если alt-метод не дал результат
+        if (images.length === 0) {
+          const officialThumbSelectors = [
+            '#rakutenLimitedId_thumblist img',
+            '.sub_image img',
+            '.thumbnail_list img',
+            '.item_thumb img',
+            '[itemprop="image"]',
+            '#rakutenLimitedId_ImageMain img',
+          ];
+          for (const selector of officialThumbSelectors) {
+            const thumbs = document.querySelectorAll(selector);
+            if (thumbs.length > 0) {
+              thumbs.forEach((img: any) => {
+                const src = img.src || img.dataset.src;
+                if (src && src.startsWith('http') && !isJunk(src)) addImg(src);
+              });
+              if (images.length > 0) break;
             }
-          });
-        });
-
-        // Если нашли мало изображений, ищем все изображения товара
-        if (images.length < 3) {
-          const allImages = document.querySelectorAll('img[src*="tshop.r10s.jp"]');
-          allImages.forEach((img: any) => {
-            let src = img.src;
-            // Фильтруем только изображения товара
-            if (src && !images.includes(src) &&
-                !src.includes('button') &&
-                !src.includes('icon') &&
-                !src.includes('banner') &&
-                !src.includes('logo') &&
-                !src.includes('header') &&
-                !src.includes('footer') &&
-                !src.includes('nav') &&
-                !src.includes('common') &&
-                !src.includes('bg_') &&
-                img.naturalWidth >= 200 &&
-                img.naturalHeight >= 200) {
-              src = src
-                .replace('_ex=128x128', '_ex=600x600')
-                .replace('_ex=200x200', '_ex=600x600')
-                .replace('_ex=300x300', '_ex=600x600');
-              images.push(src);
-            }
-          });
+          }
         }
 
-        // Ограничиваем количество изображений до 10
-        if (images.length > 10) {
-          images.splice(10);
+        // 3. Последний fallback — CDN с фильтром по размеру
+        if (images.length === 0) {
+          const cdnImgs = document.querySelectorAll('img[src*="tshop.r10s.jp"], img[src*="r10s.jp"]');
+          for (const img of Array.from(cdnImgs) as HTMLImageElement[]) {
+            if (img.src && !isJunk(img.src) && (img.width >= 100 || img.height >= 100)) {
+              addImg(img.src);
+              if (images.length >= 6) break;
+            }
+          }
         }
+
+        // Ограничиваем до 6 изображений
+        if (images.length > 6) images.splice(6);
 
         // Описание
         const itemCaption =
@@ -1787,17 +2103,47 @@ export async function getServerSideProps(context: any) {
           document.querySelector('.description')?.textContent?.trim() ||
           "";
 
-        // Название магазина
-        const shopName =
-          document.querySelector('.shop_name')?.textContent?.trim() ||
-          document.querySelector('[class*="shop"]')?.textContent?.trim() ||
-          "";
+        // Название магазина — пробуем разные селекторы Rakuten
+        const shopNameSelectors = [
+          '.rfc-shopHeader__shopName',
+          '.shop-info-name',
+          '.shop_name',
+          '[data-ratid="shop-name"]',
+          'a[href*="/shop/"] strong',
+          '.seller-store-name',
+          '#shop-info a',
+          '.shopinfo a',
+          'span[class*="shopName"]',
+          'div[class*="shopName"]',
+          '[class*="shopHeader"] [class*="name"]',
+          '[class*="ShopName"]',
+          '[class*="shop-name"]',
+        ];
+        let shopName = "";
+        const shopNameDebug: string[] = [];
+        for (const sel of shopNameSelectors) {
+          const el = document.querySelector(sel);
+          shopNameDebug.push(`${sel}: ${el?.textContent?.trim() || 'NOT FOUND'}`);
+          if (el?.textContent?.trim()) { shopName = el.textContent.trim(); break; }
+        }
+        // Последний fallback — og:title содержит "shopName | 楽天市場" на некоторых страницах
+        if (!shopName) {
+          const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content') || '';
+          // Формат: "товар | магазин | 楽天市場"
+          const parts = ogTitle.split('|').map((s: string) => s.trim());
+          if (parts.length >= 2) {
+            // Последняя часть — "楽天市場", предпоследняя — название магазина
+            const candidate = parts[parts.length - 2];
+            if (candidate && candidate !== '楽天市場') shopName = candidate;
+          }
+        }
 
         return {
           itemName,
           itemPrice,
           itemCaption,
           shopName,
+          shopNameDebug,
           images,
           itemUrl: window.location.href,
           postageFlag,
@@ -1806,22 +2152,56 @@ export async function getServerSideProps(context: any) {
 
       await browser.close();
 
-      
+      console.log('[Puppeteer shopName]', product.shopName || 'EMPTY');
+      console.log('[Puppeteer shopName debug]', product.shopNameDebug?.join(' | '));
+
+      // Пробуем получить данные из Rakuten API (изображения + shopName)
+      let apiImages: string[] = [];
+      let apiShopName = "";
+      try {
+        const urlMatch = (urlParam as string).match(/item\.rakuten\.co\.jp\/([^\/]+)\/([^\/\?]+)/);
+        if (urlMatch) {
+          const RAKUTEN_APP_ID = process.env.NEXT_PUBLIC_RAKUTEN_APP_ID || "";
+          const fullCode = `${urlMatch[1]}:${urlMatch[2]}`;
+          const apiRes = await fetch(
+            `https://app.rakuten.co.jp/services/api/IchibaItem/Search/20170706?applicationId=${encodeURIComponent(RAKUTEN_APP_ID)}&itemCode=${encodeURIComponent(fullCode)}&format=json`
+          );
+          if (apiRes.ok) {
+            const apiData: any = await apiRes.json();
+            const apiProduct = apiData.Items?.[0]?.Item;
+            if (apiProduct) {
+              apiShopName = apiProduct.shopName || "";
+              if (apiProduct.mediumImageUrls?.length > 0) {
+                apiImages = apiProduct.mediumImageUrls
+                  .map((img: any) => img.imageUrl?.replace(/^http:/, 'https:').replace(/_ex=\d+x\d+/, '_ex=700x700'))
+                  .filter(Boolean);
+              }
+            }
+          }
+        }
+      } catch (apiErr) {
+        // fallback to puppeteer data
+      }
+
+      const finalImages = apiImages.length > 0 ? apiImages : product.images;
+
       const formattedProduct = {
         itemCode,
         itemName: product.itemName,
         itemPrice: product.itemPrice,
         itemCaption: product.itemCaption,
-        shopName: product.shopName,
+        shopName: apiShopName || product.shopName || (() => {
+          const m = (urlParam as string).match(/item\.rakuten\.co\.jp\/([^\/]+)\//);
+          return m ? m[1] : "";
+        })(),
         itemUrl: product.itemUrl,
-        imageUrl: product.images[0] || "",
-        mediumImageUrls: product.images.map((img: string) => ({
+        imageUrl: finalImages[0] || "",
+        mediumImageUrls: finalImages.map((img: string) => ({
           imageUrl: img,
         })),
         postageFlag: product.postageFlag,
       };
 
-      
       return {
         props: { product: formattedProduct }
       };

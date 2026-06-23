@@ -27,11 +27,26 @@ import { allCategories } from "@/data/categories";
 
 function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
+  const [routeLoading, setRouteLoading] = React.useState(false);
 
   const noHeaderPaths = ["/checkout"];
   const showHeader = !noHeaderPaths.some((path) =>
     router.pathname.startsWith(path)
   );
+
+  // Global route loading indicator
+  React.useEffect(() => {
+    const onStart = () => setRouteLoading(true);
+    const onDone = () => setRouteLoading(false);
+    router.events.on('routeChangeStart', onStart);
+    router.events.on('routeChangeComplete', onDone);
+    router.events.on('routeChangeError', onDone);
+    return () => {
+      router.events.off('routeChangeStart', onStart);
+      router.events.off('routeChangeComplete', onDone);
+      router.events.off('routeChangeError', onDone);
+    };
+  }, [router.events]);
 
   // Патчим React для игнорирования NotFoundError
   React.useEffect(() => {
@@ -87,6 +102,20 @@ function MyApp({ Component, pageProps }: AppProps) {
                       <CartProvider>
                         <ProductsProvider>
                         {showHeader && <Header categories={allCategories} />}
+
+                        {/* Global route transition loader */}
+                        {routeLoading && (
+                          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                            <div className="text-center">
+                              <div className="relative w-16 h-16 mx-auto mb-4">
+                                <div className="absolute inset-0 rounded-full border-4 border-white/10" />
+                                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-green-400 animate-spin" />
+                                <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-emerald-300 animate-spin" style={{ animationDuration: '0.5s', animationDirection: 'reverse' }} />
+                              </div>
+                              <p className="text-white font-semibold text-sm">Loading...</p>
+                            </div>
+                          </div>
+                        )}
 
                         <ToastContainer
                           position="top-center"

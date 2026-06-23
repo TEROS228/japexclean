@@ -76,7 +76,7 @@ export default function AboutUs() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+          <div className="grid gap-8 lg:gap-12 max-w-lg mx-auto">
             {/* Leon Card */}
             <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100">
               <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-8 text-white">
@@ -87,7 +87,7 @@ export default function AboutUs() {
               <div className="p-6 sm:p-8">
                 <div className="mb-4">
                   <span className="inline-block bg-blue-100 text-blue-700 text-sm font-semibold px-3 py-1 rounded-full">
-                    Age 17
+                    Age 16
                   </span>
                 </div>
                 <p className="text-gray-700 leading-relaxed">
@@ -110,38 +110,6 @@ export default function AboutUs() {
               </div>
             </div>
 
-            {/* Erik Card */}
-            <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100">
-              <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-8 text-white">
-                <div className="text-6xl mb-4"></div>
-                <h3 className="text-2xl sm:text-3xl font-bold mb-2">Erik Ohtake</h3>
-                <p className="text-green-100 font-medium">Co-founder, Director & Shipping Manager</p>
-              </div>
-              <div className="p-6 sm:p-8">
-                <div className="mb-4">
-                  <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold px-3 py-1 rounded-full">
-                    Age 20
-                  </span>
-                </div>
-                <p className="text-gray-700 leading-relaxed">
-                  Brings ambitious vision and organizational excellence to Japrix. As Director and Shipping Manager, Erik ensures every product is carefully handled, securely packaged, and promptly delivered worldwide.
-                </p>
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
-                    <span className="mr-2">📋</span>
-                    <span>Operations Management</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
-                    <span className="mr-2">🌏</span>
-                    <span>Global Logistics</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <span className="mr-2">✨</span>
-                    <span>Quality Assurance</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -209,7 +177,7 @@ export default function AboutUs() {
                 We look forward to bringing Japan closer to you
               </p>
               <div className="text-lg font-medium">
-                — Leon & Erik
+                — Leon
               </div>
             </div>
           </div>

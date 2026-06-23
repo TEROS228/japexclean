@@ -11,8 +11,8 @@ export default async function handler(
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Cache for 4 hours
-  res.setHeader('Cache-Control', 'public, s-maxage=14400, stale-while-revalidate=7200');
+  // Cache for 30 minutes
+  res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=900');
 
   const { query, page, minPrice, maxPrice } = req.query;
 

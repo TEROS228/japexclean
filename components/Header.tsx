@@ -184,9 +184,33 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
     localStorage.setItem('searchHistory', JSON.stringify(newHistory));
   };
 
+  const detectMarketplaceUrl = (input: string): string | null => {
+    const trimmed = input.trim();
+    // Rakuten: item.rakuten.co.jp/shopcode/itemcode/
+    const rakutenMatch = trimmed.match(/item\.rakuten\.co\.jp\/([^\/\?#]+)\/([^\/\?#]+)/);
+    if (rakutenMatch) {
+      return `/product/${rakutenMatch[1]}:${rakutenMatch[2]}?url=${encodeURIComponent(trimmed)}`;
+    }
+    // Yahoo Shopping: store.shopping.yahoo.co.jp/shop/item or auctions
+    const yahooMatch = trimmed.match(/store\.shopping\.yahoo\.co\.jp\/([^\/\?#]+)\/([^\/\?#]+)/);
+    if (yahooMatch) {
+      const yahooItem = yahooMatch[2].replace(/\.html?$/i, '');
+      return `/product/yahoo-${yahooMatch[1]}-${yahooItem}?url=${encodeURIComponent(trimmed)}`;
+    }
+    return null;
+  };
+
   const onSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
+      const marketplaceUrl = detectMarketplaceUrl(searchTerm);
+      if (marketplaceUrl) {
+        router.push(marketplaceUrl);
+        setSearchTerm("");
+        setShowSearchHistory(false);
+        searchInputRef.current?.blur();
+        return;
+      }
       saveToHistory(searchTerm);
       router.push(`/search?query=${encodeURIComponent(searchTerm.trim())}`);
       setSearchTerm("");
@@ -651,8 +675,12 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder="Search by product name"
-                  className="w-full rounded-full border-2 border-gray-200 bg-white pl-8 sm:pl-12 pr-16 sm:pr-28 text-sm sm:text-base font-medium text-gray-900 placeholder-gray-400 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 focus:outline-none transition-all shadow-sm focus:shadow-md"
+                  placeholder="Search or paste Rakuten / Yahoo link..."
+                  className={`w-full rounded-full border-2 bg-white pl-8 sm:pl-12 pr-16 sm:pr-28 text-sm sm:text-base font-medium text-gray-900 placeholder-gray-400 focus:outline-none transition-all shadow-sm focus:shadow-md ${
+                    detectMarketplaceUrl(searchTerm)
+                      ? 'border-indigo-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10'
+                      : 'border-gray-200 focus:border-green-500 focus:ring-4 focus:ring-green-500/10'
+                  }`}
                   style={{ height: '48px', lineHeight: '48px', paddingTop: '0', paddingBottom: '0' }}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -662,21 +690,34 @@ export default function Header({ categories, onCategoryMenuRequest }: { categori
                     }
                   }}
                   onBlur={() => {
-                    // Save to history when user exits search with text
                     if (searchTerm.trim()) {
                       saveToHistory(searchTerm);
                     }
                   }}
                 />
                 <div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <Search size={16} className="sm:w-[19px] sm:h-[19px] text-gray-400 group-focus-within:text-green-600 transition-colors" />
+                  {detectMarketplaceUrl(searchTerm) ? (
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                  ) : (
+                    <Search size={16} className="sm:w-[19px] sm:h-[19px] text-gray-400 group-focus-within:text-green-600 transition-colors" />
+                  )}
                 </div>
                 <button
                   type="submit"
-                  className="shimmer bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold text-sm sm:text-base rounded-full hover:from-green-700 hover:to-emerald-700 transition-all hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
+                  className={`shimmer text-white font-bold text-sm sm:text-base rounded-full transition-all hover:scale-105 active:scale-95 shadow-md hover:shadow-lg ${
+                    detectMarketplaceUrl(searchTerm)
+                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700'
+                      : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
+                  }`}
                   style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', padding: '8px 20px', height: 'auto' }}
                 >
-                  <span className="hidden sm:inline">Search</span>
+                  {detectMarketplaceUrl(searchTerm) ? (
+                    <span className="hidden sm:inline">Open</span>
+                  ) : (
+                    <span className="hidden sm:inline">Search</span>
+                  )}
                   <Search size={16} className="sm:hidden" />
                 </button>
               </form>

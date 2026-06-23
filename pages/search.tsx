@@ -181,6 +181,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [error, setError] = useState("");
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [loadedPages, setLoadedPages] = useState<{ [key: number]: any[] }>({});
@@ -276,13 +277,28 @@ export default function SearchPage() {
   useEffect(() => {
     if (!query || typeof query !== "string") return;
 
+    const searchQuery = query.trim();
+
+    // Немедленный редирект если вставлена ссылка с маркетплейса
+    const rakutenMatch = searchQuery.match(/item\.rakuten\.co\.jp\/([^\/\?#]+)\/([^\/\?#]+)/);
+    if (rakutenMatch) {
+      setIsRedirecting(true);
+      router.replace(`/product/${rakutenMatch[1]}:${rakutenMatch[2]}?url=${encodeURIComponent(searchQuery)}`);
+      return;
+    }
+    const yahooMatch = searchQuery.match(/store\.shopping\.yahoo\.co\.jp\/([^\/\?#]+)\/([^\/\?#]+)/);
+    if (yahooMatch) {
+      setIsRedirecting(true);
+      const yahooItem = yahooMatch[2].replace(/\.html?$/i, '');
+      router.replace(`/product/yahoo-${yahooMatch[1]}-${yahooItem}?url=${encodeURIComponent(searchQuery)}`);
+      return;
+    }
+
     // Проверяем, есть ли сохраненные данные - если есть, не выполняем поиск
-    const savedData = sessionStorage.getItem(`data-search-${query}`);
+    const savedData = sessionStorage.getItem(`data-search-${searchQuery}`);
     if (savedData || isRestoring) {
       return; // Данные будут восстановлены в другом useEffect
     }
-
-    const searchQuery = query.trim();
 
     // Предотвращаем дублирующие запросы
     const searchKey = `${searchQuery}:${marketplace}`;
@@ -364,27 +380,20 @@ export default function SearchPage() {
   }, [query, isRestoring]);
 
   const handleProductByUrl = async (url: string) => {
-    setLoading(true);
-    setError("");
-
-    // Сразу показываем инструкцию для любого Rakuten URL
-    setError(
-      "❌ Rakuten URL not supported\n\n" +
-      "💡 Solution: Copy the full product name from the Rakuten page and paste it into the search bar above to find this product."
-    );
-    setLoading(false);
+    const match = url.match(/item\.rakuten\.co\.jp\/([^\/\?#]+)\/([^\/\?#]+)/);
+    if (match) {
+      router.push(`/product/${match[1]}:${match[2]}?url=${encodeURIComponent(url)}`);
+    }
   };
 
   const handleProductByYahooUrl = async (url: string) => {
-    setLoading(true);
-    setError("");
-
-    // Показываем инструкцию использовать поиск вместо URL
-    setError(
-      "❌ Yahoo Shopping URL not supported\n\n" +
-      "💡 Yahoo Solution: Copy the full product name from the Yahoo Shopping page and paste it into the search bar above to find this product."
-    );
-    setLoading(false);
+    const match = url.match(/store\.shopping\.yahoo\.co\.jp\/([^\/\?#]+)\/([^\/\?#]+)/);
+    if (match) {
+      const yahooItem = match[2].replace(/\.html?$/i, '');
+      router.push(`/product/yahoo-${match[1]}-${yahooItem}?url=${encodeURIComponent(url)}`);
+    } else {
+      router.push(`/product/yahoo-search?url=${encodeURIComponent(url)}`);
+    }
   };
 
   const handleSearch = async (
@@ -614,6 +623,22 @@ export default function SearchPage() {
             </svg>
             <p className="text-gray-500 text-lg">Enter a search query to find products</p>
           </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (isRedirecting) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-green-50/30 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-green-500 animate-spin"></div>
+            <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-emerald-400 animate-spin" style={{ animationDuration: '0.6s', animationDirection: 'reverse' }}></div>
+          </div>
+          <p className="text-gray-700 font-semibold text-lg">Opening product page...</p>
+          <p className="text-gray-400 text-sm mt-1">Loading from marketplace</p>
         </div>
       </main>
     );

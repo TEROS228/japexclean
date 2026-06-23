@@ -191,9 +191,11 @@ export async function cached<T>(
     return cachedValue;
   }
 
-  // Execute function and cache result
+  // Execute function and cache result (don't cache null)
   const result = await fn();
-  await cacheSet(key, result, options);
+  if (result !== null) {
+    await cacheSet(key, result, options);
+  }
   return result;
 }
 
