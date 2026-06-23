@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = 'Japrix <onboarding@resend.dev>';
+const FROM = 'Japrix <noreply@japrix.online>';
 
 function baseTemplate(title: string, content: string): string {
   return `<!DOCTYPE html>
