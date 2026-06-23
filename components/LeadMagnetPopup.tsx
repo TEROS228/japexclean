@@ -55,7 +55,13 @@ export default function LeadMagnetPopup() {
           return;
         }
 
-        // Показываем popup через 3 секунды каждый раз при заходе на главную
+        // Показываем popup только один раз (проверяем localStorage)
+        if (localStorage.getItem('leadMagnetShown')) {
+          return;
+        }
+
+        localStorage.setItem('leadMagnetShown', 'true');
+
         const timer = setTimeout(() => {
           setIsVisible(true);
         }, 3000);
@@ -63,7 +69,11 @@ export default function LeadMagnetPopup() {
         return () => clearTimeout(timer);
       } catch (error) {
         console.error('[LeadMagnet] Error checking eligibility:', error);
-        // В случае ошибки показываем popup (fail-open)
+        // В случае ошибки — тоже показываем только один раз
+        if (localStorage.getItem('leadMagnetShown')) {
+          return;
+        }
+        localStorage.setItem('leadMagnetShown', 'true');
         const timer = setTimeout(() => {
           setIsVisible(true);
         }, 3000);
