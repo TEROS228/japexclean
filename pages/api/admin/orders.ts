@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { verifyToken } from '../../../lib/jwt';
 import { prisma } from '../../../lib/prisma';
 import { createRewardCoupon } from '../../../lib/coupons';
+import { sendOrderApprovedEmail } from '../../../lib/email';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -76,9 +77,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { id: orderId },
         data: { confirmed: true },
         include: {
-          items: true
+          items: true,
+          user: { select: { email: true, name: true } }
         }
       });
+
+      // Email уведомление пользователю об одобрении заказа
+      try {
+        await sendOrderApprovedEmail({
+          email: (updatedOrder as any).user.email,
+          name: (updatedOrder as any).user.name || '',
+          orderId: updatedOrder.id,
+          items: updatedOrder.items.map(item => ({
+            title: item.title,
+            price: item.price,
+            quantity: item.quantity,
+          })),
+        });
+      } catch (e) {
+        console.error('[Email] Failed to send order approved email:', e);
+      }
 
       // Считаем сумму ТОЛЬКО товаров (без комиссии)
       const itemsTotal = updatedOrder.items.reduce((sum, item) => {

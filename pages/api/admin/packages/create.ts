@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { verifyToken } from '../../../../lib/jwt';
 import { prisma } from '../../../../lib/prisma';
+import { sendPackageArrivedEmail } from '../../../../lib/email';
 import formidable from 'formidable';
 import fs from 'fs';
 import path from 'path';
@@ -165,7 +166,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       });
 
-      
+      // Email уведомление о прибытии посылки на склад
+      try {
+        await sendPackageArrivedEmail({
+          email: orderItem.order.user.email,
+          name: orderItem.order.user.name || '',
+          itemTitle: consolidatedTitle,
+          weight: weight ? parseFloat(weight) : null,
+          trackingNumber: trackingNumber || null,
+        });
+      } catch (e) {
+        console.error('[Email] Failed to send package arrived email:', e);
+      }
+
       return res.status(200).json({
         success: true,
         package: packageRecord,
@@ -223,6 +236,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         read: false
       }
     });
+
+    // Email уведомление о прибытии посылки на склад
+    try {
+      await sendPackageArrivedEmail({
+        email: orderItem.order.user.email,
+        name: orderItem.order.user.name || '',
+        itemTitle: orderItem.title,
+        weight: weight ? parseFloat(weight) : null,
+        trackingNumber: trackingNumber || null,
+      });
+    } catch (e) {
+      console.error('[Email] Failed to send package arrived email:', e);
+    }
 
     res.status(200).json({
       success: true,

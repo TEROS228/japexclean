@@ -5,6 +5,7 @@ import { sendTelegramNotification } from '../../lib/telegram';
 import { formatOrderNotification } from '../../lib/order-notification';
 import { prisma } from '../../lib/prisma';
 import { markCouponAsUsed } from '../../lib/coupons';
+import { sendOrderPlacedEmail } from '../../lib/email';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -135,6 +136,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Формируем и отправляем уведомление в Telegram для всех заказов
     const telegramMessage = formatOrderNotification(orders[0], user.email, cart);
     const telegramSent = await sendTelegramNotification(telegramMessage);
+
+    // Email уведомление пользователю
+    try {
+      const emailItems = cart.map((item: any) => ({
+        title: item.title,
+        price: item.price,
+        quantity: item.quantity || 1,
+      }));
+      await sendOrderPlacedEmail({
+        email: dbUser.email,
+        name: dbUser.name || '',
+        orderId: orders[0].id,
+        items: emailItems,
+        total: cart.reduce((sum: number, item: any) => sum + item.price * (item.quantity || 1), 0),
+      });
+    } catch (e) {
+      console.error('[Email] Failed to send order placed email:', e);
+    }
 
     // Помечаем купон как использованный, если он был применён
     if (couponCode) {
