@@ -286,16 +286,14 @@ async function translateNodes(container: HTMLElement, targetLang: Language) {
             return NodeFilter.FILTER_REJECT;
           }
 
-          // Пропускаем уже переведенные элементы — но только если они содержат
-          // нелатинский текст (переведённый) или текст без японских символов.
-          // Если элемент помечен, но теперь содержит японский текст — значит
-          // контент обновился динамически (React fetch), переводим снова.
-          if (translatedElements.has(current)) {
-            const hasJapanese = /[ぁ-ゔァ-ヴー一-龯々〆〤]/.test(current.textContent || '');
+          // Проверяем только прямого родителя текстового узла (depth === 0).
+          // Контейнеры выше не помечаем — иначе блокируем динамически загруженный контент.
+          if (depth === 0 && translatedElements.has(current)) {
+            const hasJapanese = /[ぁ-ゔァ-ヴー一-龯々〆〤]/.test(node.textContent || '');
             if (!hasJapanese) {
               return NodeFilter.FILTER_REJECT;
             }
-            // Японский текст появился снова — убираем из кэша и переводим
+            // Японский текст появился снова (React обновил DOM) — переводим
             translatedElements.delete(current);
           }
 
