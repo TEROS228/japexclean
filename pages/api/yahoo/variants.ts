@@ -56,6 +56,7 @@ interface YahooVariantsResponse {
     options: Array<{ value: string; available: boolean }>;
   }>;
   colorSizeMapping?: Record<string, Array<{ value: string; available: boolean }>>;
+  skuCombinations?: Record<string, Array<{ value: string; available: boolean }>>;
   postageFlag?: number;
   error?: string;
   debug?: any;
@@ -192,11 +193,23 @@ export default async function handler(
       let optionListData = null;
       let selectOptionListData = null;
       let itemOptionsData = null; // Для данных о stock по вариантам
+      let multipleVariationsData: any = null; // Данные каталожных вариантов (variationItems)
 
       // Ищем данные в script тегах
       const scripts = document.querySelectorAll('script');
       scripts.forEach(script => {
         const text = script.textContent || '';
+
+        // Ищем multipleVariations (каталожные вариации — каждая комбинация = отдельный товар)
+        if (text.includes('"multipleVariations"') && text.includes('"variationItems"')) {
+          try {
+            const parsed = JSON.parse(text);
+            const item = parsed?.props?.pageProps?.item;
+            if (item?.multipleVariations?.variationItems?.length > 0) {
+              multipleVariationsData = item.multipleVariations;
+            }
+          } catch (e: any) {}
+        }
 
         // Ищем selectOptionList (новый формат для некоторых товаров)
         if (text.includes('selectOptionList')) {
@@ -346,6 +359,110 @@ export default async function handler(
       }
       if (!itemOptionsData && win.actualItemOptionList) {
         itemOptionsData = win.actualItemOptionList;
+      }
+
+      // === BEST SOURCE: multipleVariations.variationItems (catalog-type variations) ===
+      // Each variationItem is a separate product for a unique label combination.
+      // This gives accurate prices and availability for every combination.
+      if (multipleVariationsData && Array.isArray(multipleVariationsData.variationItems) && multipleVariationsData.variationItems.length > 0) {
+        const items: any[] = multipleVariationsData.variationItems;
+
+        // Collect all axis names in order (from first item's labels)
+        const axisNames: string[] = items[0]?.labels?.map((l: any) => l.name) || [];
+
+        // Build unique options per axis
+        // availability: true if ANY combination with this option value is available
+        const axisOptions: Map<string, Map<string, boolean>> = new Map();
+        axisNames.forEach(name => axisOptions.set(name, new Map()));
+
+        // For 2-axis: colorSizeMapping[axis0Value] = [{value: axis1Value, available}]
+        // For 3-axis: skuCombinations["axis0|axis1"] = [{value: axis2Value (with price), available}]
+        //             colorSizeMapping[axis0Value] = [{value: axis1Value, available}]
+        const catalogColorSizeMapping: Record<string, Array<{ value: string; available: boolean }>> = {};
+        const catalogSkuCombinations: Record<string, Array<{ value: string; available: boolean }>> = {};
+
+        items.forEach((vi: any) => {
+          const labels: Array<{ name: string; value: string }> = vi.labels || [];
+          const isAvail: boolean = vi.isAvailable === true;
+          const price: number = vi.price;
+
+          // Mark availability per axis option (true once any combo is available)
+          labels.forEach((lbl: any) => {
+            const axisMap = axisOptions.get(lbl.name);
+            if (axisMap) {
+              axisMap.set(lbl.value, (axisMap.get(lbl.value) || false) || isAvail);
+            }
+          });
+
+          if (axisNames.length === 2 && labels.length >= 2) {
+            const key = labels[0].value;
+            if (!catalogColorSizeMapping[key]) catalogColorSizeMapping[key] = [];
+            const existing = catalogColorSizeMapping[key].find((o: any) => o.value === labels[1].value);
+            if (!existing) {
+              catalogColorSizeMapping[key].push({ value: labels[1].value, available: isAvail });
+            } else if (isAvail) {
+              existing.available = true;
+            }
+          } else if (axisNames.length === 3 && labels.length >= 3) {
+            // colorSizeMapping: axis0 -> axis1 options
+            const axis0Key = labels[0].value;
+            if (!catalogColorSizeMapping[axis0Key]) catalogColorSizeMapping[axis0Key] = [];
+            const existingAxis1 = catalogColorSizeMapping[axis0Key].find((o: any) => o.value === labels[1].value);
+            if (!existingAxis1) {
+              catalogColorSizeMapping[axis0Key].push({ value: labels[1].value, available: isAvail });
+            } else if (isAvail) {
+              existingAxis1.available = true;
+            }
+
+            // skuCombinations: "axis0|axis1" -> axis2 options with price
+            const comboKey = `${labels[0].value}|${labels[1].value}`;
+            if (!catalogSkuCombinations[comboKey]) catalogSkuCombinations[comboKey] = [];
+            const priceStr = price ? `¥${price.toLocaleString('ja-JP')}` : '';
+            const displayVal = priceStr ? `${labels[2].value} (${priceStr})` : labels[2].value;
+            const existingAxis2 = catalogSkuCombinations[comboKey].find((o: any) => o.value === displayVal);
+            if (!existingAxis2) {
+              catalogSkuCombinations[comboKey].push({ value: displayVal, available: isAvail });
+            } else if (isAvail) {
+              existingAxis2.available = true;
+            }
+          }
+        });
+
+        // Build groups from axisOptions (preserve insertion order = label order)
+        // For 3-axis: axis2 options are combination-specific, so build from all skuCombinations values
+        const axis2AllOptions: Map<string, boolean> = new Map();
+        if (axisNames.length === 3) {
+          Object.values(catalogSkuCombinations).forEach((opts: any[]) => {
+            opts.forEach((o: any) => {
+              if (!axis2AllOptions.has(o.value) || o.available) {
+                axis2AllOptions.set(o.value, (axis2AllOptions.get(o.value) || false) || o.available);
+              }
+            });
+          });
+        }
+
+        axisNames.forEach((axisName: string, idx: number) => {
+          if (axisNames.length === 3 && idx === 2) {
+            // Use price-suffixed values for axis2 so they match skuCombinations keys
+            const opts = Array.from(axis2AllOptions.entries()).map(([val, avail]) => ({ value: val, available: avail }));
+            if (opts.length > 0) groups.push({ name: axisName, options: opts });
+            return;
+          }
+          const optMap = axisOptions.get(axisName);
+          if (!optMap || optMap.size === 0) return;
+          const opts = Array.from(optMap.entries()).map(([val, avail]) => ({ value: val, available: avail }));
+          groups.push({ name: axisName, options: opts });
+        });
+
+        if (groups.length > 0) {
+          return {
+            groups,
+            colorSizeMapping: catalogColorSizeMapping,
+            skuCombinations: axisNames.length === 3 ? catalogSkuCombinations : {},
+            postageFlag,
+            _debug: { multipleVariationsData, stockTableData, optionListData, selectOptionListData, itemOptionsData }
+          };
+        }
       }
 
       if (stockTableData && stockTableData.firstOption) {
@@ -512,6 +629,10 @@ export default async function handler(
         } catch (e: any) {
         }
 
+        // Only show per-option prices when there's a single group — for multi-group products
+        // the price depends on the full combination, so per-option prices would be wrong.
+        const singleGroup = optionList.length === 1;
+
         optionList.forEach((group: any) => {
           let groupName = group.name || 'オプション';
 
@@ -540,8 +661,9 @@ export default async function handler(
               available = stockMap.get(value) === true;
             }
 
-            // Добавляем цену из DOM если есть
-            if (domPriceMap.size > 0 && value && domPriceMap.has(value)) {
+            // Добавляем цену из DOM только для одногрупповых товаров.
+            // Для multi-group цена зависит от комбинации — нельзя привязать к одному варианту.
+            if (singleGroup && domPriceMap.size > 0 && value && domPriceMap.has(value)) {
               const price = domPriceMap.get(value);
               if (price) {
                 value = `${value} (${price})`;
@@ -770,12 +892,12 @@ export default async function handler(
         });
       }
 
-      return { groups, colorSizeMapping: {}, postageFlag };
+      return { groups, colorSizeMapping: {}, skuCombinations: {}, postageFlag, _debug: { stockTableData, optionListData, selectOptionListData, itemOptionsData } };
     });
 
     await browser.close();
 
-    const { groups: variantGroups, colorSizeMapping, postageFlag } = result;
+    const { groups: variantGroups, colorSizeMapping, skuCombinations: yahooSkuCombinations, postageFlag, _debug } = result as any;
 
     const allVariants: YahooVariant[] = [];
     for (const group of variantGroups) {
@@ -797,13 +919,15 @@ export default async function handler(
       variants: allVariants,
       groups: variantGroups,
       colorSizeMapping,
+      skuCombinations: yahooSkuCombinations || {},
       postageFlag,
       debug: {
         totalGroups: variantGroups.length,
         totalVariants: allVariants.length,
         method: 'Puppeteer',
         hasVariants: variantGroups.length > 0,
-        postageFlag
+        postageFlag,
+        rawData: _debug
       }
     };
 

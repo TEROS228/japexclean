@@ -634,7 +634,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   // Проверяем есть ли варианты с абсолютными ценами (например "4,160円")
   const hasAbsolutePrices = useMemo(() => {
     return variants.some(v =>
-      v.values.some(val => /\(\d[\d,\s]*円\)/.test(val.value))
+      v.values.some(val => /\(\d[\d,\s]*円\)/.test(val.value) || /\(¥[\d,]+\)/.test(val.value))
     );
   }, [variants]);
 
@@ -663,8 +663,8 @@ export default function ProductPage({ product: initialProduct }: { product: any 
     let price = 0;
 
     Object.entries(selectedOptions).forEach(([key, value]) => {
-      // Сначала проверяем абсолютную цену (4,160円)
-      const absolutePriceMatch = value.match(/\((\d[\d,\s]*)円\)/);
+      // Абсолютная цена в формате (4,160円) или (¥4,160)
+      const absolutePriceMatch = value.match(/\((\d[\d,\s]*)円\)/) || value.match(/\(¥([\d,]+)\)/);
       if (absolutePriceMatch) {
         const cleaned = absolutePriceMatch[1].replace(/[,\s\u00A0\u2009\u200A]/g, '');
         const extractedPrice = parseInt(cleaned);
@@ -723,10 +723,43 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const handleOptionChange = (optionName: string, value: string) => {
         
     setSelectedOptions(prev => {
-            const newOptions = { ...prev, [optionName]: value };
+      const newOptions = { ...prev, [optionName]: value };
+
+      // Для 3-осевых каталожных товаров (skuCombinations): при смене axis0 или axis1 сбрасываем axis2
+      if (Object.keys(skuCombinations).length > 0 && Object.keys(colorSizeMapping).length > 0) {
+        // axis0: ключи colorSizeMapping — значения axis0
+        const axis0Values = new Set(Object.keys(colorSizeMapping));
+        const isAxis0Change = axis0Values.has(value);
+
+        // axis1: значения в colorSizeMapping
+        const allAxis1Values = new Set(Object.values(colorSizeMapping).flat().map((o: any) => o.value));
+        const isAxis1Change = allAxis1Values.has(value) && !isAxis0Change;
+
+        if (isAxis0Change || isAxis1Change) {
+          // Определяем текущие значения axis0 и axis1 после изменения
+          const axis0Name = variants.find(v => v.values.some(val => axis0Values.has(val.value)))?.optionName;
+          const axis1Name = variants.find(v => v.optionName !== axis0Name && v.values.some(val => allAxis1Values.has(val.value)))?.optionName;
+          const axis2Name = variants.find(v => v.optionName !== axis0Name && v.optionName !== axis1Name)?.optionName;
+
+          const currentAxis0 = axis0Name ? newOptions[axis0Name] : undefined;
+          const currentAxis1 = axis1Name ? newOptions[axis1Name] : undefined;
+
+          if (currentAxis0 && currentAxis1 && axis2Name) {
+            const comboKey = `${currentAxis0}|${currentAxis1}`;
+            const axis2Opts = skuCombinations[comboKey];
+            if (axis2Opts && axis2Opts.length > 0) {
+              const firstAvail = axis2Opts.find(o => o.available !== false) || axis2Opts[0];
+              newOptions[axis2Name] = firstAvail.value;
+            } else if (axis2Name) {
+              newOptions[axis2Name] = '';
+            }
+          }
+        }
+        return newOptions;
+      }
 
       if (Object.keys(colorSizeMapping).length === 0) {
-                return newOptions;
+        return newOptions;
       }
 
       // Определяем структуру mapping
@@ -860,29 +893,43 @@ export default function ProductPage({ product: initialProduct }: { product: any 
       return variants;
     }
 
-    // Для 3-х групп используем skuCombinations ("group0|group1" -> group2[])
+    // Для 3-х групп используем skuCombinations ("axis0|axis1" -> axis2[])
+    // Определяем оси по структуре данных (не по имени группы):
+    // axis0: значения которых есть ключами в colorSizeMapping
+    // axis1: значения которых строятся как "axis0Val|axis1Val" в skuCombinations
+    // axis2: остаток (опции меняются в зависимости от комбинации axis0+axis1)
     if (hasSkuCombinations) {
-      const sizeOptionName = Object.keys(selectedOptions).find(k => k.includes('サイズ') || k.includes('Size'));
-      const typeOptionName = Object.keys(selectedOptions).find(k => !k.includes('サイズ') && !k.includes('Size') && !k.includes('カラー') && !k.includes('Color'));
-      const selectedSize = sizeOptionName ? selectedOptions[sizeOptionName] : undefined;
-      const selectedType = typeOptionName ? selectedOptions[typeOptionName] : undefined;
+      // Определяем axis0 — группа, чьи значения являются ключами colorSizeMapping
+      const axis0Group = variants.find(v => v.values.some(val => colorSizeMapping[val.value] !== undefined));
+      const axis0Name = axis0Group?.optionName;
+
+      // Определяем axis1 — группа, чьи значения встречаются как вторые части ключей skuCombinations
+      // ключи вида "axis0Val|axis1Val"
+      const skuKeys = Object.keys(skuCombinations);
+      const axis1Candidates = new Set(skuKeys.map(k => k.split('|')[1]).filter(Boolean));
+      const axis1Group = variants.find(v =>
+        v.optionName !== axis0Name &&
+        v.values.some(val => axis1Candidates.has(val.value))
+      );
+      const axis1Name = axis1Group?.optionName;
+
+      // axis2 — оставшаяся группа
+      const axis2Name = variants.find(v => v.optionName !== axis0Name && v.optionName !== axis1Name)?.optionName;
+
+      const selectedAxis0 = axis0Name ? selectedOptions[axis0Name] : undefined;
+      const selectedAxis1 = axis1Name ? selectedOptions[axis1Name] : undefined;
 
       return variants.map(variant => {
-        const isSize = variant.optionName.includes('サイズ') || variant.optionName.includes('Size');
-        const isColor = variant.optionName.includes('カラー') || variant.optionName.includes('Color');
-        const isType = !isSize && !isColor;
-
-        if (isSize) {
-          // Доступность размера — есть ли хоть одна доступная комбинация size|* -> *
+        if (variant.optionName === axis0Name) {
+          // axis0: доступен если хоть одна комбинация с этим axis0 доступна
           const updatedValues = variant.values.map(v => {
-            const typesForSize = colorSizeMapping[v.value];
-            if (typesForSize) {
-              const hasAvailable = typesForSize.some(t => {
+            const axis1Opts = colorSizeMapping[v.value];
+            if (axis1Opts) {
+              const hasAvailable = axis1Opts.some(t => {
                 if (!t.available) return false;
-                // Проверяем есть ли доступные цвета для size|type
                 const comboKey = `${v.value}|${t.value}`;
-                const colorsForCombo = skuCombinations[comboKey];
-                return !colorsForCombo || colorsForCombo.some(c => c.available !== false);
+                const axis2Opts = skuCombinations[comboKey];
+                return !axis2Opts || axis2Opts.some(c => c.available !== false);
               });
               return { ...v, isAvailable: hasAvailable };
             }
@@ -891,31 +938,38 @@ export default function ProductPage({ product: initialProduct }: { product: any 
           return { ...variant, values: updatedValues };
         }
 
-        if (isType && selectedSize) {
-          // Доступность типа — есть ли доступная комбинация size|type -> *
-          const typesForSize = colorSizeMapping[selectedSize];
-          if (typesForSize) {
+        if (variant.optionName === axis1Name && selectedAxis0) {
+          // axis1: доступен если хоть одна комбинация axis0|axis1 доступна
+          const axis1Opts = colorSizeMapping[selectedAxis0];
+          if (axis1Opts) {
             const updatedValues = variant.values.map(v => {
-              const typeInfo = typesForSize.find(t => t.value === v.value);
-              if (!typeInfo) return { ...v, isAvailable: false };
-              const comboKey = `${selectedSize}|${v.value}`;
-              const colorsForCombo = skuCombinations[comboKey];
-              const hasAvailableColor = !colorsForCombo || colorsForCombo.some(c => c.available !== false);
-              return { ...v, isAvailable: typeInfo.available && hasAvailableColor };
+              const axis1Info = axis1Opts.find(t => t.value === v.value);
+              if (!axis1Info) return { ...v, isAvailable: false };
+              const comboKey = `${selectedAxis0}|${v.value}`;
+              const axis2Opts = skuCombinations[comboKey];
+              const hasAvailableAxis2 = !axis2Opts || axis2Opts.some(c => c.available !== false);
+              return { ...v, isAvailable: axis1Info.available && hasAvailableAxis2 };
             });
             return { ...variant, values: updatedValues };
           }
         }
 
-        if (isColor && selectedSize && selectedType) {
-          // Фильтруем цвета по выбранной комбинации size|type
-          const comboKey = `${selectedSize}|${selectedType}`;
-          const colorsForCombo = skuCombinations[comboKey];
-          if (colorsForCombo) {
-            const updatedValues = variant.values.map(v => {
-              const colorInfo = colorsForCombo.find(c => c.value === v.value);
-              return { ...v, isAvailable: colorInfo ? colorInfo.available !== false : false };
-            }).filter(v => colorsForCombo.some(c => c.value === v.value));
+        if (variant.optionName === axis2Name && selectedAxis0 && selectedAxis1) {
+          // axis2: показываем только опции для выбранной комбинации axis0|axis1
+          const comboKey = `${selectedAxis0}|${selectedAxis1}`;
+          const axis2Opts = skuCombinations[comboKey];
+          if (axis2Opts) {
+            // skuCombinations values may have price suffix ("12本 (¥2,630)"), variant.values have plain names.
+            // Match by checking if the sku value starts with the variant value (or exact match).
+            const updatedValues = variant.values
+              .filter(v => axis2Opts.some(c => c.value === v.value || c.value.startsWith(v.value + ' (')))
+              .map(v => {
+                const info = axis2Opts.find(c => c.value === v.value || c.value.startsWith(v.value + ' ('));
+                // Use the full display value (with price) from skuCombinations
+                const displayValue = info ? info.value : v.value;
+                return { ...v, value: displayValue, isAvailable: info ? info.available !== false : false };
+              });
+            if (updatedValues.length === 0) return variant;
             return { ...variant, values: updatedValues };
           }
         }
