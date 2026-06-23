@@ -286,9 +286,17 @@ async function translateNodes(container: HTMLElement, targetLang: Language) {
             return NodeFilter.FILTER_REJECT;
           }
 
-          // Пропускаем уже переведенные элементы
+          // Пропускаем уже переведенные элементы — но только если они содержат
+          // нелатинский текст (переведённый) или текст без японских символов.
+          // Если элемент помечен, но теперь содержит японский текст — значит
+          // контент обновился динамически (React fetch), переводим снова.
           if (translatedElements.has(current)) {
-            return NodeFilter.FILTER_REJECT;
+            const hasJapanese = /[ぁ-ゔァ-ヴー一-龯々〆〤]/.test(current.textContent || '');
+            if (!hasJapanese) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            // Японский текст появился снова — убираем из кэша и переводим
+            translatedElements.delete(current);
           }
 
           current = current.parentElement;
@@ -417,12 +425,24 @@ export async function translatePage(targetLang: Language) {
   await translateNodes(document.body, targetLang);
 
   
-  // Повторяем перевод периодически (каждые 5 секунд) для динамического контента
+  // Повторяем перевод периодически для динамического контента (React fetch)
+  // Первые 10 сек — часто (1.5s), потом реже (5s)
+  let runCount = 0;
   let autoTranslateInterval = setInterval(async () => {
     if (currentLanguage === targetLang) {
       await translateNodes(document.body, targetLang);
+      runCount++;
+      if (runCount >= 7) {
+        clearInterval(autoTranslateInterval);
+        // Переключаемся на редкий интервал
+        setInterval(async () => {
+          if (currentLanguage === targetLang) {
+            await translateNodes(document.body, targetLang);
+          }
+        }, 5000);
+      }
     } else {
-            clearInterval(autoTranslateInterval);
+      clearInterval(autoTranslateInterval);
     }
-  }, 5000);
+  }, 1500);
 }
