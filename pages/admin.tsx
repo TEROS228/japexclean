@@ -941,332 +941,415 @@ export default function AdminPage() {
     );
   }
 
+  // Tab titles map
+  const tabTitles: Record<string, string> = {
+    statistics: 'Dashboard',
+    orders: 'Orders',
+    warehouse: 'Warehouse',
+    consolidation: 'Consolidation',
+    photos: 'Photo Requests',
+    reinforcement: 'Reinforcement',
+    disposal: 'Disposal',
+    cancelPurchase: 'Cancel Purchase',
+    messages: 'Messages',
+    shipping: 'Shipping',
+    compensation: 'Compensation',
+    damaged: 'Damaged Items',
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
-          <Link href="/" className="text-green-600 hover:underline">
-            ← Back to Home
-          </Link>
-        </div>
-
-        {/* Tabs - Modern Grid Design with horizontal scroll fallback */}
-        <div className="mb-8 overflow-x-auto pb-2">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 min-w-max">
-            <button
-              onClick={() => setActiveTab('statistics')}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'statistics'
-                  ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30 scale-105'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 hover:text-violet-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-violet-500'
-              }`}
-            >
-              <div className="text-2xl mb-1">📊</div>
-              <div className="text-sm font-bold">Statistics</div>
-            </button>
-
-            <button
-              onClick={() => {
-                if (hasPermission('orders')) {
-                  setActiveTab('orders');
-                } else {
-                  alert('Access Denied: You do not have permission to access this tab');
-                }
-              }}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'orders'
-                  ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 scale-105'
-                  : hasPermission('orders')
-                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-green-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-green-500'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
-              }`}
-            >
-              <div className="text-2xl mb-1">📋</div>
-              <div className="text-sm font-bold">Orders</div>
-            </button>
-
-            <button
-              onClick={() => {
-                if (hasPermission('warehouse')) {
-                  setActiveTab('warehouse');
-                } else {
-                  alert('Access Denied: You do not have permission to access this tab');
-                }
-              }}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'warehouse'
-                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 scale-105'
-                  : hasPermission('warehouse')
-                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-blue-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-blue-500'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
-              }`}
-            >
-              <div className="text-2xl mb-1">📦</div>
-              <div className="text-sm font-bold">Warehouse</div>
-              {hasPermission('warehouse') && warehouseItems.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
-                  {warehouseItems.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => {
-                if (hasPermission('consolidation')) {
-                  setActiveTab('consolidation');
-                } else {
-                  alert('Access Denied: You do not have permission to access this tab');
-                }
-              }}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'consolidation'
-                  ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg shadow-purple-500/30 scale-105'
-                  : hasPermission('consolidation')
-                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-purple-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-purple-500'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
-              }`}
-            >
-              <div className="text-2xl mb-1">🎁</div>
-              <div className="text-sm font-bold">Consolidation</div>
-              {hasPermission('consolidation') && consolidationPackages.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
-                  {consolidationPackages.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => {
-                if (hasPermission('photos')) {
-                  setActiveTab('photos');
-                } else {
-                  alert('Access Denied: You do not have permission to access this tab');
-                }
-              }}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'photos'
-                  ? 'bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg shadow-pink-500/30 scale-105'
-                  : hasPermission('photos')
-                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-pink-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-pink-500'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
-              }`}
-            >
-              <div className="text-2xl mb-1">📸</div>
-              <div className="text-sm font-bold">Photos</div>
-              {hasPermission('photos') && photoRequests.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-br from-pink-500 to-rose-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
-                  {photoRequests.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => {
-                if (hasPermission('reinforcement')) {
-                  setActiveTab('reinforcement');
-                } else {
-                  alert('Access Denied: You do not have permission to access this tab');
-                }
-              }}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'reinforcement'
-                  ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 scale-105'
-                  : hasPermission('reinforcement')
-                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-amber-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-amber-500'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
-              }`}
-            >
-              <div className="text-2xl mb-1">🛡️</div>
-              <div className="text-sm font-bold">Reinforcement</div>
-              {hasPermission('reinforcement') && reinforcementRequests.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-br from-amber-500 to-orange-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
-                  {reinforcementRequests.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => {
-                if (hasPermission('disposal')) {
-                  setActiveTab('disposal');
-                } else {
-                  alert('Access Denied: You do not have permission to access this tab');
-                }
-              }}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'disposal'
-                  ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30 scale-105'
-                  : hasPermission('disposal')
-                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-orange-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-orange-500'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
-              }`}
-            >
-              <div className="text-2xl mb-1">♻️</div>
-              <div className="text-sm font-bold">Disposal</div>
-              {hasPermission('disposal') && disposalRequests.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-br from-orange-500 to-orange-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
-                  {disposalRequests.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => {
-                if (hasPermission('cancelPurchase')) {
-                  setActiveTab('cancelPurchase');
-                } else {
-                  alert('Access Denied: You do not have permission to access this tab');
-                }
-              }}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'cancelPurchase'
-                  ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/30 scale-105'
-                  : hasPermission('cancelPurchase')
-                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-red-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-red-500'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
-              }`}
-            >
-              <div className="text-2xl mb-1">❌</div>
-              <div className="text-sm font-bold">Cancel</div>
-              {hasPermission('cancelPurchase') && cancelPurchaseRequests.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
-                  {cancelPurchaseRequests.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => {
-                if (hasPermission('messages')) {
-                  setActiveTab('messages');
-                } else {
-                  alert('Access Denied: You do not have permission to access this tab');
-                }
-              }}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'messages'
-                  ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-105'
-                  : hasPermission('messages')
-                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-indigo-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-indigo-500'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
-              }`}
-            >
-              <div className="text-2xl mb-1">💬</div>
-              <div className="text-sm font-bold">Messages</div>
-              {hasPermission('messages') && unreadMessagesCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
-                  {unreadMessagesCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => {
-                if (hasPermission('shipping')) {
-                  setActiveTab('shipping');
-                } else {
-                  alert('Access Denied: You do not have permission to access this tab');
-                }
-              }}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'shipping'
-                  ? 'bg-gradient-to-br from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/30 scale-105'
-                  : hasPermission('shipping')
-                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-cyan-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-cyan-500'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
-              }`}
-            >
-              <div className="text-2xl mb-1">📮</div>
-              <div className="text-sm font-bold">Shipping</div>
-              {hasPermission('shipping') && shippingRequests.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-br from-cyan-500 to-cyan-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
-                  {shippingRequests.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => {
-                if (hasPermission('compensation')) {
-                  setActiveTab('compensation');
-                } else {
-                  alert('Access Denied: You do not have permission to access this tab');
-                }
-              }}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'compensation'
-                  ? 'bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-lg shadow-rose-500/30 scale-105'
-                  : hasPermission('compensation')
-                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-rose-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-rose-500'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
-              }`}
-            >
-              <div className="text-2xl mb-1">💰</div>
-              <div className="text-sm font-bold">Compensation</div>
-              {hasPermission('compensation') && compensationRequests.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-br from-rose-500 to-rose-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
-                  {compensationRequests.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => {
-                if (hasPermission('damaged')) {
-                  setActiveTab('damaged');
-                } else {
-                  alert('Access Denied: You do not have permission to access this tab');
-                }
-              }}
-              className={`group relative px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                activeTab === 'damaged'
-                  ? 'bg-gradient-to-br from-red-600 to-red-700 text-white shadow-lg shadow-red-600/30 scale-105'
-                  : hasPermission('damaged')
-                    ? 'bg-white hover:bg-gray-50 text-gray-700 hover:text-red-600 shadow-md hover:shadow-lg border-2 border-gray-100 hover:border-red-600'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
-              }`}
-            >
-              <div className="text-2xl mb-1">⚠️</div>
-              <div className="text-sm font-bold">Damaged</div>
-              {hasPermission('damaged') && damagedItemRequests.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-br from-red-600 to-red-700 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-pulse">
-                  {damagedItemRequests.length}
-                </span>
-              )}
-            </button>
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
+      {/* SIDEBAR */}
+      <aside className="w-64 bg-gray-900 text-white flex flex-col flex-shrink-0">
+        {/* Logo/Brand */}
+        <div className="px-6 py-5 border-b border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold text-white text-sm">Japrix</p>
+              <p className="text-xs text-gray-400">Admin Panel</p>
+            </div>
           </div>
         </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+          {/* Statistics */}
+          <button
+            onClick={() => setActiveTab('statistics')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'statistics'
+                ? 'bg-green-600 text-white'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span>Dashboard</span>
+          </button>
+
+          {/* Orders */}
+          <button
+            onClick={() => {
+              if (hasPermission('orders')) {
+                setActiveTab('orders');
+              } else {
+                alert('Access Denied: You do not have permission to access this tab');
+              }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'orders'
+                ? 'bg-green-600 text-white'
+                : hasPermission('orders')
+                  ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            <span>Orders</span>
+          </button>
+
+          {/* Warehouse */}
+          <button
+            onClick={() => {
+              if (hasPermission('warehouse')) {
+                setActiveTab('warehouse');
+              } else {
+                alert('Access Denied: You do not have permission to access this tab');
+              }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'warehouse'
+                ? 'bg-green-600 text-white'
+                : hasPermission('warehouse')
+                  ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            <span className="flex-1 text-left">Warehouse</span>
+            {hasPermission('warehouse') && warehouseItems.length > 0 && (
+              <span className="bg-blue-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {warehouseItems.length > 9 ? '9+' : warehouseItems.length}
+              </span>
+            )}
+          </button>
+
+          {/* Consolidation */}
+          <button
+            onClick={() => {
+              if (hasPermission('consolidation')) {
+                setActiveTab('consolidation');
+              } else {
+                alert('Access Denied: You do not have permission to access this tab');
+              }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'consolidation'
+                ? 'bg-green-600 text-white'
+                : hasPermission('consolidation')
+                  ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <span className="flex-1 text-left">Consolidation</span>
+            {hasPermission('consolidation') && consolidationPackages.length > 0 && (
+              <span className="bg-purple-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {consolidationPackages.length > 9 ? '9+' : consolidationPackages.length}
+              </span>
+            )}
+          </button>
+
+          {/* Photos */}
+          <button
+            onClick={() => {
+              if (hasPermission('photos')) {
+                setActiveTab('photos');
+              } else {
+                alert('Access Denied: You do not have permission to access this tab');
+              }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'photos'
+                ? 'bg-green-600 text-white'
+                : hasPermission('photos')
+                  ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="flex-1 text-left">Photo Requests</span>
+            {hasPermission('photos') && photoRequests.length > 0 && (
+              <span className="bg-pink-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {photoRequests.length > 9 ? '9+' : photoRequests.length}
+              </span>
+            )}
+          </button>
+
+          {/* Reinforcement */}
+          <button
+            onClick={() => {
+              if (hasPermission('reinforcement')) {
+                setActiveTab('reinforcement');
+              } else {
+                alert('Access Denied: You do not have permission to access this tab');
+              }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'reinforcement'
+                ? 'bg-green-600 text-white'
+                : hasPermission('reinforcement')
+                  ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <span className="flex-1 text-left">Reinforcement</span>
+            {hasPermission('reinforcement') && reinforcementRequests.length > 0 && (
+              <span className="bg-amber-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {reinforcementRequests.length > 9 ? '9+' : reinforcementRequests.length}
+              </span>
+            )}
+          </button>
+
+          {/* Disposal */}
+          <button
+            onClick={() => {
+              if (hasPermission('disposal')) {
+                setActiveTab('disposal');
+              } else {
+                alert('Access Denied: You do not have permission to access this tab');
+              }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'disposal'
+                ? 'bg-green-600 text-white'
+                : hasPermission('disposal')
+                  ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            <span className="flex-1 text-left">Disposal</span>
+            {hasPermission('disposal') && disposalRequests.length > 0 && (
+              <span className="bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {disposalRequests.length > 9 ? '9+' : disposalRequests.length}
+              </span>
+            )}
+          </button>
+
+          {/* Cancel Purchase */}
+          <button
+            onClick={() => {
+              if (hasPermission('cancelPurchase')) {
+                setActiveTab('cancelPurchase');
+              } else {
+                alert('Access Denied: You do not have permission to access this tab');
+              }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'cancelPurchase'
+                ? 'bg-green-600 text-white'
+                : hasPermission('cancelPurchase')
+                  ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="flex-1 text-left">Cancel Purchase</span>
+            {hasPermission('cancelPurchase') && cancelPurchaseRequests.length > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {cancelPurchaseRequests.length > 9 ? '9+' : cancelPurchaseRequests.length}
+              </span>
+            )}
+          </button>
+
+          {/* Messages */}
+          <button
+            onClick={() => {
+              if (hasPermission('messages')) {
+                setActiveTab('messages');
+              } else {
+                alert('Access Denied: You do not have permission to access this tab');
+              }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'messages'
+                ? 'bg-green-600 text-white'
+                : hasPermission('messages')
+                  ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <MessageCircle className="w-5 h-5 flex-shrink-0" />
+            <span className="flex-1 text-left">Messages</span>
+            {hasPermission('messages') && unreadMessagesCount > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+              </span>
+            )}
+          </button>
+
+          {/* Shipping */}
+          <button
+            onClick={() => {
+              if (hasPermission('shipping')) {
+                setActiveTab('shipping');
+              } else {
+                alert('Access Denied: You do not have permission to access this tab');
+              }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'shipping'
+                ? 'bg-green-600 text-white'
+                : hasPermission('shipping')
+                  ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+            </svg>
+            <span className="flex-1 text-left">Shipping</span>
+            {hasPermission('shipping') && shippingRequests.length > 0 && (
+              <span className="bg-cyan-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {shippingRequests.length > 9 ? '9+' : shippingRequests.length}
+              </span>
+            )}
+          </button>
+
+          {/* Compensation */}
+          <button
+            onClick={() => {
+              if (hasPermission('compensation')) {
+                setActiveTab('compensation');
+              } else {
+                alert('Access Denied: You do not have permission to access this tab');
+              }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'compensation'
+                ? 'bg-green-600 text-white'
+                : hasPermission('compensation')
+                  ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="flex-1 text-left">Compensation</span>
+            {hasPermission('compensation') && compensationRequests.length > 0 && (
+              <span className="bg-rose-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {compensationRequests.length > 9 ? '9+' : compensationRequests.length}
+              </span>
+            )}
+          </button>
+
+          {/* Damaged */}
+          <button
+            onClick={() => {
+              if (hasPermission('damaged')) {
+                setActiveTab('damaged');
+              } else {
+                alert('Access Denied: You do not have permission to access this tab');
+              }
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'damaged'
+                ? 'bg-green-600 text-white'
+                : hasPermission('damaged')
+                  ? 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="flex-1 text-left">Damaged Items</span>
+            {hasPermission('damaged') && damagedItemRequests.length > 0 && (
+              <span className="bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                {damagedItemRequests.length > 9 ? '9+' : damagedItemRequests.length}
+              </span>
+            )}
+          </button>
+        </nav>
+
+        {/* Footer */}
+        <div className="px-4 py-4 border-t border-gray-700">
+          <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+            <span className="truncate">{currentAdminUser?.email || 'Admin'}</span>
+          </div>
+          <Link href="/" className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Home
+          </Link>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 overflow-auto flex flex-col min-w-0">
+        {/* Top bar */}
+        <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10 flex-shrink-0">
+          <h1 className="text-xl font-bold text-gray-900">{tabTitles[activeTab] || 'Admin Panel'}</h1>
+          {activeTab === 'statistics' && hasStatisticsAccess && (
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+              {[
+                { value: 'day', label: 'Today' },
+                { value: 'week', label: '7 days' },
+                { value: 'month', label: '30 days' },
+                { value: 'year', label: 'Year' },
+                { value: 'all', label: 'All time' },
+              ].map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setStatsPeriod(value as any)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    statsPeriod === value
+                      ? 'bg-white text-gray-900 shadow-sm font-semibold'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Content area */}
+        <div className="p-8 flex-1">
+          {/* Tab content */}
+
 
         {/* Statistics Tab */}
         {activeTab === 'statistics' && hasStatisticsAccess && (
           <div className="space-y-8">
-            {/* Period Selector */}
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Performance Overview</h2>
-              <div className="flex gap-2 bg-gray-100 rounded-lg p-1">
-                {[
-                  { value: 'day', label: 'Today' },
-                  { value: 'week', label: '7 days' },
-                  { value: 'month', label: '30 days' },
-                  { value: 'year', label: 'Year' },
-                  { value: 'all', label: 'All time' },
-                ].map(({ value, label }) => (
-                  <button
-                    key={value}
-                    onClick={() => setStatsPeriod(value as any)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                      statsPeriod === value
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Statistics Cards */}
             {statistics ? (
               <>
@@ -3742,7 +3825,8 @@ export default function AdminPage() {
             )}
           </div>
         )}
-      </div>
+        </div>
+      </main>
 
       {/* Statistics Password Modal */}
       {showStatisticsPasswordModal && (
