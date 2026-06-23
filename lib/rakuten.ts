@@ -32,6 +32,58 @@ function getBestImageUrl(product: any): string | null {
   return null;
 }
 
+function buildProductFromRakutenItem(product: any) {
+  const isProductImage = (url: string) =>
+    url.includes('thumbnail.image.rakuten.co.jp') ||
+    url.includes('tshop.r10s.jp') ||
+    url.includes('r10s.jp');
+
+  const mainImageUrl = getBestImageUrl(product);
+  const images: Array<{ imageUrl: string }> = [];
+  if (mainImageUrl) images.push({ imageUrl: mainImageUrl });
+
+  product.mediumImageUrls?.forEach((img: any) => {
+    const upgraded = upgradeImageUrl(img.imageUrl);
+    if (upgraded && isProductImage(upgraded) && !images.find(i => i.imageUrl === upgraded)) {
+      images.push({ imageUrl: upgraded });
+    }
+  });
+
+  if (images.length < 5) {
+    product.smallImageUrls?.forEach((img: any) => {
+      const upgraded = upgradeImageUrl(img.imageUrl);
+      if (upgraded && isProductImage(upgraded) && !images.find(i => i.imageUrl === upgraded)) {
+        images.push({ imageUrl: upgraded });
+      }
+    });
+  }
+
+  return {
+    itemCode: product.itemCode,
+    itemName: product.itemName,
+    catchcopy: product.catchcopy,
+    itemCaption: product.itemCaption,
+    itemPrice: product.itemPrice,
+    itemUrl: product.itemUrl,
+    affiliateUrl: product.affiliateUrl,
+    imageUrl: mainImageUrl || '/placeholder.png',
+    availability: product.availability,
+    taxFlag: product.taxFlag,
+    postageFlag: product.postageFlag,
+    creditCardFlag: product.creditCardFlag,
+    shopOfTheYearFlag: product.shopOfTheYearFlag,
+    shipOverseasFlag: product.shipOverseasFlag,
+    asurakuFlag: product.asurakuFlag,
+    mediumImageUrls: images.length > 0 ? images : [{ imageUrl: '/placeholder.png' }],
+    reviewCount: product.reviewCount,
+    reviewAverage: product.reviewAverage,
+    shopName: product.shopName,
+    shopCode: product.shopCode,
+    genreId: product.genreId,
+    genreName: product.genreName || null,
+  };
+}
+
 // Получить товар по URL
 export async function getProductByUrl(rakutenUrl: string) {
   return cached(
@@ -53,6 +105,8 @@ export async function getProductByUrl(rakutenUrl: string) {
       const shopCode = urlMatch[1];
       const itemCode = urlMatch[2];
 
+      // Извлекаем числовой код из slug (например "shorts-10100284" → "10100284")
+      const numericCode = itemCode.match(/(\d{5,})/)?.[1];
 
       // Пробуем поиск по shopCode:itemCode (полный идентификатор товара)
       const fullItemCode = `${shopCode}:${itemCode}`;
@@ -61,17 +115,26 @@ export async function getProductByUrl(rakutenUrl: string) {
         RAKUTEN_APP_ID
       )}&itemCode=${encodeURIComponent(fullItemCode)}&format=json`;
 
-
       try {
         const res = await fetch(url);
         if (!res.ok) {
-          console.error('[Rakuten API] HTTP error:', res.status, res.statusText);
+          const errorText = await res.text().catch(() => '');
+          console.error('[Rakuten API] HTTP error:', res.status, errorText.substring(0, 200));
 
-          // Логируем ответ для отладки
-          const errorText = await res.text().catch(() => 'Could not read error body');
-          console.error('[Rakuten API] Error response:', errorText.substring(0, 500));
+          // Если есть числовой код в slug — пробуем его как itemCode напрямую
+          if (numericCode && res.status === 400) {
+            const numericItemCode = `${shopCode}:${numericCode}`;
+            const numRes = await fetch(`${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(RAKUTEN_APP_ID)}&itemCode=${encodeURIComponent(numericItemCode)}&format=json`);
+            if (numRes.ok) {
+              const numData: any = await numRes.json();
+              const numProduct = numData.Items?.[0]?.Item;
+              if (numProduct) {
+                console.log('[Rakuten API] Found by numeric code:', numericItemCode);
+                return buildProductFromRakutenItem(numProduct);
+              }
+            }
+          }
 
-          // Если 400 ошибка, пробуем искать по shopCode
           if (res.status === 400) {
             return await getProductByShopCode(shopCode, itemCode);
           }
@@ -83,7 +146,19 @@ export async function getProductByUrl(rakutenUrl: string) {
         const product = data.Items?.[0]?.Item;
 
         if (!product) {
-          // Если не нашли по полному коду, пробуем искать по shopCode
+          // Если есть числовой код — пробуем его
+          if (numericCode) {
+            const numericItemCode = `${shopCode}:${numericCode}`;
+            const numRes = await fetch(`${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(RAKUTEN_APP_ID)}&itemCode=${encodeURIComponent(numericItemCode)}&format=json`);
+            if (numRes.ok) {
+              const numData: any = await numRes.json();
+              const numProduct = numData.Items?.[0]?.Item;
+              if (numProduct) {
+                console.log('[Rakuten API] Found by numeric code:', numericItemCode);
+                return buildProductFromRakutenItem(numProduct);
+              }
+            }
+          }
           return await getProductByShopCode(shopCode, itemCode);
         }
 
@@ -187,14 +262,22 @@ async function getProductByShopCode(shopCode: string, itemCode: string) {
     }
 
     // Ищем товар с нужным itemCode
+    // Извлекаем числовой код из slug (например "shorts-10100284" → "10100284")
+    const numericCode = itemCode.match(/(\d{5,})/)?.[1] || '';
+
     const productData = items.find((item: any) => {
       const fullItemCode = item.Item?.itemCode || '';
       if (fullItemCode.toLowerCase() === `${shopCode}:${itemCode}`.toLowerCase()) return true;
       const parts = fullItemCode.split(':');
       if (parts.length === 2 && parts[1] === itemCode) return true;
       if (fullItemCode.toLowerCase().includes(itemCode.toLowerCase())) return true;
+      // Сопоставляем по числовому коду из slug
+      if (numericCode && fullItemCode.includes(numericCode)) return true;
+      // Сопоставляем по itemUrl товара
+      const itemUrl = item.Item?.itemUrl || '';
+      if (itemUrl.includes(`/${itemCode}/`) || itemUrl.includes(`/${itemCode}?`)) return true;
       return false;
-    }) || items[0]; // Если точного совпадения нет — берём первый результат
+    });
 
     if (!productData) return null;
     const product = productData.Item;
