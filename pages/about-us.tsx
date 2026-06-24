@@ -76,40 +76,57 @@ export default function AboutUs() {
             </p>
           </div>
 
-          <div className="grid gap-8 lg:gap-12 max-w-lg mx-auto">
+          <div className="max-w-4xl mx-auto">
             {/* Leon Card */}
-            <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100">
-              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-8 text-white">
-                <div className="text-6xl mb-4"></div>
-                <h3 className="text-2xl sm:text-3xl font-bold mb-2">Leon Trofimenko</h3>
-                <p className="text-blue-100 font-medium">Co-founder, CEO & Chief Programmer</p>
-              </div>
-              <div className="p-6 sm:p-8">
-                <div className="mb-4">
-                  <span className="inline-block bg-blue-100 text-blue-700 text-sm font-semibold px-3 py-1 rounded-full">
-                    Age 16
-                  </span>
+            <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+              <div className="flex flex-col md:flex-row">
+                {/* Photo */}
+                <div className="relative md:w-72 lg:w-80 flex-shrink-0">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-10" />
+                  <img
+                    src="/images/founder.jpeg"
+                    alt="Leon Trofimenko"
+                    className="w-full h-72 md:h-full object-cover object-top"
+                  />
+                  {/* Gradient overlay at bottom on mobile */}
+                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white md:hidden" />
                 </div>
-                <p className="text-gray-700 leading-relaxed">
-                  The technological and strategic powerhouse behind Japrix. Leon sets the company's direction as CEO and ensures our platform is fast, user-friendly, and innovative through his programming expertise.
-                </p>
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
-                    <span className="mr-2">🎯</span>
-                    <span>Strategy & Vision</span>
+
+                {/* Content */}
+                <div className="flex-1 p-8 lg:p-10">
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <span className="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                      Co-founder
+                    </span>
+                    <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                      Age 16
+                    </span>
                   </div>
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
-                    <span className="mr-2">⚡</span>
-                    <span>Platform Development</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <span className="mr-2">🚀</span>
-                    <span>Innovation & Growth</span>
+
+                  <h3 className="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-1">
+                    Leon Trofimenko
+                  </h3>
+                  <p className="text-blue-600 font-semibold mb-5">CEO & Chief Programmer</p>
+
+                  <p className="text-gray-600 leading-relaxed mb-6">
+                    The technological and strategic powerhouse behind Japrix. Leon sets the company's direction and ensures our platform is fast, user-friendly, and innovative — building every feature from the ground up.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {[
+                      { icon: '🎯', label: 'Strategy & Vision' },
+                      { icon: '⚡', label: 'Platform Development' },
+                      { icon: '🚀', label: 'Innovation & Growth' },
+                    ].map(({ icon, label }) => (
+                      <div key={label} className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+                        <span className="text-xl">{icon}</span>
+                        <span className="text-sm font-medium text-gray-700">{label}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
