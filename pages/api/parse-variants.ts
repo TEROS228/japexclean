@@ -39,6 +39,7 @@ interface IVariantsData {
   }>;
   colorSizeMapping?: Record<string, Array<{ value: string; available: boolean }>>;
   skuCombinations?: Record<string, Array<{ value: string; available: boolean }>>;
+  priceComboMap?: Record<string, number>;
   postageFlag?: number;
   error?: string;
   debug?: any;
@@ -54,6 +55,7 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>, 
   const groups: Array<{ name: string; key: string; options: Array<{ value: string; label: string; available: boolean; price?: number }> }> = [];
   let colorSizeMapping: Record<string, Array<{ value: string; available: boolean }>> = {};
   let skuCombinations: Record<string, Array<{ value: string; available: boolean }>> = {};
+  let priceComboMap: Record<string, number> = {};
 
   try {
     // Ищем variantSelectors и sku в JavaScript
@@ -194,31 +196,40 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>, 
       }
 
       // Строим маппинг цен из SKU
+      // priceMap хранит цены для каждого значения варианта (по всем осям)
       const priceMap: Record<string, number> = {};
-      skuArray.forEach((sku: any, index: number) => {
-        if (sku.selectorValues && sku.selectorValues.length > 0) {
-          const key = sku.selectorValues[0];
 
-          // Пробуем разные места где может быть цена
-          let price = sku.taxIncludedPrice ||
-                     sku.newPurchaseSku?.price?.value ||
-                     sku.newPurchaseSku?.price ||
-                     sku.price?.value ||
-                     sku.price ||
-                     sku.displayPrice?.value ||
-                     sku.displayPrice;
+      skuArray.forEach((sku: any) => {
+        if (!sku.selectorValues || sku.selectorValues.length === 0) return;
 
-          // Если цена это строка, парсим её
-          if (typeof price === 'string') {
-            const priceMatch = price.match(/[\d,]+/);
-            if (priceMatch) {
-              price = parseInt(priceMatch[0].replace(/,/g, ''));
-            }
+        // Пробуем разные места где может быть цена
+        let price: any = sku.taxIncludedPrice ||
+                   sku.newPurchaseSku?.price?.value ||
+                   sku.newPurchaseSku?.price ||
+                   sku.price?.value ||
+                   sku.price ||
+                   sku.displayPrice?.value ||
+                   sku.displayPrice;
+
+        if (typeof price === 'string') {
+          const priceMatch = price.match(/[\d,]+/);
+          price = priceMatch ? parseInt(priceMatch[0].replace(/,/g, '')) : 0;
+        }
+
+        if (!price || typeof price !== 'number' || price <= 0) return;
+
+        // Привязываем цену ко всем значениям этого SKU
+        sku.selectorValues.forEach((val: string) => {
+          // Берём минимальную цену для значения — показываем "от X"
+          if (!priceMap[val] || price < priceMap[val]) {
+            priceMap[val] = price;
           }
+        });
 
-          if (price && typeof price === 'number' && price > 0) {
-            priceMap[key] = price;
-          }
+        // Также сохраняем комбинацию для точного маппинга
+        if (sku.selectorValues.length > 1) {
+          const comboKey = sku.selectorValues.join('|');
+          priceComboMap[comboKey] = price;
         }
       });
 
@@ -426,7 +437,7 @@ function parseVariantsFromHtml(html: string, soldOutCombinations?: Set<string>, 
     console.error('[HTML Parser] Error:', error);
   }
 
-  return { groups, colorSizeMapping, skuCombinations };
+  return { groups, colorSizeMapping, skuCombinations, priceComboMap };
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<IVariantsData>) {
@@ -572,7 +583,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       }
 
       // Парсим варианты из JavaScript в HTML
-      const { groups: variantGroups, colorSizeMapping, skuCombinations } = parseVariantsFromHtml(html, soldOutCombinations, soldOutVariantNames.size > 0 ? soldOutVariantNames : undefined, stockConditionMap);
+      const { groups: variantGroups, colorSizeMapping, skuCombinations, priceComboMap } = parseVariantsFromHtml(html, soldOutCombinations, soldOutVariantNames.size > 0 ? soldOutVariantNames : undefined, stockConditionMap);
 
       // Ждем postageFlag из API (более надежно чем парсинг HTML в EUC-JP)
       apiPostageFlag = await apiPromise;
@@ -598,6 +609,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         groups: variantGroups,
         colorSizeMapping,
         skuCombinations,
+        priceComboMap,
         postageFlag,
         debug: {
           totalGroups: variantGroups.length,

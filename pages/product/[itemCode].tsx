@@ -92,6 +92,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const [variantError, setVariantError] = useState<string | null>(null);
   const [colorSizeMapping, setColorSizeMapping] = useState<Record<string, Array<{ value: string; available: boolean }>>>({});
   const [skuCombinations, setSkuCombinations] = useState<Record<string, Array<{ value: string; available: boolean }>>>({});
+  const [priceComboMap, setPriceComboMap] = useState<Record<string, number>>({});
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [averageRating, setAverageRating] = useState(0);
@@ -391,6 +392,11 @@ export default function ProductPage({ product: initialProduct }: { product: any 
             // Сохраняем skuCombinations для 3-х групп (Size|Type -> Color[])
             if (data.skuCombinations) {
               setSkuCombinations(data.skuCombinations);
+            }
+
+            // Сохраняем priceComboMap для цен по комбинациям вариантов
+            if (data.priceComboMap) {
+              setPriceComboMap(data.priceComboMap);
             }
 
             const convertedVariants: Variant[] = [];
@@ -693,32 +699,38 @@ export default function ProductPage({ product: initialProduct }: { product: any 
     if (!product) return 0;
     const base = product.itemPrice || 0;
 
-    // Проверяем, есть ли выбранный вариант с собственной ценой
+    // 1. Проверяем priceComboMap — цена точной комбинации выбранных вариантов
+    if (Object.keys(priceComboMap).length > 0 && Object.keys(selectedOptions).length > 0) {
+      const selectedValues = Object.values(selectedOptions).filter(Boolean);
+      if (selectedValues.length >= 2) {
+        // Пробуем все перестановки порядка значений
+        const comboKey = selectedValues.join('|');
+        const reversedKey = [...selectedValues].reverse().join('|');
+        const comboPrice = priceComboMap[comboKey] || priceComboMap[reversedKey];
+        if (comboPrice && comboPrice > 0) return comboPrice;
+      }
+    }
+
+    // 2. Проверяем, есть ли выбранный вариант с собственной ценой
     let variantPrice = 0;
     for (const variant of variants) {
       const selectedValue = selectedOptions[variant.optionName];
       if (selectedValue) {
         const option = variant.values.find(v => v.value === selectedValue);
-                if (option && option.price && option.price > 0) {
+        if (option && option.price && option.price > 0) {
           variantPrice = option.price;
-                    break; // Используем первую найденную цену варианта
+          break;
         }
       }
     }
+    if (variantPrice > 0) return variantPrice;
 
-    // Если есть цена варианта, используем её вместо базовой
-    if (variantPrice > 0) {
-            return variantPrice;
-    }
+    // 3. Абсолютные цены в тексте варианта
+    if (hasAbsolutePrices && additionalPrice > 0) return additionalPrice;
 
-    // Если additionalPrice > 0 и есть абсолютные цены, используем additionalPrice как итоговую цену
-    if (hasAbsolutePrices && additionalPrice > 0) {
-            return additionalPrice;
-    }
-
-    // Иначе складываем базовую цену + дополнительную
-        return base + additionalPrice;
-  }, [product?.itemPrice, additionalPrice, hasAbsolutePrices, selectedOptions, variants]);
+    // 4. Базовая + доп. цена
+    return base + additionalPrice;
+  }, [product?.itemPrice, additionalPrice, hasAbsolutePrices, selectedOptions, variants, priceComboMap]);
 
   const handleOptionChange = (optionName: string, value: string) => {
         
