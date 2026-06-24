@@ -286,6 +286,13 @@ export default function SearchPage() {
       router.replace(`/product/${rakutenMatch[1]}:${rakutenMatch[2]}?url=${encodeURIComponent(searchQuery)}`);
       return;
     }
+    // brandavenue.rakuten.co.jp/item/ARTICLE/ — ищем по артикулу
+    const brandavenueMatch = searchQuery.match(/brandavenue\.rakuten\.co\.jp\/item\/([^\/\?#]+)/);
+    if (brandavenueMatch) {
+      setIsRedirecting(true);
+      router.replace(`/search?query=${encodeURIComponent(brandavenueMatch[1])}`);
+      return;
+    }
     const yahooMatch = searchQuery.match(/store\.shopping\.yahoo\.co\.jp\/([^\/\?#]+)\/([^\/\?#]+)/);
     if (yahooMatch) {
       setIsRedirecting(true);
@@ -316,14 +323,17 @@ export default function SearchPage() {
     
     // Проверяем, является ли это URL от Rakuten
     const rakutenUrlMatch = searchQuery.match(/item\.rakuten\.co\.jp\/[^\/]+\/([^\/\?]+)/);
+    const brandavenueUrlMatch = searchQuery.match(/brandavenue\.rakuten\.co\.jp\/item\/([^\/\?#]+)/);
 
     // Проверяем, является ли это URL от Yahoo Shopping (все варианты)
     const yahooUrlMatch = searchQuery.match(/shopping\.yahoo\.co\.jp|paypaymall\.yahoo\.co\.jp/);
 
-        
-    if (rakutenUrlMatch) {
+    if (brandavenueUrlMatch) {
+      // brandavenue — ищем по артикулу
+      handleSearch(brandavenueUrlMatch[1]);
+    } else if (rakutenUrlMatch) {
       // Это URL Rakuten - загружаем товар по URL
-            handleProductByUrl(searchQuery);
+      handleProductByUrl(searchQuery);
     } else if (yahooUrlMatch) {
       // Это URL Yahoo Shopping - загружаем товар по URL
             handleProductByYahooUrl(searchQuery);
