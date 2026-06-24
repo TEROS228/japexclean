@@ -513,6 +513,80 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Anime Figures Banner */}
+      <section className="relative overflow-hidden bg-[#0d0d14] py-14 sm:py-20 border-b border-white/5">
+        {/* Background effects */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_50%,rgba(139,92,246,0.15),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_50%,rgba(236,72,153,0.1),transparent_60%)]" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/20 to-transparent" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+
+            {/* Left — text */}
+            <div className="flex-1 text-center lg:text-left">
+              <div className="flex items-center justify-center lg:justify-start gap-2 mb-4">
+                <span className="text-2xl">🎌</span>
+                <span className="text-xs font-bold tracking-[0.2em] uppercase text-purple-400">Exclusive Category</span>
+              </div>
+              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-4">
+                Anime{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                  Figures
+                </span>
+              </h2>
+              <p className="text-gray-400 text-base sm:text-lg max-w-md mx-auto lg:mx-0 mb-8 leading-relaxed">
+                Authentic Japanese anime figures — Nendoroids, Figma, S.H.Figuarts and more. Sourced directly from Japan's top collectors' shops.
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center lg:justify-start mb-8">
+                {['ねんどろいど', 'figma', 'S.H.Figuarts', '限定品', 'プライズ'].map(tag => (
+                  <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-gray-300">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <button
+                onClick={() => router.push('/search?query=%E3%82%A2%E3%83%8B%E3%83%A1+%E3%83%95%E3%82%A3%E3%82%AE%E3%83%A5%E3%82%A2')}
+                className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-base rounded-xl transition-all hover:shadow-[0_0_40px_rgba(139,92,246,0.4)] hover:scale-105 active:scale-95"
+              >
+                <span>Shop Anime Figures</span>
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Right — decorative cards */}
+            <div className="relative flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md">
+              <div className="relative grid grid-cols-2 gap-3">
+                {/* Glow */}
+                <div className="absolute inset-0 bg-purple-500/10 blur-3xl rounded-full" />
+
+                {[
+                  { emoji: '🗡️', name: 'Demon Slayer', price: '¥12,800', tag: 'Nendoroid' },
+                  { emoji: '🍥', name: 'Naruto', price: '¥8,500', tag: 'figma' },
+                  { emoji: '⚡', name: 'Dragon Ball', price: '¥15,200', tag: 'S.H.Figuarts' },
+                  { emoji: '🌸', name: 'Sailor Moon', price: '¥9,900', tag: 'Limited' },
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    className="relative bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm hover:bg-white/8 hover:border-purple-500/30 transition-all hover:-translate-y-1"
+                  >
+                    <div className="text-3xl mb-2">{item.emoji}</div>
+                    <div className="text-white text-xs font-bold mb-0.5">{item.name}</div>
+                    <div className="text-gray-500 text-[10px] mb-2">{item.tag}</div>
+                    <div className="text-purple-400 text-sm font-black">{item.price}</div>
+                    <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
       {/* Marketplace Selection Section */}
       <section className="bg-gradient-to-br from-gray-50 via-white to-gray-50 py-12 sm:py-16 lg:py-20 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
