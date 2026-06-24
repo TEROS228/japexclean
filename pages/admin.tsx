@@ -6,6 +6,7 @@ import { broadcastUpdate } from "@/lib/sync";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { AnalyticsChart } from "@/components/AnalyticsChart";
 import { RevenueChart } from "@/components/RevenueChart";
+import { calculateEMSCost, getEMSZone, zoneDescriptions } from "@/lib/emsRates";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -4006,34 +4007,50 @@ export default function AdminPage() {
                       </div>
                     )}
 
-                    {packageData.shippingMethod === 'ems' && (
-                      <>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          International Shipping Cost (¥, optional)
-                        </label>
-                        <input
-                          type="number"
-                          value={packageData.shippingCost}
-                          onChange={(e) => setPackageData({ ...packageData, shippingCost: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                          placeholder="5000"
-                        />
-                        <a
-                          href="https://www.post.japanpost.jp/cgi-charge/index.php?lang=_en"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 mt-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                          </svg>
-                          Calculate shipping cost (Japan Post)
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                      </>
-                    )}
+                    {packageData.shippingMethod === 'ems' && (() => {
+                      const weightKg = packageData.weight ? (packageData.weightUnit === 'g' ? parseFloat(packageData.weight) / 1000 : parseFloat(packageData.weight)) : 0;
+                      const country = selectedItem?.shippingCountry || '';
+                      const zone = getEMSZone(country);
+                      const autoRate = weightKg > 0 ? calculateEMSCost(weightKg, zone) : null;
+                      return (
+                        <>
+                          {autoRate !== null && (
+                            <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-semibold text-green-800">
+                                    EMS Rate: ¥{autoRate.toLocaleString()}
+                                  </p>
+                                  <p className="text-xs text-green-600 mt-0.5">
+                                    {zoneDescriptions[zone]} · {weightKg}kg
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setPackageData({ ...packageData, shippingCost: autoRate.toString() })}
+                                  className="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors"
+                                >
+                                  Use this rate
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            International Shipping Cost (¥, optional)
+                          </label>
+                          <input
+                            type="number"
+                            value={packageData.shippingCost}
+                            onChange={(e) => setPackageData({ ...packageData, shippingCost: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                            placeholder={autoRate ? autoRate.toString() : '5000'}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Rate calculated from official Japan Post EMS table
+                          </p>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   <div>
