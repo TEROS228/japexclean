@@ -873,6 +873,7 @@ export default function SearchPage() {
                     const params: string[] = [];
                     if (categoryBreadcrumb) params.push(`category=${encodeURIComponent(categoryBreadcrumb)}`);
                     if (fromBreadcrumb) params.push(`from=${encodeURIComponent(fromBreadcrumb)}`);
+                    if (query) params.push(`q=${encodeURIComponent(String(query))}`);
                     return params.length > 0 ? `${base}${base.includes('?') ? '&' : '?'}${params.join('&')}` : base;
                   })()}
                   onClick={handleProductClick(product)}
