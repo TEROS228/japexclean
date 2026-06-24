@@ -174,7 +174,9 @@ function SearchLoadingAnimation({ marketplace }: { marketplace: string }) {
 
 export default function SearchPage() {
   const router = useRouter();
-  const { query } = router.query;
+  const { query, category: categoryParam, from: fromParam } = router.query;
+  const categoryBreadcrumb = categoryParam ? String(categoryParam) : undefined;
+  const fromBreadcrumb = fromParam ? String(fromParam) : undefined;
   const { marketplace } = useMarketplace();
   const { formatPrice, currency, getCurrencySymbol, convertToJPY, convertPrice } = useCurrency();
 
@@ -866,7 +868,13 @@ export default function SearchPage() {
                 {getCurrentPageProducts().map((product) => (
                 <a
                   key={product.itemCode}
-                  href={product.itemUrl ? `/product/${product.itemCode}?url=${encodeURIComponent(product.itemUrl)}` : `/product/${product.itemCode}`}
+                  href={(() => {
+                    const base = product.itemUrl ? `/product/${product.itemCode}?url=${encodeURIComponent(product.itemUrl)}` : `/product/${product.itemCode}`;
+                    const params: string[] = [];
+                    if (categoryBreadcrumb) params.push(`category=${encodeURIComponent(categoryBreadcrumb)}`);
+                    if (fromBreadcrumb) params.push(`from=${encodeURIComponent(fromBreadcrumb)}`);
+                    return params.length > 0 ? `${base}${base.includes('?') ? '&' : '?'}${params.join('&')}` : base;
+                  })()}
                   onClick={handleProductClick(product)}
                   className="group bg-white border-2 border-gray-100 rounded-2xl p-4 hover:shadow-2xl hover:border-green-300 transition-all duration-300 flex flex-col h-full hover:-translate-y-1 cursor-pointer"
                 >

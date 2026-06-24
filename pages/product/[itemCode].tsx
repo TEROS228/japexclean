@@ -37,7 +37,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
   const { showNotification } = useNotification();
   const { formatPrice } = useCurrency();
   const { user } = useUserContext();
-  const { itemCode, category, subcategory } = router.query;
+  const { itemCode, category, subcategory, from } = router.query;
 
   const [product, setProduct] = useState(initialProduct || null);
   const [loading, setLoading] = useState(!initialProduct);
@@ -1304,6 +1304,17 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                 </svg>
                 <span className="font-medium">Home</span>
               </Link>
+              {from === 'anime' && (
+                <>
+                  <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <Link href="/anime" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-all duration-200 whitespace-nowrap group">
+                    <span className="text-sm">🎌</span>
+                    <span className="font-medium">Anime Figures</span>
+                  </Link>
+                </>
+              )}
               {category && (
                 <>
                   <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

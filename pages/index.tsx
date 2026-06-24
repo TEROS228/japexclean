@@ -514,7 +514,7 @@ export default function Home() {
       </section>
 
       {/* Anime Figures Banner */}
-      <section className="relative overflow-hidden bg-[#0d0d14] py-14 sm:py-20 border-b border-white/5">
+      <section className="relative overflow-hidden bg-[#0d0d14] py-14 sm:py-20 border-b border-white/5" style={{display:'block'}}>
         {/* Background effects */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_50%,rgba(139,92,246,0.15),transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_50%,rgba(236,72,153,0.1),transparent_60%)]" />
@@ -547,7 +547,7 @@ export default function Home() {
                 ))}
               </div>
               <button
-                onClick={() => router.push('/search?query=%E3%82%A2%E3%83%8B%E3%83%A1+%E3%83%95%E3%82%A3%E3%82%AE%E3%83%A5%E3%82%A2')}
+                onClick={() => router.push('/anime')}
                 className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-base rounded-xl transition-all hover:shadow-[0_0_40px_rgba(139,92,246,0.4)] hover:scale-105 active:scale-95"
               >
                 <span>Shop Anime Figures</span>
