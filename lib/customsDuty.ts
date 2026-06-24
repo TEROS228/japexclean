@@ -21,19 +21,27 @@ export function calculateCustomsDuty(
   const cadToJpy = 110; // Примерный курс CAD/JPY
   const audToJpy = 100; // Примерный курс AUD/JPY
 
-  // США - ВАЖНО: С 29 августа 2025 отменен порог $800!
-  // Все коммерческие посылки из Японии теперь облагаются пошлиной
+  // США — текущая ситуация (июнь 2025):
+  // Порог de minimis $800 действует для Японии (отменён только для Китая с мая 2025)
+  // Тариф: 10% базовый (25% был объявлен 2 апреля, но приостановлен 9 апреля на 90 дней)
   if (countryCode === 'US') {
-    // Базовая ставка тарифа на японские товары: 15% (U.S.-Japan framework)
-    // Специальный тариф (с августа 2025): 25%
-    // Используем 25% как текущую ставку
-    const dutyRate = 0.25; // 25%
+    const threshold = 800 * usdToJpy; // $800 de minimis
+    if (itemValueJPY <= threshold) {
+      return {
+        dutyAmount: 0,
+        dutyRate: 0,
+        taxFreeThreshold: threshold,
+        isTaxFree: true,
+        description: 'Duty-free (under $800 de minimis)'
+      };
+    }
+    const dutyRate = 0.10; // 10% базовый тариф (25% приостановлен)
     return {
       dutyAmount: Math.round(itemValueJPY * dutyRate),
       dutyRate: dutyRate * 100,
-      taxFreeThreshold: 0, // Порога больше нет
+      taxFreeThreshold: threshold,
       isTaxFree: false,
-      description: 'U.S. Import Tariff on Japan (25%)'
+      description: 'U.S. Import Tariff on Japan (10%)'
     };
   }
 
