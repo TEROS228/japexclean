@@ -1646,7 +1646,22 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                       {v.values.map((val, i) => {
                         const isSoldOut = val.isAvailable === false;
                         const isSelected = selectedOptions[v.optionName] === val.value;
-                        const hasPrice = val.price && val.price > 0;
+
+                        // Для вариантов с priceComboMap — показываем цену комбинации с уже выбранными значениями
+                        let displayPrice = val.price;
+                        if (Object.keys(priceComboMap).length > 0) {
+                          const otherSelected = Object.entries(selectedOptions)
+                            .filter(([k]) => k !== v.optionName)
+                            .map(([, v]) => v)
+                            .filter(Boolean);
+                          if (otherSelected.length > 0) {
+                            const comboKey1 = [...otherSelected, val.value].join('|');
+                            const comboKey2 = [val.value, ...otherSelected].join('|');
+                            const comboPrice = priceComboMap[comboKey1] || priceComboMap[comboKey2];
+                            if (comboPrice && comboPrice > 0) displayPrice = comboPrice;
+                          }
+                        }
+                        const hasPrice = displayPrice && displayPrice > 0;
 
                         return (
                           <button
@@ -1673,7 +1688,7 @@ export default function ProductPage({ product: initialProduct }: { product: any 
                                 <span className={`text-[10px] sm:text-xs mt-0.5 ${
                                   isSelected ? 'text-white' : 'text-gray-600'
                                 }`}>
-                                  {val.price && `¥${val.price.toLocaleString()}`}
+                                  {`¥${displayPrice!.toLocaleString()}`}
                                 </span>
                               )}
                             </div>
