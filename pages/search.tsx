@@ -239,9 +239,14 @@ export default function SearchPage() {
       sessionStorage.setItem(yahooProductKey, JSON.stringify(product));
           }
 
-    const url = product.itemUrl
+    const base = product.itemUrl
       ? `/product/${product.itemCode}?url=${encodeURIComponent(product.itemUrl)}`
       : `/product/${product.itemCode}`;
+    const params: string[] = [];
+    if (categoryBreadcrumb) params.push(`category=${encodeURIComponent(categoryBreadcrumb)}`);
+    if (fromBreadcrumb) params.push(`from=${encodeURIComponent(fromBreadcrumb)}`);
+    if (query) params.push(`q=${encodeURIComponent(String(query))}`);
+    const url = params.length > 0 ? `${base}${base.includes('?') ? '&' : '?'}${params.join('&')}` : base;
     router.push(url);
   };
 

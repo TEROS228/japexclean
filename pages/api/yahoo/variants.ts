@@ -454,7 +454,10 @@ export default async function handler(
           groups.push({ name: axisName, options: opts });
         });
 
-        if (groups.length > 0) {
+        // If multipleVariations gave us 2+ axes (true catalog product), return immediately.
+        // If it gave only 1 axis it's a sibling-product switcher (different products, not variants).
+        // In that case drop it and fall through to stockTableData/optionListData for real variants.
+        if (groups.length >= 2) {
           return {
             groups,
             colorSizeMapping: catalogColorSizeMapping,
@@ -463,6 +466,8 @@ export default async function handler(
             _debug: { multipleVariationsData, stockTableData, optionListData, selectOptionListData, itemOptionsData }
           };
         }
+        // groups.length === 1 → sibling switcher, discard and use real item variants below
+        groups.length = 0;
       }
 
       if (stockTableData && stockTableData.firstOption) {
@@ -568,7 +573,7 @@ export default async function handler(
           }
         }
 
-        return { groups, colorSizeMapping, postageFlag };
+        return { groups, colorSizeMapping, skuCombinations: {}, postageFlag };
       }
 
       // Сначала пробуем individualItemOptionList (приоритетный, более точный)

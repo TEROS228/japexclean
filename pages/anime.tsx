@@ -1,5 +1,6 @@
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { useState } from 'react';
 
 const ANIME_CATEGORIES = [
   {
@@ -176,9 +177,17 @@ const ANIME_CATEGORIES = [
 
 export default function AnimePage() {
   const router = useRouter();
+  const [searchInput, setSearchInput] = useState('');
 
   const featured = ANIME_CATEGORIES[0];
   const rest = ANIME_CATEGORIES.slice(1);
+
+  const handleCustomSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchInput.trim();
+    if (!q) return;
+    router.push(`/search?query=${encodeURIComponent(q)}&category=${encodeURIComponent(q)}&from=anime`);
+  };
 
   return (
     <>
@@ -206,6 +215,25 @@ export default function AnimePage() {
             <p className="text-gray-400 text-base sm:text-lg max-w-xl mx-auto mb-8">
               Authentic Japanese collectibles sourced directly from Japan's top hobby shops
             </p>
+            {/* Custom search */}
+            <form onSubmit={handleCustomSearch} className="relative max-w-lg mx-auto mb-8">
+              <input
+                type="text"
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                placeholder="Search any anime or character... (e.g. Gojo, Luffy, 進撃)"
+                className="w-full px-5 py-4 pr-14 rounded-2xl bg-white/8 border border-white/15 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-purple-500/60 focus:bg-white/10 transition-all"
+              />
+              <button
+                type="submit"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 text-white hover:opacity-90 transition-opacity"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+            </form>
+
             <div className="flex flex-wrap gap-2 justify-center">
               {['ねんどろいど', 'figma', 'S.H.Figuarts', 'POP UP PARADE', 'プライズ', '限定品'].map(tag => (
                 <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-gray-300">
@@ -217,6 +245,15 @@ export default function AnimePage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+
+          {/* Yahoo tip */}
+          <div className="flex items-start gap-3 mb-6 px-4 py-3 rounded-2xl border border-yellow-400/30 bg-yellow-400/10">
+            <span className="text-yellow-400 text-xl flex-shrink-0">💡</span>
+            <p className="text-yellow-200 text-sm leading-relaxed">
+              For the best anime figure selection, we recommend switching to{' '}
+              <span className="font-bold text-yellow-300">Yahoo Shopping</span> — it has a wider range of figures and better availability than Rakuten.
+            </p>
+          </div>
 
           {/* Featured — All Anime Figures */}
           <button
