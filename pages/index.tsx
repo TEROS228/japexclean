@@ -557,30 +557,15 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Right — decorative cards */}
-            <div className="relative flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md">
-              <div className="relative grid grid-cols-2 gap-3">
-                {/* Glow */}
-                <div className="absolute inset-0 bg-purple-500/10 blur-3xl rounded-full" />
-
-                {[
-                  { emoji: '🗡️', name: 'Demon Slayer', price: '¥12,800', tag: 'Nendoroid' },
-                  { emoji: '🍥', name: 'Naruto', price: '¥8,500', tag: 'figma' },
-                  { emoji: '⚡', name: 'Dragon Ball', price: '¥15,200', tag: 'S.H.Figuarts' },
-                  { emoji: '🌸', name: 'Sailor Moon', price: '¥9,900', tag: 'Limited' },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="relative bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm hover:bg-white/8 hover:border-purple-500/30 transition-all hover:-translate-y-1"
-                  >
-                    <div className="text-3xl mb-2">{item.emoji}</div>
-                    <div className="text-white text-xs font-bold mb-0.5">{item.name}</div>
-                    <div className="text-gray-500 text-[10px] mb-2">{item.tag}</div>
-                    <div className="text-purple-400 text-sm font-black">{item.price}</div>
-                    <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                  </div>
-                ))}
-              </div>
+            {/* Right — anime figure photo */}
+            <div className="relative flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md flex items-center justify-center">
+              <div className="absolute inset-0 bg-purple-500/15 blur-3xl rounded-full pointer-events-none" />
+              <img
+                src="/images/anime-figures.png"
+                alt="Anime figures"
+                className="relative w-full h-auto object-contain drop-shadow-[0_0_40px_rgba(139,92,246,0.4)] select-none"
+                draggable={false}
+              />
             </div>
 
           </div>
