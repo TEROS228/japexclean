@@ -114,6 +114,19 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: '/:file*.user.js',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/javascript',
+          },
+          {
+            key: 'Content-Disposition',
+            value: 'inline',
+          },
+        ],
+      },
+      {
         source: '/api/:path*',
         headers: [
           {

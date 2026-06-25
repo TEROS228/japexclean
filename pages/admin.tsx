@@ -8,11 +8,14 @@ import { AnalyticsChart } from "@/components/AnalyticsChart";
 import { RevenueChart } from "@/components/RevenueChart";
 import { calculateEMSCost, getEMSZone, zoneDescriptions } from "@/lib/emsRates";
 
-// Adds auto-checkout flag for Rakuten URLs so Tampermonkey script clicks 購入手続きへ
-function rakutenUrl(url: string): string {
+function rakutenUrl(url: string, options?: Record<string, string>): string {
   if (!url || !url.includes('rakuten.co.jp')) return url;
   const sep = url.includes('?') ? '&' : '?';
-  return `${url}${sep}_japrix_auto=1`;
+  let result = `${url}${sep}_japrix_auto=1`;
+  if (options && Object.keys(options).length > 0) {
+    result += `&_japrix_opts=${encodeURIComponent(JSON.stringify(options))}`;
+  }
+  return result;
 }
 
 export default function AdminPage() {
@@ -2114,6 +2117,23 @@ export default function AdminPage() {
         {/* Orders Tab */}
         {activeTab === 'orders' && hasPermission('orders') && (
           <div className="space-y-4">
+            {/* Rakuten Bookmarklet */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+              <span className="text-2xl">🔖</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-900">Rakuten Auto-Checkout</p>
+                <p className="text-xs text-amber-700 mt-0.5">Перетащи кнопку в закладки браузера. Потом на странице Rakuten нажми её — автоматически кликнет 購入手続きへ.</p>
+              </div>
+              <a
+                href={`javascript:(function(){var attempts=0;var interval=setInterval(function(){attempts++;var btn=document.querySelector('button[aria-label="購入手続きへ"]');if(!btn){var btns=document.querySelectorAll('button');for(var i=0;i<btns.length;i++){if(btns[i].textContent&&btns[i].textContent.includes('購入手続きへ')){btn=btns[i];break;}}}if(btn){btn.click();clearInterval(interval);}else if(attempts>=20){clearInterval(interval);}},500);})();`}
+                className="flex-shrink-0 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-4 py-2 rounded-lg cursor-grab active:cursor-grabbing select-none"
+                onClick={(e) => e.preventDefault()}
+                draggable
+              >
+                🛒 Rakuten Checkout
+              </a>
+            </div>
+
             {orders.filter(order => !order.confirmed).length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
                 <p className="text-gray-500">No orders yet</p>
@@ -2228,8 +2248,8 @@ export default function AdminPage() {
                                           {item.options && Object.keys(item.options).length > 0 && (
                                             <div className="flex flex-wrap gap-1">
                                               {Object.entries(item.options).map(([key, value]) => (
-                                                <span key={key} className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
-                                                  {key}: {value as string}
+                                                <span key={key} className="text-xs px-1.5 py-0.5 bg-blue-100 rounded">
+                                                  <span className="text-blue-700">{key}: </span><span className="text-red-600 font-semibold">{value as string}</span>
                                                 </span>
                                               ))}
                                             </div>
@@ -2237,7 +2257,7 @@ export default function AdminPage() {
                                         </div>
                                         {item.itemUrl && (
                                           <a
-                                            href={rakutenUrl(item.itemUrl)}
+                                            href={rakutenUrl(item.itemUrl, item.options)}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-xs text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 mt-1"
@@ -2469,8 +2489,8 @@ export default function AdminPage() {
                               <p className="text-xs font-medium text-gray-700 mb-1">Options:</p>
                               <div className="flex flex-wrap gap-1">
                                 {Object.entries(item.options).map(([key, value]) => (
-                                  <span key={key} className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
-                                    {key}: {value as string}
+                                  <span key={key} className="text-xs px-2 py-0.5 bg-blue-100 rounded">
+                                    <span className="text-blue-700">{key}: </span><span className="text-red-600 font-semibold">{value as string}</span>
                                   </span>
                                 ))}
                               </div>
@@ -2480,7 +2500,7 @@ export default function AdminPage() {
                           {/* Кнопка перехода на маркетплейс */}
                           {item.itemUrl && (
                             <a
-                              href={rakutenUrl(item.itemUrl)}
+                              href={rakutenUrl(item.itemUrl, item.options)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 inline-flex items-center gap-1 font-medium shadow-sm hover:shadow-md transition-all mb-3"
@@ -3037,7 +3057,7 @@ export default function AdminPage() {
                         </p>
                         {pkg.orderItem.itemUrl && (
                           <a
-                            href={rakutenUrl(pkg.orderItem.itemUrl)}
+                            href={rakutenUrl(pkg.orderItem.itemUrl, pkg.orderItem.options)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs text-blue-600 hover:underline mt-1 inline-block"
@@ -4845,7 +4865,7 @@ function TrackingNumberModal({ package: pkg, onClose, onSubmit, onPackageUpdate 
                               <p className="text-xs text-gray-500">{item.marketplace === 'yahoo' ? '💜 Yahoo' : '🛍️ Rakuten'}</p>
                               {item.itemUrl && (
                                 <a
-                                  href={rakutenUrl(item.itemUrl)}
+                                  href={rakutenUrl(item.itemUrl, item.options)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
