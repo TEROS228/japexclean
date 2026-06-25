@@ -8,6 +8,13 @@ import { AnalyticsChart } from "@/components/AnalyticsChart";
 import { RevenueChart } from "@/components/RevenueChart";
 import { calculateEMSCost, getEMSZone, zoneDescriptions } from "@/lib/emsRates";
 
+// Adds auto-checkout flag for Rakuten URLs so Tampermonkey script clicks 購入手続きへ
+function rakutenUrl(url: string): string {
+  if (!url || !url.includes('rakuten.co.jp')) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}_japrix_auto=1`;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [orderItems, setOrderItems] = useState<any[]>([]);
@@ -2230,7 +2237,7 @@ export default function AdminPage() {
                                         </div>
                                         {item.itemUrl && (
                                           <a
-                                            href={item.itemUrl}
+                                            href={rakutenUrl(item.itemUrl)}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-xs text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 mt-1"
@@ -2473,7 +2480,7 @@ export default function AdminPage() {
                           {/* Кнопка перехода на маркетплейс */}
                           {item.itemUrl && (
                             <a
-                              href={item.itemUrl}
+                              href={rakutenUrl(item.itemUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 inline-flex items-center gap-1 font-medium shadow-sm hover:shadow-md transition-all mb-3"
@@ -3030,7 +3037,7 @@ export default function AdminPage() {
                         </p>
                         {pkg.orderItem.itemUrl && (
                           <a
-                            href={pkg.orderItem.itemUrl}
+                            href={rakutenUrl(pkg.orderItem.itemUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs text-blue-600 hover:underline mt-1 inline-block"
@@ -4838,7 +4845,7 @@ function TrackingNumberModal({ package: pkg, onClose, onSubmit, onPackageUpdate 
                               <p className="text-xs text-gray-500">{item.marketplace === 'yahoo' ? '💜 Yahoo' : '🛍️ Rakuten'}</p>
                               {item.itemUrl && (
                                 <a
-                                  href={item.itemUrl}
+                                  href={rakutenUrl(item.itemUrl)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
