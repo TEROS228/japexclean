@@ -697,27 +697,6 @@ export default function ShippingCalculator() {
             </p>
           </div>
 
-          {/* Item Value */}
-          <div className="mb-6">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-              </svg>
-              Item Value (¥)
-            </label>
-            <input
-              type="number"
-              step="1"
-              min="0"
-              placeholder="e.g., 5000 or 15000"
-              value={fedexItemValue}
-              onChange={(e) => setFedexItemValue(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Total value of items in Japanese Yen (for insurance and customs)
-            </p>
-          </div>
 
           {/* Destination Address */}
           <div className="mb-6">
@@ -1128,11 +1107,6 @@ export default function ShippingCalculator() {
 
               <div className="space-y-3">
                 {fedexOptions.map((option: any, idx: number) => {
-                  // Calculate customs duty if item value is provided
-                  const customsDuty = fedexItemValue && parseFloat(fedexItemValue) > 0
-                    ? calculateCustomsDuty(fedexCountry, parseFloat(fedexItemValue))
-                    : null;
-
                   return (
                     <div key={idx} className="bg-white border-2 border-green-200 rounded-xl p-4">
                       <div className="flex justify-between items-start mb-2">
@@ -1149,68 +1123,34 @@ export default function ShippingCalculator() {
                           <p className="text-2xl font-bold text-green-600">{formatPrice(option.rateJPY)}</p>
 
                           {/* Additional Services & Grand Total */}
-                          {(fedexItemValue && parseFloat(fedexItemValue) > 0 && customsDuty) || photoService || reinforcement ? (
+                          {(photoService || reinforcement) ? (
                             <div className="mt-3 pt-3 border-t border-purple-200 space-y-2">
-                              {/* Additional Services */}
-                              {(photoService || reinforcement) && (
-                                <div className="text-xs space-y-1 mb-2">
-                                  {photoService && (
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-gray-600 flex items-center gap-1">
-                                        <Camera size={12} className="text-purple-600" />
-                                        Photo Service:
-                                      </span>
-                                      <span className="font-medium text-gray-700">{formatPrice(500)}</span>
-                                    </div>
-                                  )}
-                                  {reinforcement && (
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-gray-600 flex items-center gap-1">
-                                        <svg className="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        Reinforcement:
-                                      </span>
-                                      <span className="font-medium text-gray-700">{formatPrice(1000)}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Customs Duty Breakdown */}
-                              {fedexItemValue && parseFloat(fedexItemValue) > 0 && customsDuty && (
-                                <div className="text-xs space-y-1">
+                              <div className="text-xs space-y-1 mb-2">
+                                {photoService && (
                                   <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Item Value:</span>
-                                    <span className="font-medium text-gray-700">{formatPrice(parseFloat(fedexItemValue))}</span>
+                                    <span className="text-gray-600 flex items-center gap-1">
+                                      <Camera size={12} className="text-purple-600" />
+                                      Photo Service:
+                                    </span>
+                                    <span className="font-medium text-gray-700">{formatPrice(500)}</span>
                                   </div>
+                                )}
+                                {reinforcement && (
                                   <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Customs Duty:</span>
-                                    <span className="font-medium text-gray-700">{formatPrice(customsDuty.dutyAmount)}</span>
+                                    <span className="text-gray-600 flex items-center gap-1">
+                                      <svg className="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                      </svg>
+                                      Reinforcement:
+                                    </span>
+                                    <span className="font-medium text-gray-700">{formatPrice(1000)}</span>
                                   </div>
-                                  {customsDuty.isTaxFree ? (
-                                    <p className="text-green-600 font-semibold mt-1">
-                                      ✓ {customsDuty.description}
-                                    </p>
-                                  ) : (
-                                    <p className="text-amber-600 font-semibold mt-1">
-                                      {customsDuty.description}
-                                    </p>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Grand Total */}
+                                )}
+                              </div>
                               <div className="pt-2 border-t border-purple-300">
                                 <p className="text-xs text-gray-600 mb-1">Grand Total</p>
                                 <p className="text-xl font-bold text-purple-600">
-                                  {formatPrice(
-                                    option.rateJPY +
-                                    (photoService ? 500 : 0) +
-                                    (reinforcement ? 1000 : 0) +
-                                    (fedexItemValue && parseFloat(fedexItemValue) > 0 ? parseFloat(fedexItemValue) : 0) +
-                                    (customsDuty ? customsDuty.dutyAmount : 0)
-                                  )}
+                                  {formatPrice(option.rateJPY + (photoService ? 500 : 0) + (reinforcement ? 1000 : 0))}
                                 </p>
                               </div>
                             </div>
