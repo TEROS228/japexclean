@@ -42,6 +42,7 @@ export default function CartPage() {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<any | null>(null);
   const [showCouponSelector, setShowCouponSelector] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -305,10 +306,12 @@ export default function CartPage() {
 
   // Оплата с баланса
   const handlePayWithBalance = async () => {
+    if (isSubmittingOrder) return;
     if (!user) {
       alert("Please log in first");
       return;
     }
+    setIsSubmittingOrder(true);
 
     const token = getCompatibleAuthToken();
 
@@ -393,6 +396,8 @@ export default function CartPage() {
     } catch (err: any) {
       console.error("Payment error:", err);
       alert("Payment failed: " + err.message);
+    } finally {
+      setIsSubmittingOrder(false);
     }
   };
 
@@ -1045,13 +1050,21 @@ export default function CartPage() {
               <button
                 onClick={handlePayWithBalance}
                 className={`group w-full relative px-6 py-4 font-semibold rounded-xl transition-all duration-300 overflow-hidden ${
-                  cart.length === 0 || serverBalance < grandTotal || !shippingPolicyAccepted || !preferredShippingCarrier || !selectedAddressId
+                  isSubmittingOrder || cart.length === 0 || serverBalance < grandTotal || !shippingPolicyAccepted || !preferredShippingCarrier || !selectedAddressId
                     ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                     : "bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
                 }`}
-                disabled={cart.length === 0 || serverBalance < grandTotal || !shippingPolicyAccepted || !preferredShippingCarrier || !selectedAddressId}
+                disabled={isSubmittingOrder || cart.length === 0 || serverBalance < grandTotal || !shippingPolicyAccepted || !preferredShippingCarrier || !selectedAddressId}
               >
-                {cart.length === 0 || serverBalance >= grandTotal ? (
+                {isSubmittingOrder ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Processing...
+                  </span>
+                ) : cart.length === 0 || serverBalance >= grandTotal ? (
                   <>
                     <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></span>
                     <span className="relative flex items-center justify-center gap-2">
