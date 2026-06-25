@@ -1235,8 +1235,8 @@ export default function AdminPage() {
             </svg>
             <span className="flex-1 text-left">Shipping</span>
             {hasPermission('shipping') && shippingRequests.length > 0 && (
-              <span className="bg-cyan-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                {shippingRequests.length > 9 ? '9+' : shippingRequests.length}
+              <span className="bg-cyan-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center flex-shrink-0">
+                {shippingRequests.length}
               </span>
             )}
           </button>
