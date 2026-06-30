@@ -3,10 +3,22 @@ import { GENERATED_KEYWORDS } from './category-keywords-generator';
 import { cached, cacheGet, cacheSet } from './cache';
 
 const RAKUTEN_APP_ID = process.env.NEXT_PUBLIC_RAKUTEN_APP_ID || "";
+const RAKUTEN_ACCESS_KEY = process.env.RAKUTEN_ACCESS_KEY || "";
 const RAKUTEN_API_URL =
-  "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20170706";
+  "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260401";
 const RAKUTEN_GENRE_API_URL =
-  "https://app.rakuten.co.jp/services/api/IchibaGenre/Search/20140222";
+  "https://openapi.rakuten.co.jp/ichibams/api/IchibaGenre/Search/20260401";
+
+function rakutenAuthParams(): string {
+  return `applicationId=${encodeURIComponent(RAKUTEN_APP_ID)}&accessKey=${encodeURIComponent(RAKUTEN_ACCESS_KEY)}`;
+}
+
+const RAKUTEN_FETCH_OPTS = {
+  headers: {
+    'referer': 'https://japrix.online/',
+    'origin': 'https://japrix.online',
+  }
+};
 
 export interface VariantValue {
   value: string;
@@ -108,12 +120,10 @@ export async function getProductByUrl(rakutenUrl: string) {
       // Пробуем поиск по shopCode:itemCode (полный идентификатор товара)
       const fullItemCode = `${shopCode}:${itemCode}`;
 
-      const url = `${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(
-        RAKUTEN_APP_ID
-      )}&itemCode=${encodeURIComponent(fullItemCode)}&format=json`;
+      const url = `${RAKUTEN_API_URL}?${rakutenAuthParams()}&itemCode=${encodeURIComponent(fullItemCode)}&format=json`;
 
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, RAKUTEN_FETCH_OPTS);
         if (!res.ok) {
           const errorText = await res.text().catch(() => '');
           console.error('[Rakuten API] HTTP error:', res.status, errorText.substring(0, 200));
@@ -212,12 +222,10 @@ async function getProductByShopCode(shopCode: string, itemCode: string) {
   if (!RAKUTEN_APP_ID) return null;
 
   // Ищем по keyword=itemCode внутри магазина — один запрос вместо 10 страниц
-  const url = `${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(
-    RAKUTEN_APP_ID
-  )}&shopCode=${encodeURIComponent(shopCode)}&keyword=${encodeURIComponent(itemCode)}&hits=10&format=json`;
+  const url = `${RAKUTEN_API_URL}?${rakutenAuthParams()}&shopCode=${encodeURIComponent(shopCode)}&keyword=${encodeURIComponent(itemCode)}&hits=10&format=json`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, RAKUTEN_FETCH_OPTS);
     if (!res.ok) {
       console.error('[Rakuten API] shopCode search HTTP error:', res.status, res.statusText);
       return null;
@@ -318,12 +326,10 @@ export async function getProductById(itemCode: string) {
     async () => {
       if (!RAKUTEN_APP_ID) return null;
 
-      const url = `${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(
-        RAKUTEN_APP_ID
-      )}&itemCode=${encodeURIComponent(itemCode)}&format=json`;
+      const url = `${RAKUTEN_API_URL}?${rakutenAuthParams()}&itemCode=${encodeURIComponent(itemCode)}&format=json`;
 
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, RAKUTEN_FETCH_OPTS);
         if (!res.ok) return null;
 
         const data: any = await res.json();
@@ -361,9 +367,7 @@ export async function getProductById(itemCode: string) {
     if (!genreName && product.genreId) {
       try {
         const genreRes = await fetch(
-          `${RAKUTEN_GENRE_API_URL}?applicationId=${encodeURIComponent(
-            RAKUTEN_APP_ID
-          )}&genreId=${encodeURIComponent(product.genreId)}&format=json`
+          `${RAKUTEN_GENRE_API_URL}?${rakutenAuthParams()}&genreId=${encodeURIComponent(product.genreId)}&format=json`
         );
         const genreData: any = await genreRes.json();
         genreName = genreData?.current?.genreName || null;
@@ -816,13 +820,11 @@ export async function getProductsByGenreId(
       // orFlag используем только когда есть keyword
       const orFlagParam = useKeyword ? "&orFlag=1" : "";
 
-      const url = `${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(
-        RAKUTEN_APP_ID
-      )}&genreId=${encodeURIComponent(String(genreId))}&hits=${hits}&page=${page}&format=json${sortParam}${availabilityParam}${priceFilterParam}${keywordParam}${orFlagParam}`;
+      const url = `${RAKUTEN_API_URL}?${rakutenAuthParams()}&genreId=${encodeURIComponent(String(genreId))}&hits=${hits}&page=${page}&format=json${sortParam}${availabilityParam}${priceFilterParam}${keywordParam}${orFlagParam}`;
 
             
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, RAKUTEN_FETCH_OPTS);
         
         if (!res.ok) {
           console.error(`[Rakuten API] ❌ Error: ${res.statusText}`);
@@ -842,12 +844,10 @@ export async function getProductsByGenreId(
         
         // Если API вернул пустой результат при сортировке по цене, попробуем без сортировки
         if (products.length === 0 && (sort === 'lowest' || sort === 'highest')) {
-                    const urlWithoutSort = `${RAKUTEN_API_URL}?applicationId=${encodeURIComponent(
-            RAKUTEN_APP_ID
-          )}&genreId=${encodeURIComponent(String(genreId))}&hits=${hits}&page=${page}&format=json${availabilityParam}`;
+                    const urlWithoutSort = `${RAKUTEN_API_URL}?${rakutenAuthParams()}&genreId=${encodeURIComponent(String(genreId))}&hits=${hits}&page=${page}&format=json${availabilityParam}`;
 
           
-          const res2 = await fetch(urlWithoutSort);
+          const res2 = await fetch(urlWithoutSort, RAKUTEN_FETCH_OPTS);
           if (res2.ok) {
             const data2: any = await res2.json();
             
@@ -914,11 +914,11 @@ export async function searchRakutenProducts(
   // Параметры для улучшения релевантности поиска
   const params = new URLSearchParams({
     applicationId: RAKUTEN_APP_ID,
+    accessKey: RAKUTEN_ACCESS_KEY,
     keyword: normalizedKeyword,
     hits: String(hits),
     page: String(page),
     format: 'json',
-    // Расширенный поиск для лучших результатов
     orFlag: '1',
   });
 
@@ -933,7 +933,7 @@ export async function searchRakutenProducts(
   const url = `${RAKUTEN_API_URL}?${params.toString()}`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, RAKUTEN_FETCH_OPTS);
     if (!res.ok) {
       return [];
     }
