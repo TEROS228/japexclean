@@ -43,6 +43,7 @@ export default function CartPage() {
   const [selectedCoupon, setSelectedCoupon] = useState<any | null>(null);
   const [showCouponSelector, setShowCouponSelector] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [safetyPackage, setSafetyPackage] = useState<'basic' | 'premium'>('basic');
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -58,12 +59,13 @@ export default function CartPage() {
 
   const uniqueProducts = new Set(cart.map(item => getProductIdentifier(item))).size;
   const serviceFee = uniqueProducts * 800;
+  const safetyPackageFee = safetyPackage === 'premium' ? 600 : 0;
 
   // Применяем скидку купона только если выполнены условия минимальной суммы
   const couponDiscount = selectedCoupon && total >= selectedCoupon.minPurchase
     ? selectedCoupon.discountAmount
     : 0;
-  const grandTotal = Math.max(0, total + serviceFee - couponDiscount);
+  const grandTotal = Math.max(0, total + serviceFee + safetyPackageFee - couponDiscount);
 
   // Broadcast обновления между вкладками
   const broadcastUpdate = (type: string) => {
@@ -369,7 +371,9 @@ export default function CartPage() {
           couponCode: selectedCoupon?.code || null,
           couponDiscount: couponDiscount,
           balanceUsed: grandTotal,
-          serviceFee: serviceFee
+          serviceFee: serviceFee,
+          safetyPackage: safetyPackage,
+          safetyPackageFee: safetyPackageFee
         }),
       });
 
@@ -791,6 +795,65 @@ export default function CartPage() {
                 <div className="flex justify-between text-gray-600 text-sm sm:text-base">
                   <span>Service Fee</span>
                   <span className="font-semibold text-gray-900">{formatPrice(serviceFee)}</span>
+                </div>
+
+                {/* Safety Package */}
+                <div className="border-t border-dashed border-gray-200 pt-3 pb-1">
+                  <p className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
+                    🛡️ Safety Package
+                  </p>
+                  <div className="space-y-2">
+                    {/* Basic */}
+                    <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${safetyPackage === 'basic' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'}`}>
+                      <input
+                        type="radio"
+                        name="safetyPackage"
+                        value="basic"
+                        checked={safetyPackage === 'basic'}
+                        onChange={() => setSafetyPackage('basic')}
+                        className="mt-0.5 accent-blue-500"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-900">Basic</span>
+                          <span className="text-sm font-bold text-green-600">Free</span>
+                        </div>
+                        <ul className="mt-1 space-y-0.5">
+                          <li className="text-xs text-gray-500 flex items-center gap-1"><span className="text-green-500">✓</span> Visual inspection upon arrival</li>
+                          <li className="text-xs text-gray-500 flex items-center gap-1"><span className="text-green-500">✓</span> Photo of the parcel</li>
+                        </ul>
+                      </div>
+                    </label>
+                    {/* Premium */}
+                    <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${safetyPackage === 'premium' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'}`}>
+                      <input
+                        type="radio"
+                        name="safetyPackage"
+                        value="premium"
+                        checked={safetyPackage === 'premium'}
+                        onChange={() => setSafetyPackage('premium')}
+                        className="mt-0.5 accent-orange-500"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-900">Premium</span>
+                          <span className="text-sm font-bold text-orange-600">¥600</span>
+                        </div>
+                        <ul className="mt-1 space-y-0.5">
+                          <li className="text-xs text-gray-500 flex items-center gap-1"><span className="text-orange-500">✓</span> Outer packaging removed</li>
+                          <li className="text-xs text-gray-500 flex items-center gap-1"><span className="text-orange-500">✓</span> Detailed visual inspection</li>
+                          <li className="text-xs text-gray-500 flex items-center gap-1"><span className="text-orange-500">✓</span> Photos of item in factory packaging</li>
+                          <li className="text-xs text-gray-500 flex items-center gap-1"><span className="text-orange-500">✓</span> Factory seal preserved</li>
+                        </ul>
+                      </div>
+                    </label>
+                  </div>
+                  {safetyPackage === 'premium' && (
+                    <div className="flex justify-between text-orange-600 text-sm mt-2">
+                      <span>Safety Package (Premium)</span>
+                      <span className="font-semibold">+{formatPrice(600)}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Coupon Section */}
